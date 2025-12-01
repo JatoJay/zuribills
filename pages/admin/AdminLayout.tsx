@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Outlet, useParams, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ShoppingBag, FileText, Settings, LogOut, ExternalLink, Users } from 'lucide-react';
@@ -25,10 +26,15 @@ const AdminLayout: React.FC = () => {
 
   const formatMoney = (amount: number, currencyCode?: string) => {
     if (!org) return '';
-    return new Intl.NumberFormat('en-US', { 
-        style: 'currency', 
-        currency: currencyCode || org.currency 
-    }).format(amount);
+    try {
+        return new Intl.NumberFormat('en-US', { 
+            style: 'currency', 
+            currency: currencyCode || org.currency || 'USD'
+        }).format(amount);
+    } catch (error) {
+        // Fallback if currency code is invalid
+        return `${currencyCode || org.currency} ${amount.toFixed(2)}`;
+    }
   };
 
   if (!org) return <div className="p-8">Loading...</div>;
