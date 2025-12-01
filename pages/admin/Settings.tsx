@@ -71,6 +71,14 @@ const Settings: React.FC = () => {
     }));
   };
 
+  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Allow only lowercase alphanumeric and single hyphens
+      let val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+      // Prevent multiple consecutive hyphens
+      val = val.replace(/-+/g, '-');
+      setFormData({...formData, slug: val});
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -123,7 +131,7 @@ const Settings: React.FC = () => {
                     <Input 
                         label="URL Slug" 
                         value={formData.slug} 
-                        onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})}
+                        onChange={handleSlugChange}
                         required 
                     />
                     <p className="text-xs text-slate-500 mt-1.5 ml-0.5">

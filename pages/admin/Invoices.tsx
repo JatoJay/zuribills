@@ -1,9 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { useOutletContext, useNavigate, Link } from 'react-router-dom';
 import { Organization, Invoice, InvoiceStatus } from '../../types';
 import { getInvoices, updateInvoiceStatus } from '../../services/storage';
 import { Button, Card, Badge } from '../../components/ui';
-import { Plus, Eye, Copy, Send, Sparkles, X } from 'lucide-react';
+import { Plus, Eye, Copy, Send, Sparkles, X, CheckSquare, Square, Mail, DollarSign } from 'lucide-react';
 import { sendInvoiceEmail } from '../../services/email';
 import { generateInvoiceEmailBody } from '../../services/geminiService';
 
@@ -12,11 +13,15 @@ const Invoices: React.FC = () => {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   
+  // Bulk Selection State
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
   // Send Modal State
   const [sendingInvoice, setSendingInvoice] = useState<Invoice | null>(null);
   const [emailBody, setEmailBody] = useState('');
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   const loadInvoices = () => {
     if (org) getInvoices(org.id).then(setInvoices);
@@ -25,6 +30,52 @@ const Invoices: React.FC = () => {
   useEffect(() => {
     loadInvoices();
   }, [org]);
+
+  // Bulk Selection Handlers
+  const toggleSelectAll = () => {
+      if (selectedIds.size === invoices.length) {
+          setSelectedIds(new Set());
+      } else {
+          setSelectedIds(new Set(invoices.map(i => i.id)));
+      }
+  };
+
+  const toggleSelect = (id: string) => {
+      const newSet = new Set(selectedIds);
+      if (newSet.has(id)) {
+          newSet.delete(id);
+      } else {
+          newSet.add(id);
+      }
+      setSelectedIds(newSet);
+  };
+
+  const handleBulkMarkPaid = async () => {
+      if (!confirm(`Mark ${selectedIds.size} invoices as PAID?`)) return;
+      setIsBulkProcessing(true);
+      await Promise.all(Array.from(selectedIds).map(id => updateInvoiceStatus(id, InvoiceStatus.PAID)));
+      setIsBulkProcessing(false);
+      setSelectedIds(new Set());
+      loadInvoices();
+  };
+
+  const handleBulkSendReminders = async () => {
+      if (!confirm(`Send emails for ${selectedIds.size} invoices?`)) return;
+      setIsBulkProcessing(true);
+      const selectedInvoices = invoices.filter(i => selectedIds.has(i.id));
+      
+      // Process sequentially to simulate realistic sending
+      for (const invoice of selectedInvoices) {
+          await sendInvoiceEmail(invoice);
+          if (invoice.status === InvoiceStatus.DRAFT) {
+              await updateInvoiceStatus(invoice.id, InvoiceStatus.SENT);
+          }
+      }
+      
+      setIsBulkProcessing(false);
+      setSelectedIds(new Set());
+      loadInvoices();
+  };
 
   const handleStatusChange = async (id: string, status: InvoiceStatus) => {
       await updateInvoiceStatus(id, status);
@@ -101,11 +152,47 @@ const Invoices: React.FC = () => {
         </Button>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-4 py-3 rounded-full shadow-xl flex items-center gap-4 animate-fade-in-up">
+              <span className="text-sm font-semibold pl-2">{selectedIds.size} Selected</span>
+              <div className="h-4 w-px bg-slate-700"></div>
+              <button 
+                onClick={handleBulkMarkPaid} 
+                disabled={isBulkProcessing}
+                className="flex items-center gap-2 text-xs hover:text-green-400 transition-colors disabled:opacity-50"
+              >
+                  <DollarSign className="w-4 h-4" /> Mark Paid
+              </button>
+              <button 
+                onClick={handleBulkSendReminders} 
+                disabled={isBulkProcessing}
+                className="flex items-center gap-2 text-xs hover:text-blue-400 transition-colors disabled:opacity-50"
+              >
+                  <Mail className="w-4 h-4" /> Send Email
+              </button>
+              <button 
+                onClick={() => setSelectedIds(new Set())}
+                className="ml-2 p-1 hover:bg-slate-800 rounded-full"
+              >
+                  <X className="w-4 h-4" />
+              </button>
+          </div>
+      )}
+
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
+                        <th className="px-6 py-4 w-10">
+                            <button onClick={toggleSelectAll} className="flex items-center text-slate-400 hover:text-slate-600">
+                                {invoices.length > 0 && selectedIds.size === invoices.length ? 
+                                    <CheckSquare className="w-4 h-4 text-blue-600" /> : 
+                                    <Square className="w-4 h-4" />
+                                }
+                            </button>
+                        </th>
                         <th className="px-6 py-4 font-medium text-slate-500">Invoice #</th>
                         <th className="px-6 py-4 font-medium text-slate-500">Client</th>
                         <th className="px-6 py-4 font-medium text-slate-500">Date</th>
@@ -116,10 +203,18 @@ const Invoices: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                     {invoices.length === 0 ? (
-                        <tr><td colSpan={6} className="text-center py-8 text-slate-500">No invoices found.</td></tr>
+                        <tr><td colSpan={7} className="text-center py-8 text-slate-500">No invoices found.</td></tr>
                     ) : (
                         invoices.map(invoice => (
-                            <tr key={invoice.id} className="hover:bg-slate-50/50">
+                            <tr key={invoice.id} className={`hover:bg-slate-50/50 ${selectedIds.has(invoice.id) ? 'bg-blue-50/30' : ''}`}>
+                                <td className="px-6 py-4">
+                                    <button onClick={() => toggleSelect(invoice.id)} className="flex items-center text-slate-400 hover:text-slate-600">
+                                        {selectedIds.has(invoice.id) ? 
+                                            <CheckSquare className="w-4 h-4 text-blue-600" /> : 
+                                            <Square className="w-4 h-4" />
+                                        }
+                                    </button>
+                                </td>
                                 <td className="px-6 py-4 font-mono font-medium">{invoice.invoiceNumber}</td>
                                 <td className="px-6 py-4">
                                     <div className="font-medium">{invoice.clientName}</div>

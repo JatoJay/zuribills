@@ -61,6 +61,19 @@ export const updateOrganization = async (updatedOrg: Organization): Promise<Orga
     throw new Error('Organization not found');
   }
 
+  // Validation
+  if (!updatedOrg.name.trim()) {
+      throw new Error('Organization name is required');
+  }
+  if (!updatedOrg.slug.trim()) {
+      throw new Error('URL Slug is required');
+  }
+  
+  // Strict Slug Validation
+  if (!/^[a-z0-9-]+$/.test(updatedOrg.slug)) {
+      throw new Error('Slug must contain only lowercase letters, numbers, and hyphens');
+  }
+
   // Ensure slug uniqueness if changed (though generally slug shouldn't change often)
   if (orgs.some(o => o.slug === updatedOrg.slug && o.id !== updatedOrg.id)) {
       throw new Error('Slug already taken');
