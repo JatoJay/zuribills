@@ -1,0 +1,5 @@
+{
+  "name": "InvoiceFlow SaaS",
+  "description": "A multi-tenant SaaS platform for service businesses to manage offerings and allow customers to generate invoices via an e-commerce style catalog.",
+  "requestFramePermissions": []
+}
