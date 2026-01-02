@@ -4,7 +4,7 @@
 
 # Run and deploy your AI Studio app
 
-This contains everything you need to run your app locally.
+This repo now uses the fresh-app UI as the default app.
 
 View your app in AI Studio: https://ai.studio/apps/drive/1Jt6Nh3gLLHwqtQcpjRV-GEO85-hVRFV5
 
@@ -15,6 +15,16 @@ View your app in AI Studio: https://ai.studio/apps/drive/1Jt6Nh3gLLHwqtQcpjRV-GE
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. (Optional) Set API keys in `.env.local`:
+   - `VITE_GEMINI_API_KEY` (or `VITE_API_KEY`) for Gemini features
+   - `VITE_FLUTTERWAVE_PUBLIC_KEY` for Flutterwave payments
+   - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for Supabase storage (apply `supabase/schema.sql` in your project)
+   - Note: the demo assumes public table access; enable RLS + policies for production.
+3. (Optional) If using Flutterwave payments + webhooks, set server env vars in `.env.local` and run the server:
+   - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+   - `FLUTTERWAVE_SECRET_KEY` and `FLUTTERWAVE_WEBHOOK_SECRET`
+   - `PLATFORM_FEE_PERCENT` (defaults to 1.5)
+   - Required for Flutterwave bank payout connection and webhooks
+   - Run `npm run server`
+4. Run the app:
    `npm run dev`
