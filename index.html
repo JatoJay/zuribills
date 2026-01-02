@@ -1,90 +1,52 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="InvoiceFlow is the ultimate multi-tenant SaaS for service businesses. Create invoices, manage catalogs, and get paid faster with our mobile-friendly platform." />
-    <meta name="theme-color" content="#0f172a" />
-    <title>InvoiceFlow - B2B SaaS Invoice Platform</title>
+    <title>InvoiceFlow - Zoom From Services to Paid</title>
     <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/888/888879.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: '#0f172a', // Slate 900
-              secondary: '#64748b', // Slate 500
-              accent: '#3b82f6', // Blue 500
-            },
-            animation: {
-              'float': 'float 6s ease-in-out infinite',
-              'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
-            },
-            keyframes: {
-              float: {
-                '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-20px)' },
-              },
-              fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(20px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: 'var(--background)',
+                        surface: 'var(--surface)',
+                        foreground: 'var(--text)',
+                        primary: 'var(--primary)',
+                        secondary: 'var(--secondary)',
+                        muted: 'var(--text-muted)',
+                        border: 'var(--border)',
+                        // Slate overrides for backward compatibility
+                        slate: {
+                            800: 'var(--surface)', // Map to surface for consistent card backgrounds
+                            900: 'var(--background)', // Map to background
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['var(--font-body)', 'sans-serif'],
+                        display: ['var(--font-display)', 'sans-serif'],
+                        body: ['var(--font-body)', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 16px 40px rgba(0, 0, 0, 0.12)',
+                        'lift': '0 24px 60px rgba(0, 0, 0, 0.18)',
+                    }
+                }
             }
-          }
         }
-      }
     </script>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-      body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f8fafc;
-      }
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
-    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0"
-  }
-}
-</script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet">
 </head>
-  <body>
+
+<body>
     <div id="root"></div>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('SW registered: ', registration);
-            })
-            .catch(registrationError => {
-              console.log('SW registration failed: ', registrationError);
-            });
-        });
-      }
-    </script>
-  </body>
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>
