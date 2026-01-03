@@ -354,7 +354,7 @@ const Checkout: React.FC = () => {
                                     placeholder={t('Any special requirements or notes...')}
                                     value={formData.notes}
                                     onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                                    className="w-full p-3 rounded-lg border border-border bg-surface text-foreground text-sm focus:ring-2 focus:ring-primary focus:outline-none resize-none h-20 placeholder:text-muted"
+                                    className="w-full h-20 resize-none rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
                                 />
                             </div>
 

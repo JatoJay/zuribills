@@ -73,13 +73,15 @@ export interface Organization {
   };
   paymentConfig?: {
     enabled: boolean;
-    provider: 'flutterwave' | 'stripe' | 'paystack';
-    accountId?: string; // Flutterwave subaccount / payout account id
+    provider: 'flutterwave' | 'stripe' | 'momo';
+    accountId?: string; // Flutterwave subaccount or Stripe account id
     bankName?: string;
     bankCode?: string;
     bankCountry?: string;
     accountName?: string;
     accountNumberLast4?: string;
+    momoMsisdn?: string;
+    momoAccountName?: string;
     platformFeePercent?: number;
   };
   trial?: TrialInfo;

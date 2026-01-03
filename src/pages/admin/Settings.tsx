@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Organization } from '@/types';
 import { updateOrganization } from '@/services/storage';
 import { createFlutterwavePayoutAccount, fetchFlutterwaveBanks, FlutterwaveBank } from '@/services/paymentService';
+import { resolveCountryCode, resolvePayoutProvider } from '@/services/paymentRouting';
 import { Button, Input, Card, Select } from '@/components/ui';
 import { Upload, ImageIcon, X, AlertCircle } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
@@ -33,14 +34,6 @@ const languageOptions = [
     'Turkish',
     'Indonesian',
     'Vietnamese',
-];
-
-const payoutCountryOptions = [
-    { label: 'Nigeria (NG)', value: 'NG' },
-    { label: 'Ghana (GH)', value: 'GH' },
-    { label: 'Kenya (KE)', value: 'KE' },
-    { label: 'Rwanda (RW)', value: 'RW' },
-    { label: 'South Africa (ZA)', value: 'ZA' },
 ];
 
 const PLATFORM_FEE_PERCENT = 1.5;
@@ -79,24 +72,33 @@ const Settings: React.FC = () => {
         'Billing & Currency',
         'Default Currency',
         'Payouts & Payments',
-        'Payout bank connected',
-        'Bank Country',
+        'Payout method',
+        'Payout account connected',
         'Bank',
         'Bank Code',
         'Select a bank',
         'Account Number',
         'Account Name',
+        'MoMo Wallet Number',
+        'MoMo Wallet Name',
+        'Stripe Account ID',
         'Connect Payout Bank',
         'Update Payout Bank',
+        'Connect MoMo Wallet',
+        'Update MoMo Wallet',
+        'Connect Stripe Account',
+        'Update Stripe Account',
         'Ending in',
         'Required to receive payments directly into your bank account.',
         'Payments enabled',
-        'Payments are disabled until a payout bank is connected.',
+        'Payments are disabled until a payout account is connected.',
         'Platform fee',
         'InvoiceFlow fee per transaction.',
         'Enabled',
         'Disabled',
-        'Payout bank connected successfully.',
+        'Payout account connected successfully.',
+        'MoMo wallet connected successfully.',
+        'Stripe payout connected successfully.',
         'Failed to connect payout account.',
         'Loading banks...',
         'Language & Localization',
@@ -121,15 +123,22 @@ const Settings: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [payoutForm, setPayoutForm] = useState({
-        bankCountry: 'NG',
+        bankCountry: '',
         bankCode: '',
         bankName: '',
         accountNumber: '',
         accountName: '',
+        momoMsisdn: '',
+        stripeAccountId: '',
     });
     const [banks, setBanks] = useState<FlutterwaveBank[]>([]);
     const [banksLoading, setBanksLoading] = useState(false);
     const [payoutLoading, setPayoutLoading] = useState(false);
+
+    const payoutProvider = resolvePayoutProvider(payoutForm.bankCountry);
+    const isFlutterwaveProvider = payoutProvider === 'flutterwave';
+    const isMomoProvider = payoutProvider === 'momo';
+    const isStripeProvider = payoutProvider === 'stripe';
 
     const [formData, setFormData] = useState<Organization>({
         id: '',
@@ -169,6 +178,11 @@ const Settings: React.FC = () => {
                 provider: 'flutterwave',
                 platformFeePercent: PLATFORM_FEE_PERCENT,
             };
+            const inferredCountry = resolveCountryCode(paymentConfig.bankCountry, org.address?.country);
+            const payoutProvider = resolvePayoutProvider(inferredCountry || paymentConfig.bankCountry);
+            const isEnabled = payoutProvider === 'momo'
+                ? Boolean(paymentConfig.momoMsisdn)
+                : Boolean(paymentConfig.accountId);
             setFormData({
                 ...org,
                 catalogEnabled: org.catalogEnabled ?? false,
@@ -176,22 +190,31 @@ const Settings: React.FC = () => {
                 address: org.address || { street: '', city: '', state: '', zip: '', country: '' },
                 paymentConfig: {
                     ...paymentConfig,
-                    provider: 'flutterwave',
+                    provider: payoutProvider,
+                    bankCountry: inferredCountry || paymentConfig.bankCountry,
                     platformFeePercent: paymentConfig.platformFeePercent ?? PLATFORM_FEE_PERCENT,
-                    enabled: Boolean(paymentConfig.accountId),
+                    enabled: isEnabled,
                 },
             });
             setPayoutForm({
-                bankCountry: paymentConfig.bankCountry || 'NG',
+                bankCountry: inferredCountry || paymentConfig.bankCountry || '',
                 bankCode: paymentConfig.bankCode || '',
                 bankName: paymentConfig.bankName || '',
                 accountNumber: '',
-                accountName: paymentConfig.accountName || '',
+                accountName: paymentConfig.momoAccountName || paymentConfig.accountName || '',
+                momoMsisdn: paymentConfig.momoMsisdn || '',
+                stripeAccountId: payoutProvider === 'stripe' ? paymentConfig.accountId || '' : '',
             });
         }
     }, [org]);
 
     useEffect(() => {
+        if (!isFlutterwaveProvider) {
+            setBanks([]);
+            setBanksLoading(false);
+            return;
+        }
+
         let cancelled = false;
 
         const loadBanks = async () => {
@@ -214,7 +237,7 @@ const Settings: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [payoutForm.bankCountry]);
+    }, [payoutForm.bankCountry, isFlutterwaveProvider]);
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -264,7 +287,7 @@ const Settings: React.FC = () => {
         }));
     };
 
-    const handleConnectPayout = async () => {
+    const handleConnectFlutterwavePayout = async () => {
         if (!org) return;
         setPayoutLoading(true);
         setMessage(null);
@@ -300,9 +323,84 @@ const Settings: React.FC = () => {
             },
         }));
         setPayoutForm(prev => ({ ...prev, accountNumber: '' }));
-        setMessage({ type: 'success', text: t('Payout bank connected successfully.') });
+        setMessage({ type: 'success', text: t('Payout account connected successfully.') });
         if (refreshOrg) refreshOrg();
         setPayoutLoading(false);
+    };
+
+    const handleConnectMomoPayout = async () => {
+        if (!org) return;
+        setPayoutLoading(true);
+        setMessage(null);
+
+        const msisdn = payoutForm.momoMsisdn.trim();
+        if (!msisdn) {
+            setMessage({ type: 'error', text: t('Failed to connect payout account.') });
+            setPayoutLoading(false);
+            return;
+        }
+
+        const updated = {
+            ...formData,
+            paymentConfig: {
+                ...(formData.paymentConfig || {}),
+                enabled: true,
+                provider: 'momo',
+                bankCountry: payoutForm.bankCountry,
+                momoMsisdn: msisdn,
+                momoAccountName: payoutForm.accountName.trim() || undefined,
+                platformFeePercent: PLATFORM_FEE_PERCENT,
+            },
+        };
+
+        try {
+            await updateOrganization(updated);
+            setFormData(updated);
+            setMessage({ type: 'success', text: t('MoMo wallet connected successfully.') });
+            if (refreshOrg) refreshOrg();
+        } catch (error: any) {
+            console.error(error);
+            setMessage({ type: 'error', text: error.message || t('Failed to connect payout account.') });
+        } finally {
+            setPayoutLoading(false);
+        }
+    };
+
+    const handleConnectStripePayout = async () => {
+        if (!org) return;
+        setPayoutLoading(true);
+        setMessage(null);
+
+        const accountId = payoutForm.stripeAccountId.trim();
+        if (!accountId) {
+            setMessage({ type: 'error', text: t('Failed to connect payout account.') });
+            setPayoutLoading(false);
+            return;
+        }
+
+        const updated = {
+            ...formData,
+            paymentConfig: {
+                ...(formData.paymentConfig || {}),
+                enabled: true,
+                provider: 'stripe',
+                bankCountry: payoutForm.bankCountry,
+                accountId,
+                platformFeePercent: PLATFORM_FEE_PERCENT,
+            },
+        };
+
+        try {
+            await updateOrganization(updated);
+            setFormData(updated);
+            setMessage({ type: 'success', text: t('Stripe payout connected successfully.') });
+            if (refreshOrg) refreshOrg();
+        } catch (error: any) {
+            console.error(error);
+            setMessage({ type: 'error', text: error.message || t('Failed to connect payout account.') });
+        } finally {
+            setPayoutLoading(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -329,10 +427,27 @@ const Settings: React.FC = () => {
         }
     };
 
-    const payoutAccountSummary = formData.paymentConfig?.accountId
-        ? `${formData.paymentConfig?.bankName || t('Bank')} - ${t('Ending in')} ${formData.paymentConfig?.accountNumberLast4 || '----'}`
-        : '';
-    const canConnectPayout = Boolean(payoutForm.bankCode && payoutForm.accountNumber && !payoutLoading);
+    const payoutAccountSummary = (() => {
+        if (isMomoProvider && formData.paymentConfig?.momoMsisdn) {
+            const last4 = formData.paymentConfig.momoMsisdn.slice(-4);
+            return `MoMo - ${t('Ending in')} ${last4 || '----'}`;
+        }
+        if (isStripeProvider && formData.paymentConfig?.accountId) {
+            return `Stripe - ${formData.paymentConfig.accountId}`;
+        }
+        if (formData.paymentConfig?.accountId) {
+            return `${formData.paymentConfig?.bankName || t('Bank')} - ${t('Ending in')} ${formData.paymentConfig?.accountNumberLast4 || '----'}`;
+        }
+        return '';
+    })();
+
+    const payoutProviderLabel = isMomoProvider ? 'MoMo' : isFlutterwaveProvider ? 'Flutterwave' : 'Stripe';
+
+    const canConnectPayout = isFlutterwaveProvider
+        ? Boolean(payoutForm.bankCode && payoutForm.accountNumber && !payoutLoading)
+        : isMomoProvider
+            ? Boolean(payoutForm.momoMsisdn && !payoutLoading)
+            : Boolean(payoutForm.stripeAccountId && !payoutLoading);
 
     if (!org) return <div>{t('Loading...')}</div>;
 
@@ -551,83 +666,135 @@ const Settings: React.FC = () => {
                     <div className="pt-4 border-t border-slate-100">
                         <h3 className="text-lg font-medium mb-2">{t('Payouts & Payments')}</h3>
                         <p className="text-sm text-slate-500 mb-4">
-                            {t('Payments are disabled until a payout bank is connected.')}
+                            {t('Payments are disabled until a payout account is connected.')}
                         </p>
 
-                        {formData.paymentConfig?.accountId && (
+                        <div className="mb-4 flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm">
+                            <span className="text-slate-600">{t('Payout method')}</span>
+                            <span className="font-semibold text-slate-900">{payoutProviderLabel}</span>
+                        </div>
+
+                        {formData.paymentConfig?.enabled && payoutAccountSummary && (
                             <div className="mb-4 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                                <div className="font-medium">{t('Payout bank connected')}</div>
+                                <div className="font-medium">{t('Payout account connected')}</div>
                                 <div className="text-xs text-emerald-700/80">
                                     {payoutAccountSummary}
-                                    {formData.paymentConfig?.accountName ? ` - ${formData.paymentConfig.accountName}` : ''}
+                                    {isMomoProvider && formData.paymentConfig?.momoAccountName
+                                        ? ` - ${formData.paymentConfig.momoAccountName}`
+                                        : (!isMomoProvider && formData.paymentConfig?.accountName ? ` - ${formData.paymentConfig.accountName}` : '')}
                                 </div>
                             </div>
                         )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Select
-                                label={t('Bank Country')}
-                                options={payoutCountryOptions}
-                                value={payoutForm.bankCountry}
-                                onChange={(e) => setPayoutForm(prev => ({
-                                    ...prev,
-                                    bankCountry: e.target.value,
-                                    bankCode: '',
-                                    bankName: '',
-                                }))}
-                            />
-                            {banks.length > 0 || banksLoading ? (
-                                <Select
-                                    label={t('Bank')}
-                                    options={[
-                                        { label: t('Select a bank'), value: '' },
-                                        ...banks.map((bank) => ({ label: bank.name, value: bank.code })),
-                                    ]}
-                                    value={payoutForm.bankCode}
-                                    onChange={(e) => handleBankChange(e.target.value)}
-                                    disabled={banksLoading}
-                                />
-                            ) : (
-                                <Input
-                                    label={t('Bank Code')}
-                                    value={payoutForm.bankCode}
-                                    onChange={(e) => setPayoutForm(prev => ({
-                                        ...prev,
-                                        bankCode: e.target.value,
-                                        bankName: '',
-                                    }))}
-                                />
-                            )}
-                        </div>
+                        {isFlutterwaveProvider && (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {banks.length > 0 || banksLoading ? (
+                                        <Select
+                                            label={t('Bank')}
+                                            options={[
+                                                { label: t('Select a bank'), value: '' },
+                                                ...banks.map((bank) => ({ label: bank.name, value: bank.code })),
+                                            ]}
+                                            value={payoutForm.bankCode}
+                                            onChange={(e) => handleBankChange(e.target.value)}
+                                            disabled={banksLoading}
+                                        />
+                                    ) : (
+                                        <Input
+                                            label={t('Bank Code')}
+                                            value={payoutForm.bankCode}
+                                            onChange={(e) => setPayoutForm(prev => ({
+                                                ...prev,
+                                                bankCode: e.target.value,
+                                                bankName: '',
+                                            }))}
+                                        />
+                                    )}
+                                    <Input
+                                        label={t('Account Number')}
+                                        value={payoutForm.accountNumber}
+                                        inputMode="numeric"
+                                        onChange={(e) => setPayoutForm(prev => ({ ...prev, accountNumber: e.target.value }))}
+                                    />
+                                </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                            <Input
-                                label={t('Account Number')}
-                                value={payoutForm.accountNumber}
-                                inputMode="numeric"
-                                onChange={(e) => setPayoutForm(prev => ({ ...prev, accountNumber: e.target.value }))}
-                            />
-                            <Input
-                                label={t('Account Name')}
-                                value={payoutForm.accountName}
-                                onChange={(e) => setPayoutForm(prev => ({ ...prev, accountName: e.target.value }))}
-                            />
-                        </div>
+                                <div className="mt-4">
+                                    <Input
+                                        label={t('Account Name')}
+                                        value={payoutForm.accountName}
+                                        onChange={(e) => setPayoutForm(prev => ({ ...prev, accountName: e.target.value }))}
+                                    />
+                                </div>
 
-                        <div className="mt-4 flex items-center gap-3">
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                isLoading={payoutLoading}
-                                disabled={!canConnectPayout}
-                                onClick={handleConnectPayout}
-                            >
-                                {formData.paymentConfig?.accountId ? t('Update Payout Bank') : t('Connect Payout Bank')}
-                            </Button>
-                            {banksLoading && (
-                                <span className="text-xs text-slate-500">{t('Loading banks...')}</span>
-                            )}
-                        </div>
+                                <div className="mt-4 flex items-center gap-3">
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        isLoading={payoutLoading}
+                                        disabled={!canConnectPayout}
+                                        onClick={handleConnectFlutterwavePayout}
+                                    >
+                                        {formData.paymentConfig?.accountId ? t('Update Payout Bank') : t('Connect Payout Bank')}
+                                    </Button>
+                                    {banksLoading && (
+                                        <span className="text-xs text-slate-500">{t('Loading banks...')}</span>
+                                    )}
+                                </div>
+                            </>
+                        )}
+
+                        {isMomoProvider && (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Input
+                                        label={t('MoMo Wallet Number')}
+                                        value={payoutForm.momoMsisdn}
+                                        inputMode="tel"
+                                        onChange={(e) => setPayoutForm(prev => ({ ...prev, momoMsisdn: e.target.value }))}
+                                    />
+                                    <Input
+                                        label={t('MoMo Wallet Name')}
+                                        value={payoutForm.accountName}
+                                        onChange={(e) => setPayoutForm(prev => ({ ...prev, accountName: e.target.value }))}
+                                    />
+                                </div>
+                                <div className="mt-4 flex items-center gap-3">
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        isLoading={payoutLoading}
+                                        disabled={!canConnectPayout}
+                                        onClick={handleConnectMomoPayout}
+                                    >
+                                        {formData.paymentConfig?.momoMsisdn ? t('Update MoMo Wallet') : t('Connect MoMo Wallet')}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+
+                        {isStripeProvider && (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Input
+                                        label={t('Stripe Account ID')}
+                                        value={payoutForm.stripeAccountId}
+                                        onChange={(e) => setPayoutForm(prev => ({ ...prev, stripeAccountId: e.target.value }))}
+                                    />
+                                </div>
+                                <div className="mt-4 flex items-center gap-3">
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        isLoading={payoutLoading}
+                                        disabled={!canConnectPayout}
+                                        onClick={handleConnectStripePayout}
+                                    >
+                                        {formData.paymentConfig?.accountId ? t('Update Stripe Account') : t('Connect Stripe Account')}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
 
                         <p className="text-xs text-slate-500 mt-2">
                             {t('Required to receive payments directly into your bank account.')}

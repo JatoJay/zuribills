@@ -154,11 +154,11 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                 <Card className="p-6 relative overflow-hidden bg-surface border-border">
                     <div className="flex items-center justify-between z-10 relative">
-                        <div>
+                        <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Total Revenue')}</p>
                             <h3 className="text-2xl font-bold mt-1 tracking-tight text-foreground">{formatMoney(totalRevenue)}</h3>
                         </div>
-                        <div className="p-3 bg-green-500/10 rounded-xl text-green-500">
+                        <div className="shrink-0 p-3 bg-green-500/10 rounded-xl text-green-500">
                             <DollarSign className="w-5 h-5" />
                         </div>
                     </div>
@@ -167,11 +167,11 @@ const Dashboard: React.FC = () => {
 
                 <Card className="p-6 relative overflow-hidden bg-surface border-border">
                     <div className="flex items-center justify-between z-10 relative">
-                        <div>
+                        <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Outstanding')}</p>
                             <h3 className="text-2xl font-bold mt-1 tracking-tight text-foreground">{formatMoney(pendingAmount)}</h3>
                         </div>
-                        <div className="p-3 bg-orange-500/10 rounded-xl text-orange-500">
+                        <div className="shrink-0 p-3 bg-orange-500/10 rounded-xl text-orange-500">
                             <AlertCircle className="w-5 h-5" />
                         </div>
                     </div>
@@ -180,11 +180,11 @@ const Dashboard: React.FC = () => {
 
                 <Card className="p-6 relative overflow-hidden bg-surface border-border">
                     <div className="flex items-center justify-between z-10 relative">
-                        <div>
+                        <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Payment Rate')}</p>
                             <h3 className="text-2xl font-bold mt-1 tracking-tight text-foreground">{paymentRate}%</h3>
                         </div>
-                        <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500">
+                        <div className="shrink-0 p-3 bg-blue-500/10 rounded-xl text-blue-500">
                             <Activity className="w-5 h-5" />
                         </div>
                     </div>
@@ -195,11 +195,11 @@ const Dashboard: React.FC = () => {
 
                 <Card className="p-6 relative overflow-hidden bg-surface border-border">
                     <div className="flex items-center justify-between z-10 relative">
-                        <div>
+                        <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Avg. Invoice')}</p>
                             <h3 className="text-2xl font-bold mt-1 tracking-tight text-foreground">{formatMoney(averageValue)}</h3>
                         </div>
-                        <div className="p-3 bg-purple-500/10 rounded-xl text-purple-500">
+                        <div className="shrink-0 p-3 bg-purple-500/10 rounded-xl text-purple-500">
                             <TrendingUp className="w-5 h-5" />
                         </div>
                     </div>
@@ -208,14 +208,14 @@ const Dashboard: React.FC = () => {
 
                 <Card className="p-6 relative overflow-hidden bg-surface border-border">
                     <div className="flex items-center justify-between z-10 relative">
-                        <div>
+                        <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Expenses (Paid)')}</p>
                             <h3 className="text-2xl font-bold mt-1 tracking-tight text-foreground">{formatMoney(totalExpenses)}</h3>
                             <p className="text-xs text-muted mt-2">
                                 {t('Outstanding:')} <span className="text-foreground font-semibold">{formatMoney(outstandingExpenses)}</span>
                             </p>
                         </div>
-                        <div className="p-3 bg-primary/10 rounded-xl text-primary">
+                        <div className="shrink-0 p-3 bg-primary/10 rounded-xl text-primary">
                             <Wallet className="w-5 h-5" />
                         </div>
                     </div>

@@ -107,7 +107,7 @@ const Services: React.FC = () => {
                         <input
                             type="text"
                             placeholder={t('Search services...')}
-                            className="w-full pl-9 pr-4 py-2 rounded-md border border-border bg-surface text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted"
+                            className="w-full h-11 rounded-lg border border-border bg-surface pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
@@ -179,7 +179,7 @@ const Services: React.FC = () => {
                                 <div className="flex-1">
                                     <label className="text-sm font-medium mb-2 block text-foreground">{t('Description')}</label>
                                     <textarea
-                                        className="w-full border rounded-md p-2 text-sm border-border bg-surface text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                                        className="w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
                                         rows={3}
                                         value={newService.description}
                                         onChange={e => setNewService({ ...newService, description: e.target.value })}

@@ -342,7 +342,7 @@ const Invoices: React.FC = () => {
                                 {isGeneratingEmail && <span className="text-xs text-primary flex items-center"><Sparkles className="w-3 h-3 mr-1 animate-spin" /> {t('AI Generating...')}</span>}
                             </label>
                             <textarea
-                                className="w-full h-40 p-3 text-sm border border-border rounded-md focus:ring-2 focus:ring-primary focus:outline-none resize-none bg-surface text-foreground"
+                                className="w-full h-40 resize-none rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
                                 value={emailBody}
                                 onChange={(e) => setEmailBody(e.target.value)}
                                 placeholder={t('Drafting email...')}

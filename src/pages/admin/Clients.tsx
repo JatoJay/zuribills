@@ -137,7 +137,7 @@ const Clients: React.FC = () => {
                         <input
                             type="text"
                             placeholder={t('Search clients...')}
-                            className="w-full pl-9 pr-4 py-2 rounded-md border border-border bg-surface text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted"
+                            className="w-full h-11 rounded-lg border border-border bg-surface pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />

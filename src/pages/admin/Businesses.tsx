@@ -10,6 +10,7 @@ import {
 import { Organization } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Building2, Plus } from 'lucide-react';
+import { resolveDefaultCurrency, resolvePayoutProvider } from '@/services/paymentRouting';
 
 type CountryOption = {
   code: string;
@@ -169,7 +170,19 @@ const Businesses: React.FC = () => {
   useEffect(() => {
     const selected = countries.find((country) => country.code === countryCode);
     if (selected) {
-      setCurrencyInfo({ code: selected.currencyCode, name: selected.currencyName });
+      const resolvedCode = resolveDefaultCurrency(selected.code, selected.currencyCode);
+      const currencyNames: Record<string, string> = {
+        USD: 'US Dollar',
+        NGN: 'Nigerian Naira',
+        GHS: 'Ghanaian Cedi',
+        KES: 'Kenyan Shilling',
+        ZAR: 'South African Rand',
+        RWF: 'Rwandan Franc',
+      };
+      setCurrencyInfo({
+        code: resolvedCode,
+        name: currencyNames[resolvedCode] || selected.currencyName,
+      });
     }
   }, [countryCode, countries]);
 
@@ -225,19 +238,21 @@ const Businesses: React.FC = () => {
     setSaving(true);
     try {
       const slug = await generateUniqueSlug(formData.name);
+      const resolvedCurrency = resolveDefaultCurrency(selectedCountry.code, selectedCountry.currencyCode);
+      const payoutProvider = resolvePayoutProvider(selectedCountry.code);
       const newOrg = await createOrganization({
         accountId: org.accountId,
         ownerId: org.ownerId,
         name: formData.name.trim(),
         slug,
         contactEmail: formData.contactEmail.trim(),
-        currency: selectedCountry.currencyCode || 'USD',
+        currency: resolvedCurrency,
         primaryColor: org.primaryColor || '#0EA5A4',
         catalogEnabled: false,
         preferredLanguage: formData.preferredLanguage.trim() || 'English',
         paymentConfig: {
           enabled: false,
-          provider: 'flutterwave',
+          provider: payoutProvider,
           platformFeePercent: 1.5,
           bankCountry: selectedCountry.code,
         },
@@ -316,7 +331,7 @@ const Businesses: React.FC = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <Card className="w-full max-w-lg p-6 bg-white text-slate-900 relative">
+          <Card className="w-full max-w-lg p-6 relative">
             <h3 className="text-lg font-semibold text-foreground mb-4">{t('Create a new business')}</h3>
             <form onSubmit={handleCreateBusiness} className="space-y-5">
               <Input
@@ -339,12 +354,12 @@ const Businesses: React.FC = () => {
                 onChange={(e) => setCountryCode(e.target.value)}
                 disabled={countriesLoading}
               />
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-xs uppercase tracking-wider text-slate-500">{t('Currency')}</div>
-                <div className="text-sm font-semibold text-slate-900 mt-1">
+              <div className="rounded-lg border border-border bg-surface px-4 py-3">
+                <div className="text-xs uppercase tracking-wider text-muted">{t('Currency')}</div>
+                <div className="text-sm font-semibold text-foreground mt-1">
                   {currencyInfo.code} • {currencyInfo.name}
                 </div>
-                <p className="text-xs text-slate-500 mt-1">{t('We will set your currency automatically.')}</p>
+                <p className="text-xs text-muted mt-1">{t('We will set your currency automatically.')}</p>
               </div>
               <div>
                 <Input

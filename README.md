@@ -26,5 +26,14 @@ View your app in AI Studio: https://ai.studio/apps/drive/1Jt6Nh3gLLHwqtQcpjRV-GE
    - `PLATFORM_FEE_PERCENT` (defaults to 1.5)
    - Required for Flutterwave bank payout connection and webhooks
    - Run `npm run server`
+4. (Optional) If using MTN MoMo payments:
+   - `MOMO_API_BASE_URL` (defaults to `https://sandbox.momodeveloper.mtn.com`)
+   - `MOMO_TARGET_ENVIRONMENT` (defaults to `sandbox`)
+   - `MOMO_COLLECTION_SUBSCRIPTION_KEY`
+   - `MOMO_COLLECTION_USER_ID`
+   - `MOMO_COLLECTION_API_KEY`
+   - (Optional, for automatic payouts) `MOMO_DISBURSEMENT_SUBSCRIPTION_KEY`
+   - (Optional, for automatic payouts) `MOMO_DISBURSEMENT_USER_ID`
+   - (Optional, for automatic payouts) `MOMO_DISBURSEMENT_API_KEY`
 4. Run the app:
    `npm run dev`

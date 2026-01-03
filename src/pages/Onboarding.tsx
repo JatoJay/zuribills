@@ -5,6 +5,7 @@ import { createAccount, createOrganization, createUser, getCurrentAccountId, get
 import { UserRole } from '../types';
 import { Zap, ShieldCheck, Clock3, Sparkles } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { resolveDefaultCurrency, resolvePayoutProvider } from '@/services/paymentRouting';
 
 type CountryOption = {
     code: string;
@@ -174,7 +175,20 @@ const Onboarding: React.FC = () => {
     useEffect(() => {
         const selected = countries.find((country) => country.code === countryCode);
         if (selected) {
-            setCurrencyInfo({ code: selected.currencyCode, name: selected.currencyName });
+            const resolvedCode = resolveDefaultCurrency(selected.code, selected.currencyCode);
+            const fallbackName = resolvedCode === selected.currencyCode ? selected.currencyName : 'US Dollar';
+            const currencyNames: Record<string, string> = {
+                USD: 'US Dollar',
+                NGN: 'Nigerian Naira',
+                GHS: 'Ghanaian Cedi',
+                KES: 'Kenyan Shilling',
+                ZAR: 'South African Rand',
+                RWF: 'Rwandan Franc',
+            };
+            setCurrencyInfo({
+                code: resolvedCode,
+                name: currencyNames[resolvedCode] || fallbackName,
+            });
         }
     }, [countryCode, countries]);
 
@@ -300,19 +314,21 @@ const Onboarding: React.FC = () => {
             }
 
             const slug = await generateUniqueSlug(formData.name);
+            const resolvedCurrency = resolveDefaultCurrency(selectedCountry.code, selectedCountry.currencyCode);
+            const payoutProvider = resolvePayoutProvider(selectedCountry.code);
             await createOrganization({
                 accountId: accountId!,
                 ownerId: ownerId!,
                 name: formData.name.trim(),
                 slug,
                 contactEmail: formData.contactEmail.trim(),
-                currency: selectedCountry.currencyCode || 'USD',
+                currency: resolvedCurrency,
                 primaryColor: '#0EA5A4',
                 catalogEnabled: false,
                 preferredLanguage: language.trim() || 'English',
                 paymentConfig: {
                     enabled: false,
-                    provider: 'flutterwave',
+                    provider: payoutProvider,
                     platformFeePercent: 1.5,
                     bankCountry: selectedCountry.code,
                 },
@@ -496,7 +512,6 @@ const Onboarding: React.FC = () => {
                                 required
                                 value={formData.name}
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                className="bg-slate-50 border-2 border-slate-300 text-black placeholder:text-slate-500"
                             />
 
                             <Input
@@ -505,7 +520,6 @@ const Onboarding: React.FC = () => {
                                 required
                                 value={formData.contactEmail}
                                 onChange={e => setFormData({ ...formData, contactEmail: e.target.value })}
-                                className="bg-slate-50 border-2 border-slate-300 text-black placeholder:text-slate-500"
                             />
 
                             <Select
@@ -513,7 +527,6 @@ const Onboarding: React.FC = () => {
                                 options={countryOptions}
                                 value={countryCode}
                                 onChange={(e) => setCountryCode(e.target.value)}
-                                className="bg-slate-50 border-2 border-slate-300 text-black"
                                 disabled={countriesLoading}
                             />
 
@@ -531,7 +544,6 @@ const Onboarding: React.FC = () => {
                                     list="language-options"
                                     value={language}
                                     onChange={(e) => setLanguage(e.target.value)}
-                                    className="bg-slate-50 border-2 border-slate-300 text-black placeholder:text-slate-500"
                                 />
                                 <datalist id="language-options">
                                     {languageSuggestions.map(option => (
