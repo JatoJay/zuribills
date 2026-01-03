@@ -2,19 +2,34 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from '@tanstack/react-router';
 import { Invoice, Organization, InvoiceStatus } from '@/types';
 import { getOrganizationBySlug, getInvoices } from '@/services/storage';
-import { Button, formatCurrency, Badge, Card } from '@/components/ui';
-import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, Zap, RefreshCw } from 'lucide-react';
+import { Button, formatCurrency, Badge, Card, Input } from '@/components/ui';
+import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, Zap, RefreshCw, Smartphone } from 'lucide-react';
 import { processPayment, PaymentGateway } from '@/services/paymentService';
 import { useTranslation } from '@/hooks/useTranslation';
+import { resolvePayoutProvider } from '@/services/paymentRouting';
 
 // Payment gateway configurations
 const PAYMENT_GATEWAYS: Record<string, any> = {
+    momo: {
+        name: 'MoMo',
+        currencies: ['RWF', 'GHS', 'KES', 'ZAR'],
+        icon: Smartphone,
+        description: 'Pay with mobile money',
+        color: 'bg-emerald-500',
+    },
     flutterwave: {
         name: 'Flutterwave',
         currencies: ['USD', 'NGN', 'GBP', 'EUR', 'KES', 'GHS', 'ZAR', 'RWF'],
         icon: Zap,
         description: 'Pay with card, bank, or mobile money',
         color: 'bg-orange-500',
+    },
+    stripe: {
+        name: 'Card',
+        currencies: ['*'],
+        icon: CreditCard,
+        description: 'Pay with card or bank',
+        color: 'bg-slate-900',
     },
 };
 
@@ -54,10 +69,17 @@ const InvoiceView: React.FC = () => {
         'Pay with credit/debit card',
         'Pay with card, bank transfer, or USSD',
         'Pay with card, bank, or mobile money',
+        'Pay with card or bank',
+        'Pay with mobile money',
         'Payments unavailable',
-        'This business needs to connect a payout bank before it can accept payments.',
+        'This business needs to connect a payout account before it can accept payments.',
         'Redirecting to Flutterwave...',
         'Payment received. Waiting for Flutterwave to confirm the transfer...',
+        'Payment received. Updating invoice status...',
+        'MoMo prompt sent. Please approve the payment on your phone.',
+        'Waiting for MoMo confirmation...',
+        'Mobile money number',
+        'Enter your mobile money number to receive the payment prompt.',
         'Payment cancelled.',
     ]), []);
     const { t } = useTranslation(translationStrings);
@@ -65,10 +87,11 @@ const InvoiceView: React.FC = () => {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedGateway, setSelectedGateway] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [paymentStatus, setPaymentStatus] = useState<'idle' | 'redirecting' | 'success' | 'error'>('idle');
+    const [paymentStatus, setPaymentStatus] = useState<'idle' | 'redirecting' | 'pending' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
     const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
     const [paymentReturnStatus, setPaymentReturnStatus] = useState<'success' | 'failed' | null>(null);
+    const [momoPhone, setMomoPhone] = useState('');
 
     useEffect(() => {
         const load = async () => {
@@ -132,7 +155,7 @@ const InvoiceView: React.FC = () => {
     // Determine available gateways based on currency
     const getAvailableGateways = (currency: string) => {
         return Object.entries(PAYMENT_GATEWAYS).filter(([_, gateway]) =>
-            gateway.currencies.includes(currency)
+            gateway.currencies.includes(currency) || gateway.currencies.includes('*')
         );
     };
 
@@ -143,10 +166,15 @@ const InvoiceView: React.FC = () => {
             setErrorMessage(t('Payments unavailable'));
             return;
         }
+        if (gateway === 'momo' && !momoPhone.trim()) {
+            setPaymentStatus('error');
+            setErrorMessage(t('Enter your mobile money number to receive the payment prompt.'));
+            return;
+        }
         setIsProcessing(true);
         setSelectedGateway(gateway);
         setErrorMessage('');
-        setPaymentStatus('redirecting');
+        setPaymentStatus(gateway === 'momo' ? 'pending' : 'redirecting');
 
         const result = await processPayment(gateway as PaymentGateway, {
             invoiceId: data.invoice.id,
@@ -155,10 +183,64 @@ const InvoiceView: React.FC = () => {
             customerEmail: data.invoice.clientEmail,
             customerName: data.invoice.clientName,
             description: `Payment for Invoice ${data.invoice.invoiceNumber}`,
+            payerPhone: momoPhone.trim(),
         });
 
         if (result.redirectUrl) {
             window.location.href = result.redirectUrl;
+            return;
+        }
+
+        if (gateway === 'momo' && result.success && result.reference) {
+            setPaymentNotice(t('MoMo prompt sent. Please approve the payment on your phone.'));
+            let cancelled = false;
+            let attempts = 0;
+
+            const pollStatus = async () => {
+                if (cancelled) return;
+                attempts += 1;
+                try {
+                    const response = await fetch(`/api/payments/momo/status?reference=${encodeURIComponent(result.reference)}&invoiceId=${data.invoice.id}`);
+                    const statusData = await response.json().catch(() => ({}));
+                    if (statusData?.status === 'SUCCESSFUL') {
+                        setPaymentStatus('success');
+                        setPaymentNotice(t('Payment received. Updating invoice status...'));
+                        try {
+                            const invoices = await getInvoices(data.org.id);
+                            const updatedInvoice = invoices.find(i => i.id === data.invoice.id);
+                            if (updatedInvoice) {
+                                setData(prev => prev ? { ...prev, invoice: updatedInvoice } : prev);
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh invoice status', error);
+                        }
+                        setTimeout(() => {
+                            setShowPaymentModal(false);
+                            setPaymentStatus('idle');
+                        }, 2500);
+                        return;
+                    }
+                    if (statusData?.status && statusData.status !== 'PENDING') {
+                        setPaymentStatus('error');
+                        setErrorMessage(t('Payment failed. Please try again.'));
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Failed to check MoMo status', error);
+                    setPaymentStatus('error');
+                    setErrorMessage(t('Payment failed. Please try again.'));
+                    return;
+                }
+
+                if (attempts < 10) {
+                    setTimeout(pollStatus, 4000);
+                }
+            };
+
+            pollStatus();
+
+            setIsProcessing(false);
+            setSelectedGateway(null);
             return;
         }
 
@@ -181,12 +263,21 @@ const InvoiceView: React.FC = () => {
 
     const { invoice, org } = data;
     const paymentConfig = org.paymentConfig;
+    const paymentProvider = paymentConfig?.bankCountry
+        ? resolvePayoutProvider(paymentConfig.bankCountry)
+        : (paymentConfig?.provider || 'flutterwave');
     const paymentsEnabled = Boolean(
         paymentConfig?.enabled
-        && paymentConfig?.provider === 'flutterwave'
-        && paymentConfig?.accountId
+        && (
+            (paymentProvider === 'flutterwave' && paymentConfig?.accountId)
+            || (paymentProvider === 'momo' && paymentConfig?.momoMsisdn)
+            || (paymentProvider === 'stripe' && paymentConfig?.accountId)
+        )
     );
-    const availableGateways = paymentsEnabled ? getAvailableGateways(org.currency) : [];
+    const availableGateways = paymentsEnabled
+        ? getAvailableGateways(org.currency).filter(([key]) => key === paymentProvider)
+        : [];
+    const hasMomoGateway = availableGateways.some(([key]) => key === 'momo');
     const isPaid = invoice.status === InvoiceStatus.PAID;
 
     return (
@@ -209,7 +300,7 @@ const InvoiceView: React.FC = () => {
                         {!isPaid && !paymentsEnabled && (
                             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
                                 <span className="font-semibold">{t('Payments unavailable')}</span>
-                                <span className="ml-2">{t('This business needs to connect a payout bank before it can accept payments.')}</span>
+                                <span className="ml-2">{t('This business needs to connect a payout account before it can accept payments.')}</span>
                             </div>
                         )}
                         {isPaid && (
@@ -349,7 +440,7 @@ const InvoiceView: React.FC = () => {
                             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                                 {paymentStatus === 'success' ? (
                                     <CheckCircle2 className="w-8 h-8 text-green-500 animate-in zoom-in duration-300" />
-                                ) : paymentStatus === 'redirecting' ? (
+                                ) : paymentStatus === 'redirecting' || paymentStatus === 'pending' ? (
                                     <RefreshCw className="w-8 h-8 text-primary animate-spin" />
                                 ) : paymentStatus === 'error' ? (
                                     <AlertCircle className="w-8 h-8 text-red-500 animate-in zoom-in duration-300" />
@@ -360,11 +451,13 @@ const InvoiceView: React.FC = () => {
                             <h3 className="text-xl font-bold">
                                 {paymentStatus === 'success' ? t('Payment Successful!') :
                                     paymentStatus === 'redirecting' ? t('Redirecting to Flutterwave...') :
+                                        paymentStatus === 'pending' ? t('Waiting for MoMo confirmation...') :
                                         paymentStatus === 'error' ? t('Payment Failed') : t('Pay Invoice')}
                             </h3>
                             <p className="text-slate-500 text-sm mt-1">
                                 {paymentStatus === 'success' ? t('Your invoice has been marked as paid.') :
                                     paymentStatus === 'redirecting' ? `${t('Invoice:')} ${invoice.invoiceNumber}` :
+                                        paymentStatus === 'pending' ? t('MoMo prompt sent. Please approve the payment on your phone.') :
                                         paymentStatus === 'error' ? errorMessage : `${t('Invoice:')} ${invoice.invoiceNumber}`}
                             </p>
                             {paymentStatus === 'idle' && (
@@ -377,6 +470,21 @@ const InvoiceView: React.FC = () => {
                         {paymentStatus === 'idle' ? (
                             <div className="space-y-3">
                                 <p className="text-sm font-medium text-slate-600 mb-2">{t('Select Payment Method:')}</p>
+
+                                {hasMomoGateway && (
+                                    <div className="mb-2">
+                                        <Input
+                                            label={t('Mobile money number')}
+                                            value={momoPhone}
+                                            inputMode="tel"
+                                            onChange={(e) => setMomoPhone(e.target.value)}
+                                            className="bg-slate-50"
+                                        />
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            {t('Enter your mobile money number to receive the payment prompt.')}
+                                        </p>
+                                    </div>
+                                )}
 
                                 {availableGateways.map(([key, gateway]) => {
                                     const Icon = gateway.icon;
@@ -411,6 +519,11 @@ const InvoiceView: React.FC = () => {
                             <div className="py-6 text-center text-sm text-slate-500">
                                 <div className="mx-auto mb-3 h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                                 {t('Redirecting to Flutterwave...')}
+                            </div>
+                        ) : paymentStatus === 'pending' ? (
+                            <div className="py-6 text-center text-sm text-slate-500">
+                                <div className="mx-auto mb-3 h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                {t('Waiting for MoMo confirmation...')}
                             </div>
                         ) : paymentStatus === 'success' ? (
                             <div className="py-8 text-center">

@@ -302,10 +302,10 @@ const Expenses: React.FC = () => {
 
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-                    <Card className="w-full max-w-2xl p-6 relative bg-white text-slate-900">
+                    <Card className="w-full max-w-2xl p-6 relative">
                         <button
                             onClick={() => setIsModalOpen(false)}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+                            className="absolute top-4 right-4 text-muted hover:text-foreground"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -318,14 +318,12 @@ const Expenses: React.FC = () => {
                                     required
                                     value={formData.vendorName}
                                     onChange={(e) => setFormData(prev => ({ ...prev, vendorName: e.target.value }))}
-                                    className="bg-white text-black placeholder:text-slate-500 border-2 border-slate-300"
                                 />
                                 <Input
                                     label={t('Vendor Email')}
                                     type="email"
                                     value={formData.vendorEmail}
                                     onChange={(e) => setFormData(prev => ({ ...prev, vendorEmail: e.target.value }))}
-                                    className="bg-white text-black placeholder:text-slate-500 border-2 border-slate-300"
                                 />
                             </div>
 
@@ -334,14 +332,12 @@ const Expenses: React.FC = () => {
                                     label={t('Vendor Company')}
                                     value={formData.vendorCompany}
                                     onChange={(e) => setFormData(prev => ({ ...prev, vendorCompany: e.target.value }))}
-                                    className="bg-white text-black placeholder:text-slate-500 border-2 border-slate-300"
                                 />
                                 <Input
                                     label={t('Category')}
                                     placeholder={t('Utilities, Rent, Marketing')}
                                     value={formData.category}
                                     onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                                    className="bg-white text-black placeholder:text-slate-500 border-2 border-slate-300"
                                 />
                             </div>
 
@@ -351,21 +347,18 @@ const Expenses: React.FC = () => {
                                     type="date"
                                     value={formData.date}
                                     onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                                    className="bg-white text-black border-slate-300"
                                 />
                                 <Input
                                     label={t('Due Date')}
                                     type="date"
                                     value={formData.dueDate}
                                     onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-                                    className="bg-white text-black border-slate-300"
                                 />
                                 <Select
                                     label={t('Status')}
                                     options={Object.values(ExpenseStatus).map(status => ({ label: status, value: status }))}
                                     value={formData.status}
                                     onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as ExpenseStatus }))}
-                                    className="bg-white text-black border-slate-300"
                                 />
                             </div>
 
@@ -416,7 +409,7 @@ const Expenses: React.FC = () => {
                             <div>
                                 <label className="text-sm font-medium text-foreground mb-2 block">{t('Notes')}</label>
                                 <textarea
-                                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                    className="w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
                                     rows={3}
                                     value={formData.notes}
                                     onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}

@@ -1,6 +1,6 @@
 /**
  * Payment Gateway Service
- * Handles Stripe (USD, GBP, EUR) and Paystack (NGN) integrations
+ * Handles Stripe, Flutterwave, and MTN MoMo integrations
  */
 
 import { getSupabaseClient } from './supabaseClient';
@@ -19,6 +19,7 @@ export interface PaymentConfig {
     customerName: string;
     description: string;
     metadata?: Record<string, string>;
+    payerPhone?: string;
 }
 
 export interface PaymentResult {
@@ -262,6 +263,45 @@ export const initFlutterwavePayment = async (config: PaymentConfig): Promise<Pay
     }
 };
 
+// ============================================
+// MTN MOMO INTEGRATION
+// ============================================
+
+export const initMomoPayment = async (config: PaymentConfig): Promise<PaymentResult> => {
+    if (!config.payerPhone) {
+        return { success: false, error: 'Mobile money number is required.' };
+    }
+
+    try {
+        const response = await fetch('/api/payments/momo/initialize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                invoiceId: config.invoiceId,
+                payerPhone: config.payerPhone,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            return { success: false, error: errorBody.error || 'Failed to initialize MoMo payment.' };
+        }
+
+        const data = await response.json();
+        if (!data?.reference) {
+            return { success: false, error: 'Missing MoMo reference.' };
+        }
+
+        return {
+            success: true,
+            reference: data.reference,
+        };
+    } catch (error: any) {
+        console.error('MoMo payment error:', error);
+        return { success: false, error: error.message || 'Failed to initialize MoMo payment.' };
+    }
+};
+
 export const fetchFlutterwaveBanks = async (country: string): Promise<FlutterwaveBank[]> => {
     try {
         const token = await getAccessToken();
@@ -329,7 +369,7 @@ export const createFlutterwavePayoutAccount = async (
 // UNIFIED PAYMENT HANDLER
 // ============================================
 
-export type PaymentGateway = 'stripe' | 'paystack' | 'flutterwave';
+export type PaymentGateway = 'stripe' | 'paystack' | 'flutterwave' | 'momo';
 
 /**
  * Process payment through the appropriate gateway
@@ -345,6 +385,8 @@ export const processPayment = async (
             return initPaystackPayment(config);
         case 'flutterwave':
             return initFlutterwavePayment(config);
+        case 'momo':
+            return initMomoPayment(config);
         default:
             return { success: false, error: 'Unknown payment gateway' };
     }
@@ -356,10 +398,10 @@ export const processPayment = async (
 export const getRecommendedGateway = (currency: string): PaymentGateway => {
     const currencyUpper = currency.toUpperCase();
     if (currencyUpper === 'NGN') {
-        return 'paystack';
-    }
-    if (['KES', 'GHS', 'ZAR'].includes(currencyUpper)) {
         return 'flutterwave';
+    }
+    if (['RWF', 'KES', 'GHS', 'ZAR'].includes(currencyUpper)) {
+        return 'momo';
     }
     return 'stripe';
 };
@@ -375,6 +417,8 @@ export const isGatewayConfigured = (gateway: PaymentGateway): boolean => {
             return !!PAYSTACK_PUBLIC_KEY;
         case 'flutterwave':
             return !!FLUTTERWAVE_PUBLIC_KEY;
+        case 'momo':
+            return true;
         default:
             return false;
     }

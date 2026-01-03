@@ -204,7 +204,7 @@ const AdminLayout: React.FC = () => {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currencyCode || org.currency || 'USD'
-      }).format(amount);
+      }).format(amount).replace(/[\u00A0\u202F]/g, ' ');
     } catch (error) {
       // Fallback if currency code is invalid
       return `${currencyCode || org.currency} ${amount.toFixed(2)} `;

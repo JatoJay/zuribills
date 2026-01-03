@@ -217,7 +217,7 @@ const InvoiceCreate: React.FC = () => {
                 <div className="flex gap-2">
                     <input
                         type="text"
-                        className="flex-1 rounded-md border border-blue-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                        className="flex-1 rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
                         placeholder={t('e.g. Bill Acme Corp $500 for Web Design and $150 for Hosting')}
                         value={aiPrompt}
                         onChange={(e) => setAiPrompt(e.target.value)}
@@ -249,7 +249,7 @@ const InvoiceCreate: React.FC = () => {
                         <div>
                             <label className="text-sm font-medium leading-none mb-2 block">{t('Notes / Terms')}</label>
                             <textarea
-                                className="flex min-h-[80px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
+                                className="flex min-h-[80px] w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
                                 placeholder={t('Additional notes...')}
                                 value={formData.notes}
                                 onChange={e => setFormData({ ...formData, notes: e.target.value })}
@@ -267,7 +267,7 @@ const InvoiceCreate: React.FC = () => {
                             <div className="flex-1">
                                 <label className="text-xs font-medium mb-1 block">{t('Item / Service')}</label>
                                 <select
-                                    className="w-full border rounded text-sm p-2 mb-2 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
+                                    className="w-full h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
                                     value={item.serviceId || ''}
                                     onChange={e => updateItem(item.id, 'serviceId', e.target.value)}
                                 >

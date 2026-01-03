@@ -15,6 +15,7 @@ import {
   AgentLog,
 } from '../types';
 import { getSupabaseClient } from './supabaseClient';
+import { resolveCountryCode, resolveDefaultCurrency, resolvePayoutProvider } from './paymentRouting';
 
 const CURRENT_ACCOUNT_KEY = 'invoiceflow_current_account';
 const CURRENT_USER_KEY = 'invoiceflow_current_user';
@@ -453,15 +454,18 @@ export const createOrganization = async (org: Omit<Organization, 'id' | 'created
   }
 
   const now = new Date();
+  const bankCountry = resolveCountryCode(org.paymentConfig?.bankCountry, org.address?.country);
+  const provider = resolvePayoutProvider(bankCountry || org.paymentConfig?.bankCountry);
   const newOrg: Organization = {
     ...org,
-    currency: org.currency || 'USD',
+    currency: org.currency || resolveDefaultCurrency(bankCountry, 'USD'),
     primaryColor: org.primaryColor || '#0EA5A4',
     catalogEnabled: org.catalogEnabled ?? false,
     preferredLanguage: org.preferredLanguage || 'English',
     paymentConfig: org.paymentConfig ?? {
       enabled: false,
-      provider: 'flutterwave',
+      provider,
+      bankCountry: bankCountry || undefined,
       platformFeePercent: 1.5,
     },
     trial: org.trial ?? buildTrial(now),
@@ -945,7 +949,8 @@ export const seedDatabase = async () => {
     },
     paymentConfig: {
       enabled: false,
-      provider: 'flutterwave',
+      provider: 'stripe',
+      bankCountry: 'US',
       platformFeePercent: 1.5,
     },
     createdAt: new Date().toISOString(),
