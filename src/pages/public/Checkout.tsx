@@ -7,6 +7,7 @@ import { CartContext } from '@/context/CartContext';
 import { Trash2, ArrowLeft, CreditCard, Globe, Shield, Zap, Plus, Minus, Lock, Clock, RefreshCw } from 'lucide-react';
 import { useCatalogContext } from './CatalogLayout';
 import { useTranslation } from '@/hooks/useTranslation';
+import { fetchProviderRate } from '@/services/paymentService';
 
 // Currency configuration
 const CURRENCIES = [
@@ -96,6 +97,7 @@ const Checkout: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
     const [detectingLocation, setDetectingLocation] = useState(true);
+    const [conversionRate, setConversionRate] = useState<number | null>(null);
     const catalogEnabled = org.catalogEnabled !== false;
 
     useEffect(() => {
@@ -108,7 +110,6 @@ const Checkout: React.FC = () => {
 
     const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
-    // Currency conversion rates (simplified - in production use real API)
     const conversionRates: Record<string, number> = {
         'USD': 1,
         'CAD': 1.36,
@@ -121,7 +122,44 @@ const Checkout: React.FC = () => {
         'RWF': 1300,
     };
 
-    const convertedTotal = total * conversionRates[selectedCurrency];
+    const getFallbackRate = (from: string, to: string) => {
+        const fromRate = conversionRates[from] || 1;
+        const toRate = conversionRates[to] || 1;
+        return toRate / fromRate;
+    };
+
+    useEffect(() => {
+        if (!catalogEnabled) return;
+        const fromCurrency = org.currency;
+        const toCurrency = selectedCurrency;
+        if (!fromCurrency || !toCurrency) return;
+        if (fromCurrency === toCurrency) {
+            setConversionRate(1);
+            return;
+        }
+
+        let isActive = true;
+        const loadRate = async () => {
+            try {
+                const result = await fetchProviderRate(fromCurrency, toCurrency, org.paymentConfig?.provider);
+                if (isActive) {
+                    setConversionRate(result.rate);
+                }
+            } catch (error) {
+                if (isActive) {
+                    setConversionRate(getFallbackRate(fromCurrency, toCurrency));
+                }
+            }
+        };
+
+        loadRate();
+        return () => {
+            isActive = false;
+        };
+    }, [catalogEnabled, org.currency, org.paymentConfig?.provider, selectedCurrency]);
+
+    const effectiveRate = conversionRate ?? getFallbackRate(org.currency, selectedCurrency);
+    const convertedTotal = total * effectiveRate;
     const currencySymbol = CURRENCIES.find(c => c.value === selectedCurrency)?.symbol || '$';
 
     const handleCheckout = async (e: React.FormEvent) => {

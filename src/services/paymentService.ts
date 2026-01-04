@@ -39,8 +39,8 @@ export interface FlutterwavePayoutPayload {
     bankCode: string;
     bankName?: string;
     accountNumber: string;
-    accountName?: string;
-    bankCountry?: string;
+    accountName: string;
+    bankCountry: string;
 }
 
 export interface FlutterwavePayoutResult {
@@ -52,6 +52,11 @@ export interface FlutterwavePayoutResult {
     accountName?: string;
     accountNumberLast4?: string;
     error?: string;
+}
+
+export interface ProviderRateResult {
+    rate: number;
+    source?: string;
 }
 
 const getAccessToken = async (): Promise<string | null> => {
@@ -422,4 +427,30 @@ export const isGatewayConfigured = (gateway: PaymentGateway): boolean => {
         default:
             return false;
     }
+};
+
+export const fetchProviderRate = async (
+    from: string,
+    to: string,
+    provider?: string,
+    amount = 1
+): Promise<ProviderRateResult> => {
+    const query = new URLSearchParams({
+        from,
+        to,
+        amount: String(amount),
+    });
+    if (provider) {
+        query.set('provider', provider);
+    }
+    const response = await fetch(`/api/payments/rates?${query.toString()}`);
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error?.error || 'Failed to load exchange rates.');
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!Number.isFinite(data?.rate)) {
+        throw new Error('Invalid exchange rate response.');
+    }
+    return { rate: data.rate, source: data.source };
 };
