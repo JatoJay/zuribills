@@ -1,8 +1,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Organization } from '@/types';
-import { updateOrganization } from '@/services/storage';
+import { AgentLog, Organization } from '@/types';
+import { getAgentLogsByOrg, updateOrganization } from '@/services/storage';
 import { createFlutterwavePayoutAccount, fetchFlutterwaveBanks, FlutterwaveBank } from '@/services/paymentService';
 import { resolveCountryCode, resolvePayoutProvider } from '@/services/paymentRouting';
 import { Button, Input, Card, Select } from '@/components/ui';
@@ -43,6 +43,8 @@ const MOMO_MSISDN_RULES: Record<string, { countryCode: string; nationalLength: n
     KE: { countryCode: '254', nationalLength: 9, example: '+2547XXXXXXXX' },
     ZA: { countryCode: '27', nationalLength: 9, example: '+278XXXXXXXX' },
 };
+
+const MOMO_NETWORK_KEYWORDS = /(momo|mobile|mtn|airtel|vodafone|mpesa|m-pesa|tigo|tigo cash)/i;
 const BANK_ACCOUNT_RULES: Record<string, { minLength: number; maxLength: number; example: string }> = {
     NG: { minLength: 10, maxLength: 10, example: '0123456789' },
 };
@@ -142,10 +144,12 @@ const Settings: React.FC = () => {
         'Bank',
         'Bank Code',
         'Select a bank',
+        'Select a network',
         'Account Number',
         'Account Name',
         'MoMo Wallet Number',
         'MoMo Wallet Name',
+        'Mobile money network',
         'Stripe Account ID',
         'Connect Payout Bank',
         'Update Payout Bank',
@@ -159,6 +163,23 @@ const Settings: React.FC = () => {
         'Payments are disabled until a payout account is connected.',
         'Platform fee',
         'InvoiceFlow fee per transaction.',
+        'Payout status',
+        'Latest payout',
+        'Payout history',
+        'No payout history yet.',
+        'Date',
+        'No payouts yet.',
+        'Status',
+        'Provider',
+        'Method',
+        'Reference',
+        'Transfer ID',
+        'Invoice',
+        'Updated',
+        'Initiated',
+        'Completed',
+        'Failed',
+        'Pending',
         'Enabled',
         'Disabled',
         'Payout account connected successfully.',
@@ -174,6 +195,7 @@ const Settings: React.FC = () => {
         'Please enter the bank account name.',
         'Please enter your MoMo wallet number.',
         'Please enter your MoMo wallet name.',
+        'Please select a mobile money network.',
         'MoMo wallet number should include country code.',
         'Please enter your Stripe account ID.',
         'Loading banks...',
@@ -241,6 +263,8 @@ const Settings: React.FC = () => {
     const [banks, setBanks] = useState<FlutterwaveBank[]>([]);
     const [banksLoading, setBanksLoading] = useState(false);
     const [payoutLoading, setPayoutLoading] = useState(false);
+    const [payoutLogs, setPayoutLogs] = useState<AgentLog[]>([]);
+    const [payoutLogsLoading, setPayoutLogsLoading] = useState(false);
 
     const resolvedPayoutCountry = useMemo(
         () => resolveCountryCode(payoutForm.bankCountry, formData.address?.country),
@@ -258,6 +282,12 @@ const Settings: React.FC = () => {
     const isFlutterwaveProvider = payoutProvider === 'flutterwave';
     const isMomoProvider = payoutProvider === 'momo';
     const isStripeProvider = payoutProvider === 'stripe';
+    const momoNetworkOptions = useMemo(() => {
+        if (!isMomoProvider) return [];
+        if (!banks.length) return [];
+        const filtered = banks.filter((bank) => MOMO_NETWORK_KEYWORDS.test(bank.name));
+        return filtered.length ? filtered : banks;
+    }, [banks, isMomoProvider]);
 
     useEffect(() => {
         if (org) {
@@ -301,6 +331,29 @@ const Settings: React.FC = () => {
     }, [org]);
 
     useEffect(() => {
+        if (!org) return;
+        let cancelled = false;
+        const loadPayoutLogs = async () => {
+            setPayoutLogsLoading(true);
+            try {
+                const logs = await getAgentLogsByOrg(org.id);
+                if (!cancelled) {
+                    setPayoutLogs(logs.filter((log) => String(log.action || '').startsWith('PAYOUT_')));
+                }
+            } catch (error) {
+                console.error('Failed to load payout logs', error);
+                if (!cancelled) setPayoutLogs([]);
+            } finally {
+                if (!cancelled) setPayoutLogsLoading(false);
+            }
+        };
+        loadPayoutLogs();
+        return () => {
+            cancelled = true;
+        };
+    }, [org]);
+
+    useEffect(() => {
         if (!payoutForm.bankCountry && formData.address?.country) {
             const resolved = resolveCountryCode('', formData.address.country);
             if (resolved) {
@@ -325,7 +378,7 @@ const Settings: React.FC = () => {
     }, [isFlutterwaveProvider, isMomoProvider, payoutForm.accountNumber, payoutForm.momoMsisdn, resolvedPayoutCountry]);
 
     useEffect(() => {
-        if (!isFlutterwaveProvider) {
+        if (!isFlutterwaveProvider && !isMomoProvider) {
             setBanks([]);
             setBanksLoading(false);
             return;
@@ -358,7 +411,7 @@ const Settings: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [resolvedPayoutCountry, isFlutterwaveProvider]);
+    }, [resolvedPayoutCountry, isFlutterwaveProvider, isMomoProvider]);
 
     const payoutValidationError = useMemo(() => {
         if (!resolvedPayoutCountry) {
@@ -383,8 +436,10 @@ const Settings: React.FC = () => {
         if (isMomoProvider) {
             const msisdn = momoState.normalized;
             const accountName = payoutForm.accountName.trim();
+            const bankCode = payoutForm.bankCode.trim();
             if (!msisdn) return t('Please enter your MoMo wallet number.');
             if (!accountName) return t('Please enter your MoMo wallet name.');
+            if (!bankCode) return t('Please select a mobile money network.');
             if (momoState.expectedLength && msisdn.length !== momoState.expectedLength) {
                 return t('MoMo wallet number should include country code.');
             }
@@ -520,6 +575,8 @@ const Settings: React.FC = () => {
                 enabled: true,
                 provider: 'momo',
                 bankCountry,
+                bankCode: payoutForm.bankCode.trim(),
+                bankName: payoutForm.bankName.trim() || undefined,
                 momoMsisdn: msisdn,
                 momoAccountName: accountName || undefined,
                 platformFeePercent: PLATFORM_FEE_PERCENT,
@@ -605,7 +662,8 @@ const Settings: React.FC = () => {
     const payoutAccountSummary = (() => {
         if (isMomoProvider && formData.paymentConfig?.momoMsisdn) {
             const last4 = formData.paymentConfig.momoMsisdn.slice(-4);
-            return `MoMo - ${t('Ending in')} ${last4 || '----'}`;
+            const network = formData.paymentConfig.bankName ? ` (${formData.paymentConfig.bankName})` : '';
+            return `MoMo${network} - ${t('Ending in')} ${last4 || '----'}`;
         }
         if (isStripeProvider && formData.paymentConfig?.accountId) {
             return `Stripe - ${formData.paymentConfig.accountId}`;
@@ -619,6 +677,51 @@ const Settings: React.FC = () => {
     const payoutProviderLabel = isMomoProvider ? 'MoMo' : isFlutterwaveProvider ? 'Flutterwave' : 'Stripe';
 
     const canConnectPayout = !payoutValidationError && !payoutLoading;
+    const payoutEntries = useMemo(() => payoutLogs.slice(0, 5), [payoutLogs]);
+    const latestPayout = payoutEntries[0];
+    const getPayoutStatusLabel = (action?: string) => {
+        if (!action) return t('Pending');
+        switch (action) {
+            case 'PAYOUT_INITIATED':
+                return t('Initiated');
+            case 'PAYOUT_COMPLETED':
+                return t('Completed');
+            case 'PAYOUT_FAILED':
+                return t('Failed');
+            default:
+                return t('Pending');
+        }
+    };
+    const getPayoutStatusTone = (action?: string) => {
+        if (!action) return 'text-slate-500';
+        if (action === 'PAYOUT_COMPLETED') return 'text-emerald-600';
+        if (action === 'PAYOUT_FAILED') return 'text-red-600';
+        return 'text-amber-600';
+    };
+    const latestPayoutDetails = useMemo<Record<string, any>>(() => {
+        if (!latestPayout?.details) return {};
+        try {
+            return JSON.parse(latestPayout.details);
+        } catch {
+            return {};
+        }
+    }, [latestPayout]);
+    const payoutStatusLabel = latestPayout ? getPayoutStatusLabel(latestPayout.action) : '';
+    const payoutStatusTone = latestPayout ? getPayoutStatusTone(latestPayout.action) : 'text-slate-500';
+    const payoutHistoryRows = useMemo(() => payoutEntries.map((log) => {
+        let details: Record<string, any> = {};
+        try {
+            details = JSON.parse(log.details || '{}');
+        } catch {
+            details = {};
+        }
+        return {
+            log,
+            details,
+            statusLabel: getPayoutStatusLabel(log.action),
+            statusTone: getPayoutStatusTone(log.action),
+        };
+    }), [payoutEntries, t]);
 
     if (!org) return <div>{t('Loading...')}</div>;
 
@@ -933,6 +1036,28 @@ const Settings: React.FC = () => {
                         {isMomoProvider && (
                             <>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {momoNetworkOptions.length > 0 || banksLoading ? (
+                                        <Select
+                                            label={t('Mobile money network')}
+                                            options={[
+                                                { label: t('Select a network'), value: '' },
+                                                ...momoNetworkOptions.map((bank) => ({ label: bank.name, value: bank.code })),
+                                            ]}
+                                            value={payoutForm.bankCode}
+                                            onChange={(e) => handleBankChange(e.target.value)}
+                                            disabled={banksLoading}
+                                        />
+                                    ) : (
+                                        <Input
+                                            label={t('Mobile money network')}
+                                            value={payoutForm.bankCode}
+                                            onChange={(e) => setPayoutForm(prev => ({
+                                                ...prev,
+                                                bankCode: e.target.value,
+                                                bankName: e.target.value,
+                                            }))}
+                                        />
+                                    )}
                                     <Input
                                         label={t('MoMo Wallet Number')}
                                         value={payoutForm.momoMsisdn}
@@ -1006,6 +1131,115 @@ const Settings: React.FC = () => {
                             <span className="font-semibold text-slate-900">{PLATFORM_FEE_PERCENT}%</span>
                         </div>
                         <p className="text-xs text-slate-500 mt-2">{t('InvoiceFlow fee per transaction.')}</p>
+
+                        <div className="mt-4 rounded-lg border border-slate-100 bg-white px-4 py-3 text-sm">
+                            <div className="flex items-center justify-between">
+                                <span className="font-medium text-slate-700">{t('Payout status')}</span>
+                                {latestPayout && (
+                                    <span className={`text-xs font-semibold ${payoutStatusTone}`}>
+                                        {payoutStatusLabel}
+                                    </span>
+                                )}
+                            </div>
+                            {payoutLogsLoading ? (
+                                <p className="mt-2 text-xs text-slate-500">{t('Loading...')}</p>
+                            ) : latestPayout ? (
+                                <div className="mt-2 space-y-2 text-xs text-slate-500">
+                                    <div className="font-medium text-slate-700">{t('Latest payout')}</div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <div>
+                                            <span className="text-slate-600">{t('Updated')}:</span>{' '}
+                                            {new Date(latestPayout.timestamp).toLocaleString()}
+                                        </div>
+                                        {latestPayoutDetails?.provider && (
+                                            <div>
+                                                <span className="text-slate-600">{t('Provider')}:</span>{' '}
+                                                {latestPayoutDetails.provider}
+                                            </div>
+                                        )}
+                                        {latestPayoutDetails?.method && (
+                                            <div>
+                                                <span className="text-slate-600">{t('Method')}:</span>{' '}
+                                                {latestPayoutDetails.method}
+                                            </div>
+                                        )}
+                                        {latestPayoutDetails?.reference && (
+                                            <div>
+                                                <span className="text-slate-600">{t('Reference')}:</span>{' '}
+                                                {latestPayoutDetails.reference}
+                                            </div>
+                                        )}
+                                        {latestPayoutDetails?.transferId && (
+                                            <div>
+                                                <span className="text-slate-600">{t('Transfer ID')}:</span>{' '}
+                                                {latestPayoutDetails.transferId}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {latestPayoutDetails?.error && (
+                                        <div className="text-red-600">{latestPayoutDetails.error}</div>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="mt-2 text-xs text-slate-500">{t('No payouts yet.')}</p>
+                            )}
+                        </div>
+
+                        <div className="mt-4 overflow-hidden rounded-lg border border-slate-100 bg-white">
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                                <span className="text-sm font-medium text-slate-700">{t('Payout history')}</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-50 border-b border-slate-100">
+                                        <tr>
+                                            <th className="px-4 py-3 font-medium text-slate-500">{t('Date')}</th>
+                                            <th className="px-4 py-3 font-medium text-slate-500">{t('Status')}</th>
+                                            <th className="px-4 py-3 font-medium text-slate-500">{t('Provider')}</th>
+                                            <th className="px-4 py-3 font-medium text-slate-500">{t('Method')}</th>
+                                            <th className="px-4 py-3 font-medium text-slate-500">{t('Reference')}</th>
+                                            <th className="px-4 py-3 font-medium text-slate-500">{t('Transfer ID')}</th>
+                                            <th className="px-4 py-3 font-medium text-slate-500">{t('Invoice')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {payoutHistoryRows.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="px-4 py-6 text-center text-xs text-slate-500">
+                                                    {t('No payout history yet.')}
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            payoutHistoryRows.map(({ log, details, statusLabel, statusTone }) => (
+                                                <tr key={log.id} className="hover:bg-slate-50/80">
+                                                    <td className="px-4 py-3 text-xs text-slate-600">
+                                                        {new Date(log.timestamp).toLocaleString()}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs">
+                                                        <span className={`font-semibold ${statusTone}`}>{statusLabel}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs text-slate-600">
+                                                        {details.provider || '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs text-slate-600">
+                                                        {details.method || '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs text-slate-600">
+                                                        {details.reference || '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs text-slate-600">
+                                                        {details.transferId || '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs text-slate-600">
+                                                        {details.invoiceNumber || '—'}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100">

@@ -35,6 +35,29 @@ const momoDisbursementSubscriptionKey = process.env.MOMO_DISBURSEMENT_SUBSCRIPTI
 const momoDisbursementUserId = process.env.MOMO_DISBURSEMENT_USER_ID;
 const momoDisbursementApiKey = process.env.MOMO_DISBURSEMENT_API_KEY;
 
+const FLUTTERWAVE_MOMO_TYPES = {
+    RW: 'mobile_money_rwanda',
+    GH: 'mobile_money_ghana',
+    KE: 'mpesa',
+    ZA: 'mobile_money_sa',
+};
+
+const FLUTTERWAVE_MOMO_OPTIONS = {
+    RW: 'mobilemoneyrwanda',
+    GH: 'mobilemoneyghana',
+    KE: 'mpesa',
+    ZA: 'mobilemoneysa',
+};
+
+const MOMO_NETWORK_REQUIRED = new Set(['GH']);
+
+const MOMO_COUNTRY_BY_CURRENCY = {
+    RWF: 'RW',
+    GHS: 'GH',
+    KES: 'KE',
+    ZAR: 'ZA',
+};
+
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 const supabaseAdmin = supabaseUrl && supabaseServiceKey
     ? createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } })
@@ -46,6 +69,139 @@ const resolvePlatformFeePercent = (value) => {
         return parsed;
     }
     return Number.isFinite(platformFeePercent) ? platformFeePercent : 1.5;
+};
+
+const createAgentLog = async ({ organizationId, action, details, relatedId, type }) => {
+    if (!supabaseAdmin || !organizationId) return;
+    const { error } = await supabaseAdmin.from('agent_logs').insert({
+        id: randomUUID(),
+        organization_id: organizationId,
+        timestamp: new Date().toISOString(),
+        action,
+        details,
+        related_id: relatedId || null,
+        type: type || 'INFO',
+    });
+    if (error) {
+        console.error('Failed to write agent log', error);
+    }
+};
+
+const hasPayoutLog = async (organizationId, relatedId) => {
+    if (!supabaseAdmin || !organizationId || !relatedId) return false;
+    const { data, error } = await supabaseAdmin
+        .from('agent_logs')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('related_id', relatedId)
+        .eq('action', 'PAYOUT_INITIATED')
+        .limit(1);
+    if (error) {
+        console.error('Failed to check payout logs', error);
+        return false;
+    }
+    return Array.isArray(data) && data.length > 0;
+};
+
+const createFlutterwaveTransfer = async (payload) => {
+    const response = await fetch('https://api.flutterwave.com/v3/transfers', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${flutterwaveSecretKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+};
+
+const resolveMomoCountry = (bankCountry, currency) => {
+    const normalized = String(bankCountry || '').trim().toUpperCase();
+    if (normalized) return normalized;
+    const normalizedCurrency = String(currency || '').trim().toUpperCase();
+    return MOMO_COUNTRY_BY_CURRENCY[normalizedCurrency] || '';
+};
+
+const resolveFlutterwaveMomoType = (countryCode) =>
+    FLUTTERWAVE_MOMO_TYPES[String(countryCode || '').trim().toUpperCase()] || null;
+
+const resolveFlutterwaveMomoOption = (countryCode) =>
+    FLUTTERWAVE_MOMO_OPTIONS[String(countryCode || '').trim().toUpperCase()] || null;
+
+const maybeTriggerFlutterwaveMomoPayout = async ({
+    org,
+    invoice,
+    amount,
+    currency,
+    reference,
+}) => {
+    if (!flutterwaveSecretKey || !supabaseAdmin || !org || !invoice) return;
+    const paymentConfig = org.payment_config || {};
+    if (paymentConfig.provider !== 'momo') return;
+    const momoMsisdn = String(paymentConfig.momoMsisdn || '').trim();
+    const momoBankCode = String(paymentConfig.bankCode || '').trim();
+    if (!momoMsisdn || !momoBankCode) return;
+
+    const payoutAmount = Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0;
+    if (payoutAmount <= 0) return;
+
+    const alreadyInitiated = await hasPayoutLog(org.id, invoice.id);
+    if (alreadyInitiated) return;
+
+    const transferReference = reference || `payout_${invoice.id}`;
+    const payload = {
+        account_bank: momoBankCode,
+        account_number: momoMsisdn,
+        amount: payoutAmount,
+        currency,
+        narration: `Invoice ${invoice.invoice_number} payout`,
+        reference: transferReference,
+        beneficiary_name: paymentConfig.momoAccountName || org.name,
+        meta: {
+            invoice_id: invoice.id,
+            invoice_number: invoice.invoice_number,
+            organization_id: org.id,
+            payout_method: 'momo',
+        },
+    };
+
+    try {
+        const { response, data } = await createFlutterwaveTransfer(payload);
+        if (!response.ok) {
+            console.error('Flutterwave MoMo payout failed', data);
+            await createAgentLog({
+                organizationId: org.id,
+                action: 'PAYOUT_FAILED',
+                details: JSON.stringify({
+                    provider: 'flutterwave',
+                    method: 'momo',
+                    reference: transferReference,
+                    error: data?.message || 'Transfer failed',
+                }),
+                relatedId: invoice.id,
+                type: 'WARNING',
+            });
+            return;
+        }
+
+        await createAgentLog({
+            organizationId: org.id,
+            action: 'PAYOUT_INITIATED',
+            details: JSON.stringify({
+                provider: 'flutterwave',
+                method: 'momo',
+                reference: transferReference,
+                status: data?.data?.status || 'pending',
+                transferId: data?.data?.id,
+                invoiceNumber: invoice.invoice_number,
+            }),
+            relatedId: invoice.id,
+            type: 'INFO',
+        });
+    } catch (error) {
+        console.error('Flutterwave MoMo payout error', error);
+    }
 };
 
 const escapeHtml = (input = '') =>
@@ -447,15 +603,16 @@ app.post('/api/payments/flutterwave/payouts', async (req, res) => {
 });
 
 app.post('/api/payments/momo/initialize', async (req, res) => {
-    if (!momoCollectionSubscriptionKey || !momoCollectionUserId || !momoCollectionApiKey) {
-        return res.status(500).json({ error: 'MoMo collection credentials are not configured.' });
+    if (!flutterwaveSecretKey) {
+        return res.status(500).json({ error: 'FLUTTERWAVE_SECRET_KEY is not configured.' });
     }
     if (!supabaseAdmin) {
         return res.status(500).json({ error: 'Supabase admin is not configured.' });
     }
 
-    const { invoiceId, payerPhone } = req.body || {};
+    const { invoiceId, payerPhone, payerNetwork } = req.body || {};
     const trimmedPhone = String(payerPhone || '').trim();
+    const trimmedNetwork = String(payerNetwork || '').trim().toUpperCase();
     if (!invoiceId || !trimmedPhone) {
         return res.status(400).json({ error: 'invoiceId and payerPhone are required.' });
     }
@@ -492,53 +649,101 @@ app.post('/api/payments/momo/initialize', async (req, res) => {
         return res.status(400).json({ error: 'MoMo payments are not enabled for this organization.' });
     }
 
-    const token = await getMomoCollectionToken();
-    if (!token) {
-        return res.status(500).json({ error: 'Failed to authenticate with MoMo.' });
+    const currency = String(org.currency || 'USD').toUpperCase();
+    const momoCountry = resolveMomoCountry(paymentConfig.bankCountry, currency);
+    const chargeType = resolveFlutterwaveMomoType(momoCountry);
+    const paymentOption = resolveFlutterwaveMomoOption(momoCountry);
+
+    if (!chargeType) {
+        return res.status(400).json({ error: 'Mobile money is not supported for this country.' });
+    }
+    if (MOMO_NETWORK_REQUIRED.has(momoCountry) && !trimmedNetwork) {
+        return res.status(400).json({ error: 'Mobile money network is required for this country.' });
     }
 
-    const referenceId = randomUUID();
+    const txRef = `momo_${invoice.id}_${Date.now()}`;
+    const redirectUrl = `${appBaseUrl}/catalog/${org.slug}/invoice/${invoice.id}`;
     const payload = {
-        amount: String(invoice.total),
-        currency: String(org.currency || 'USD').toUpperCase(),
-        externalId: invoice.id,
-        payer: {
-            partyIdType: 'MSISDN',
-            partyId: trimmedPhone,
+        tx_ref: txRef,
+        amount: Number.parseFloat(String(invoice.total || '0')),
+        currency,
+        email: invoice.client_email,
+        phone_number: trimmedPhone,
+        fullname: invoice.client_name,
+        redirect_url: redirectUrl,
+        meta: {
+            invoice_id: invoice.id,
+            organization_id: org.id,
+            platform_fee_percent: String(resolvePlatformFeePercent(paymentConfig.platformFeePercent)),
         },
-        payerMessage: `Invoice ${invoice.invoice_number}`,
-        payeeNote: `Payment to ${org.name}`,
     };
+    if (trimmedNetwork) {
+        payload.network = trimmedNetwork;
+    }
 
     try {
-        const response = await fetch(`${momoApiBaseUrl}/collection/v1_0/requesttopay`, {
+        const response = await fetch(`https://api.flutterwave.com/v3/charges?type=${encodeURIComponent(chargeType)}`, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${token}`,
-                'X-Reference-Id': referenceId,
-                'X-Target-Environment': momoTargetEnvironment,
-                'Ocp-Apim-Subscription-Key': momoCollectionSubscriptionKey,
+                Authorization: `Bearer ${flutterwaveSecretKey}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload),
         });
 
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            console.error('MoMo requestToPay failed', data);
+            console.error('Flutterwave MoMo charge failed', data);
+            if (paymentOption) {
+                const linkPayload = {
+                    tx_ref: txRef,
+                    amount: Number.parseFloat(String(invoice.total || '0')),
+                    currency,
+                    redirect_url: redirectUrl,
+                    payment_options: paymentOption,
+                    customer: {
+                        email: invoice.client_email,
+                        name: invoice.client_name,
+                        phone_number: trimmedPhone,
+                    },
+                    meta: payload.meta,
+                    customizations: {
+                        title: `${org.name} Invoice`,
+                        description: `Invoice ${invoice.invoice_number}`,
+                    },
+                };
+                const linkResponse = await fetch('https://api.flutterwave.com/v3/payments', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${flutterwaveSecretKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(linkPayload),
+                });
+                const linkData = await linkResponse.json().catch(() => ({}));
+                if (!linkResponse.ok) {
+                    console.error('Flutterwave fallback payment failed', linkData);
+                    return res.status(linkResponse.status).json({ error: linkData?.message || 'Failed to initialize MoMo payment.' });
+                }
+                const link = linkData?.data?.link;
+                if (!link) {
+                    return res.status(500).json({ error: 'Flutterwave did not return a payment link.' });
+                }
+                return res.json({ reference: txRef, link });
+            }
             return res.status(response.status).json({ error: data?.message || 'Failed to initialize MoMo payment.' });
         }
 
-        return res.json({ reference: referenceId });
+        return res.json({ reference: txRef, status: data?.data?.status || 'pending' });
     } catch (error) {
-        console.error('MoMo initialize error', error);
+        console.error('Flutterwave MoMo initialize error', error);
         return res.status(500).json({ error: 'Failed to initialize MoMo payment.' });
     }
 });
 
 app.get('/api/payments/momo/status', async (req, res) => {
-    if (!momoCollectionSubscriptionKey || !momoCollectionUserId || !momoCollectionApiKey) {
-        return res.status(500).json({ error: 'MoMo collection credentials are not configured.' });
+    if (!flutterwaveSecretKey) {
+        return res.status(500).json({ error: 'FLUTTERWAVE_SECRET_KEY is not configured.' });
     }
     if (!supabaseAdmin) {
         return res.status(500).json({ error: 'Supabase admin is not configured.' });
@@ -550,29 +755,27 @@ app.get('/api/payments/momo/status', async (req, res) => {
         return res.status(400).json({ error: 'reference is required.' });
     }
 
-    const token = await getMomoCollectionToken();
-    if (!token) {
-        return res.status(500).json({ error: 'Failed to authenticate with MoMo.' });
-    }
-
     try {
-        const response = await fetch(`${momoApiBaseUrl}/collection/v1_0/requesttopay/${reference}`, {
+        const response = await fetch(`https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`, {
             headers: {
-                Authorization: `Bearer ${token}`,
-                'X-Target-Environment': momoTargetEnvironment,
-                'Ocp-Apim-Subscription-Key': momoCollectionSubscriptionKey,
+                Authorization: `Bearer ${flutterwaveSecretKey}`,
             },
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            console.error('MoMo status check failed', data);
+            console.error('Flutterwave MoMo status check failed', data);
             return res.status(response.status).json({ error: data?.message || 'Failed to check MoMo status.' });
         }
 
-        const status = String(data?.status || '').toUpperCase();
-        const resolvedInvoiceId = data?.externalId || invoiceId;
+        const flwStatus = String(data?.data?.status || '').toUpperCase();
+        const normalizedStatus = flwStatus === 'SUCCESSFUL' ? 'SUCCESSFUL'
+            : flwStatus === 'FAILED' || flwStatus === 'CANCELLED' ? 'FAILED'
+                : 'PENDING';
+        const resolvedInvoiceId = data?.data?.meta?.invoice_id
+            || data?.data?.meta?.invoiceId
+            || invoiceId;
 
-        if (status === 'SUCCESSFUL' && resolvedInvoiceId) {
+        if (normalizedStatus === 'SUCCESSFUL' && resolvedInvoiceId) {
             const { data: invoice, error: invoiceError } = await supabaseAdmin
                 .from('invoices')
                 .select('id, organization_id, total, invoice_number')
@@ -592,22 +795,27 @@ app.get('/api/payments/momo/status', async (req, res) => {
                     console.error('Failed to load org for MoMo status', orgError);
                 }
 
-                const feePercent = resolvePlatformFeePercent(org?.payment_config?.platformFeePercent);
-                const amount = Number.parseFloat(String(invoice.total || '0'));
+                const feePercent = resolvePlatformFeePercent(
+                    data?.data?.meta?.platform_fee_percent
+                        || data?.data?.meta?.platformFeePercent
+                        || org?.payment_config?.platformFeePercent
+                );
+                const amount = Number.parseFloat(String(data?.data?.amount || invoice.total || '0'));
                 const platformFeeAmount = Number.isFinite(amount)
                     ? Math.round((amount * (feePercent / 100)) * 100) / 100
                     : 0;
                 const netAmount = Number.isFinite(amount) ? amount - platformFeeAmount : 0;
-                const paymentId = `momo_${reference}`;
+                const transactionId = data?.data?.id;
+                const paymentId = transactionId ? `flw_${transactionId}` : `flw_${reference}`;
 
                 const paymentRecord = {
                     id: paymentId,
                     invoice_id: invoice.id,
                     amount: Number.isFinite(amount) ? amount : 0,
-                    currency: org?.currency || null,
-                    status,
-                    provider: 'momo',
-                    provider_reference: reference,
+                    currency: data?.data?.currency || org?.currency || null,
+                    status: flwStatus || normalizedStatus,
+                    provider: 'flutterwave',
+                    provider_reference: data?.data?.flw_ref || data?.data?.tx_ref || reference,
                     platform_fee_percent: feePercent,
                     platform_fee_amount: platformFeeAmount,
                     net_amount: netAmount,
@@ -630,41 +838,20 @@ app.get('/api/payments/momo/status', async (req, res) => {
                     console.error('Failed to update invoice status for MoMo', invoiceUpdateError);
                 }
 
-                if (org?.payment_config?.momoMsisdn && momoDisbursementSubscriptionKey && momoDisbursementUserId && momoDisbursementApiKey) {
-                    const disbursementToken = await getMomoDisbursementToken();
-                    if (disbursementToken) {
-                        const transferReference = randomUUID();
-                        await fetch(`${momoApiBaseUrl}/disbursement/v1_0/transfer`, {
-                            method: 'POST',
-                            headers: {
-                                Authorization: `Bearer ${disbursementToken}`,
-                                'X-Reference-Id': transferReference,
-                                'X-Target-Environment': momoTargetEnvironment,
-                                'Ocp-Apim-Subscription-Key': momoDisbursementSubscriptionKey,
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                amount: String(invoice.total),
-                                currency: String(org.currency || 'USD').toUpperCase(),
-                                externalId: invoice.id,
-                                payee: {
-                                    partyIdType: 'MSISDN',
-                                    partyId: org.payment_config.momoMsisdn,
-                                },
-                                payerMessage: `Invoice ${invoice.invoice_number}`,
-                                payeeNote: `Payout to ${org.name}`,
-                            }),
-                        }).catch((transferError) => {
-                            console.error('MoMo payout transfer failed', transferError);
-                        });
-                    }
-                }
+                const payoutCurrency = data?.data?.currency || org?.currency || 'USD';
+                await maybeTriggerFlutterwaveMomoPayout({
+                    org,
+                    invoice,
+                    amount: netAmount,
+                    currency: payoutCurrency,
+                    reference: data?.data?.tx_ref || reference,
+                });
             }
         }
 
-        return res.json({ status: status || 'PENDING' });
+        return res.json({ status: normalizedStatus });
     } catch (error) {
-        console.error('MoMo status error', error);
+        console.error('Flutterwave MoMo status error', error);
         return res.status(500).json({ error: 'Failed to check MoMo status.' });
     }
 });
@@ -789,21 +976,21 @@ app.post('/api/webhooks/flutterwave', async (req, res) => {
     const data = payload.data || {};
 
     const isChargeCompleted = event === 'charge.completed' && data.status === 'successful';
-    const isTransferCompleted = event === 'transfer.completed'
-        && ['successful', 'SUCCESSFUL', 'success'].includes(String(data.status || ''));
+    const isTransferEvent = event === 'transfer.completed';
 
-    if (!isChargeCompleted && !isTransferCompleted) {
+    if (!isChargeCompleted && !isTransferEvent) {
         return res.json({ received: true });
     }
 
     const invoiceId = data?.meta?.invoice_id
         || data?.meta?.invoiceId
         || parseInvoiceIdFromRef(data?.tx_ref || data?.txRef || data?.reference || data?.flw_ref);
-    if (!invoiceId) {
-        return res.json({ received: true });
-    }
+    const organizationId = data?.meta?.organization_id || data?.meta?.organizationId;
 
     if (isChargeCompleted) {
+        if (!invoiceId) {
+            return res.json({ received: true });
+        }
         const amount = Number.parseFloat(String(data.amount || '0'));
         const feePercent = resolvePlatformFeePercent(data?.meta?.platform_fee_percent || data?.meta?.platformFeePercent);
         const platformFeeAmount = Number.isFinite(amount)
@@ -833,14 +1020,87 @@ app.post('/api/webhooks/flutterwave', async (req, res) => {
         if (paymentError) {
             console.error('Failed to record payment', paymentError);
         }
+
+        if (invoiceId) {
+            const { data: invoiceRow, error: invoiceRowError } = await supabaseAdmin
+                .from('invoices')
+                .select('id, organization_id, total, invoice_number')
+                .eq('id', invoiceId)
+                .maybeSingle();
+            if (invoiceRowError) {
+                console.error('Failed to load invoice for payout', invoiceRowError);
+            } else if (invoiceRow) {
+                const { data: orgRow, error: orgRowError } = await supabaseAdmin
+                    .from('organizations')
+                    .select('id, name, currency, payment_config')
+                    .eq('id', invoiceRow.organization_id)
+                    .maybeSingle();
+                if (orgRowError) {
+                    console.error('Failed to load org for payout', orgRowError);
+                } else if (orgRow) {
+                    const payoutCurrency = data.currency || orgRow.currency || 'USD';
+                    await maybeTriggerFlutterwaveMomoPayout({
+                        org: orgRow,
+                        invoice: invoiceRow,
+                        amount: netAmount,
+                        currency: payoutCurrency,
+                        reference: data.tx_ref || data.flw_ref,
+                    });
+                }
+            }
+        }
+
+        const { error: invoiceError } = await supabaseAdmin
+            .from('invoices')
+            .update({ status: 'PAID' })
+            .eq('id', invoiceId);
+        if (invoiceError) {
+            console.error('Failed to update invoice status', invoiceError);
+        }
     }
 
-    const { error: invoiceError } = await supabaseAdmin
-        .from('invoices')
-        .update({ status: 'PAID' })
-        .eq('id', invoiceId);
-    if (invoiceError) {
-        console.error('Failed to update invoice status', invoiceError);
+    if (isTransferEvent) {
+        const transferStatus = String(data.status || '').toUpperCase();
+        const normalizedStatus = transferStatus === 'SUCCESSFUL' ? 'SUCCESSFUL' : 'FAILED';
+        let resolvedOrgId = organizationId;
+        let resolvedInvoiceId = invoiceId;
+
+        if (!resolvedOrgId && resolvedInvoiceId) {
+            const { data: invoiceRow } = await supabaseAdmin
+                .from('invoices')
+                .select('organization_id')
+                .eq('id', resolvedInvoiceId)
+                .maybeSingle();
+            if (invoiceRow?.organization_id) {
+                resolvedOrgId = invoiceRow.organization_id;
+            }
+        }
+
+        if (resolvedOrgId) {
+            let resolvedInvoiceNumber = data?.meta?.invoice_number;
+            if (!resolvedInvoiceNumber && resolvedInvoiceId) {
+                const { data: invoiceRow } = await supabaseAdmin
+                    .from('invoices')
+                    .select('invoice_number')
+                    .eq('id', resolvedInvoiceId)
+                    .maybeSingle();
+                resolvedInvoiceNumber = invoiceRow?.invoice_number;
+            }
+            await createAgentLog({
+                organizationId: resolvedOrgId,
+                action: normalizedStatus === 'SUCCESSFUL' ? 'PAYOUT_COMPLETED' : 'PAYOUT_FAILED',
+                details: JSON.stringify({
+                    provider: 'flutterwave',
+                    method: data?.meta?.payout_method || 'momo',
+                    status: transferStatus || normalizedStatus,
+                    transferId: data?.id,
+                    reference: data?.reference,
+                    invoiceNumber: resolvedInvoiceNumber,
+                }),
+                relatedId: resolvedInvoiceId || null,
+                type: normalizedStatus === 'SUCCESSFUL' ? 'SUCCESS' : 'WARNING',
+            });
+        }
     }
 
     return res.json({ received: true });

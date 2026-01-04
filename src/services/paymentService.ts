@@ -20,6 +20,7 @@ export interface PaymentConfig {
     description: string;
     metadata?: Record<string, string>;
     payerPhone?: string;
+    payerNetwork?: string;
 }
 
 export interface PaymentResult {
@@ -284,6 +285,7 @@ export const initMomoPayment = async (config: PaymentConfig): Promise<PaymentRes
             body: JSON.stringify({
                 invoiceId: config.invoiceId,
                 payerPhone: config.payerPhone,
+                payerNetwork: config.payerNetwork,
             }),
         });
 
@@ -293,6 +295,9 @@ export const initMomoPayment = async (config: PaymentConfig): Promise<PaymentRes
         }
 
         const data = await response.json();
+        if (data?.link) {
+            return { success: true, redirectUrl: data.link, reference: data.reference };
+        }
         if (!data?.reference) {
             return { success: false, error: 'Missing MoMo reference.' };
         }
