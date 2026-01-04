@@ -5,7 +5,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import BusinessChatWidget from '@/components/BusinessChatWidget';
 import { Button, Card } from '@/components/ui';
 import { getSupabaseClient } from '@/services/supabaseClient';
-import { clearCurrentAccountId, clearCurrentUserId, getAccountById, getCurrentUserId, getOrganizationBySlug, getUserByEmail, setCurrentAccountId, setCurrentUserId, updateOrganization } from '@/services/storage';
+import { clearCurrentAccountId, clearCurrentUserId, getAccountById, getCurrentUserId, getOrganizationBySlug, getUserByEmail, setCurrentAccountId, setCurrentUserId, updateAccountSubscription } from '@/services/storage';
 import { Account, Organization } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -226,13 +226,10 @@ const AdminLayout: React.FC = () => {
     setIsUpgrading(true);
     setUpgradeError(null);
     try {
-      await updateOrganization({
-        ...org,
-        subscription: {
-          status: 'active',
-          billingCycle,
-          startedAt: new Date().toISOString(),
-        },
+      await updateAccountSubscription(org.accountId, {
+        status: 'active',
+        billingCycle,
+        startedAt: new Date().toISOString(),
       });
       setShowUpgradeModal(false);
       refreshOrg();

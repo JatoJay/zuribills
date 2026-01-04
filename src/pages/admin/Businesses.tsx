@@ -4,8 +4,10 @@ import { Button, Card, Input, Select } from '@/components/ui';
 import { useAdminContext } from './AdminLayout';
 import {
   createOrganization,
-  getOrganizations,
   getOrganizationsByAccount,
+  getOrganizationsForUser,
+  getOrganizationBySlug,
+  getCurrentUserId,
 } from '@/services/storage';
 import { Organization } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -63,7 +65,7 @@ const languageSuggestions = [
 ];
 
 const Businesses: React.FC = () => {
-  const { org, account } = useAdminContext();
+  const { org, account, isOwner } = useAdminContext();
   const navigate = useNavigate();
   const translationStrings = useMemo(() => ([
     'Businesses',
@@ -113,7 +115,10 @@ const Businesses: React.FC = () => {
     setLoading(true);
     const accountId = org.accountId;
     if (accountId) {
-      const orgs = await getOrganizationsByAccount(accountId);
+      const currentUserId = getCurrentUserId();
+      const orgs = isOwner
+        ? await getOrganizationsByAccount(accountId)
+        : await getOrganizationsForUser(currentUserId, accountId);
       setBusinesses(orgs);
     }
     setLoading(false);
@@ -178,6 +183,7 @@ const Businesses: React.FC = () => {
         KES: 'Kenyan Shilling',
         ZAR: 'South African Rand',
         RWF: 'Rwandan Franc',
+        CAD: 'Canadian Dollar',
       };
       setCurrencyInfo({
         code: resolvedCode,
@@ -202,11 +208,11 @@ const Businesses: React.FC = () => {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'business';
-    const orgs = await getOrganizations();
-    if (!orgs.some(org => org.slug === base)) return base;
+    const existing = await getOrganizationBySlug(base);
+    if (!existing) return base;
     let count = 2;
     let candidate = `${base}-${count}`;
-    while (orgs.some(org => org.slug === candidate)) {
+    while (await getOrganizationBySlug(candidate)) {
       count += 1;
       candidate = `${base}-${count}`;
     }

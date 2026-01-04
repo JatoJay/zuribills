@@ -4,6 +4,7 @@ export const MOMO_COUNTRIES = ['RW', 'GH', 'KE', 'ZA'] as const;
 export const FLUTTERWAVE_COUNTRIES = ['NG'] as const;
 export const STRIPE_COUNTRIES = [
   'US',
+  'CA',
   'GB',
   'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU',
   'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES',
@@ -21,6 +22,10 @@ const FLUTTERWAVE_CURRENCY_BY_COUNTRY: Record<string, string> = {
   NG: 'NGN',
 };
 
+const DEFAULT_CURRENCY_BY_COUNTRY: Record<string, string> = {
+  CA: 'CAD',
+};
+
 const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   Nigeria: 'NG',
   Ghana: 'GH',
@@ -30,6 +35,7 @@ const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   'United States': 'US',
   'United States of America': 'US',
   USA: 'US',
+  Canada: 'CA',
   'United Kingdom': 'GB',
   UK: 'GB',
 };
@@ -78,6 +84,9 @@ export const resolveDefaultCurrency = (countryCode?: string, fallbackCurrency = 
   }
   if (FLUTTERWAVE_CURRENCY_BY_COUNTRY[normalized]) {
     return FLUTTERWAVE_CURRENCY_BY_COUNTRY[normalized];
+  }
+  if (DEFAULT_CURRENCY_BY_COUNTRY[normalized]) {
+    return DEFAULT_CURRENCY_BY_COUNTRY[normalized];
   }
   if (shouldDefaultToUsd(normalized)) {
     return 'USD';

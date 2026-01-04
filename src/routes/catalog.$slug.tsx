@@ -1,6 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import CatalogLayout from '@/pages/public/CatalogLayout'
+import { createFileRoute, lazyRouteComponent } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/catalog/$slug')({
-    component: CatalogLayout,
+    component: lazyRouteComponent(() => import('@/pages/public/CatalogLayout')),
 })

@@ -6,11 +6,13 @@ import { getSupabaseClient } from '@/services/supabaseClient';
 import {
   getOrganizationBySlug,
   getOrganizationsByAccount,
+  getOrganizationsForUser,
   getOrgMemberships,
   getUserByEmail,
   setCurrentAccountId,
   setCurrentUserId,
 } from '@/services/storage';
+import { UserRole } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { ArrowRight, Building2, ShieldCheck, Sparkles, Eye, EyeOff } from 'lucide-react';
 
@@ -111,12 +113,20 @@ const Login: React.FC = () => {
           return;
         }
       } else {
-        const orgs = await getOrganizationsByAccount(userRecord.accountId);
-        if (!orgs.length) {
+        const orgs = await getOrganizationsForUser(userRecord.id, userRecord.accountId);
+        if (!orgs.length && [UserRole.OWNER, UserRole.ADMIN].includes(userRecord.role)) {
+          const accountOrgs = await getOrganizationsByAccount(userRecord.accountId);
+          if (accountOrgs.length) {
+            destinationSlug = accountOrgs[0].slug;
+          }
+        } else if (orgs.length) {
+          destinationSlug = orgs[0].slug;
+        }
+
+        if (!destinationSlug) {
           navigate({ to: '/onboarding', search: { email: normalizedEmail } as any });
           return;
         }
-        destinationSlug = orgs[0].slug;
       }
 
       navigate({ to: '/org/$slug', params: { slug: destinationSlug } });
