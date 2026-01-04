@@ -33,6 +33,22 @@ const PAYMENT_GATEWAYS: Record<string, any> = {
     },
 };
 
+const MOMO_COUNTRY_BY_CURRENCY: Record<string, string> = {
+    RWF: 'RW',
+    GHS: 'GH',
+    KES: 'KE',
+    ZAR: 'ZA',
+};
+
+const MOMO_NETWORK_HINTS: Record<string, string> = {
+    GH: 'MTN, Vodafone, AirtelTigo',
+    RW: 'MTN, Airtel',
+    KE: 'M-Pesa',
+    ZA: 'MTN, Vodacom',
+};
+
+const MOMO_NETWORK_REQUIRED = new Set(['GH']);
+
 const InvoiceView: React.FC = () => {
     const params = useParams({ strict: false });
     const slug = (params as any).slug;
@@ -80,6 +96,9 @@ const InvoiceView: React.FC = () => {
         'Waiting for MoMo confirmation...',
         'Mobile money number',
         'Enter your mobile money number to receive the payment prompt.',
+        'Mobile money network',
+        'Enter your mobile money network (e.g., MTN).',
+        'Enter your mobile money network to continue.',
         'Payment cancelled.',
     ]), []);
     const { t } = useTranslation(translationStrings);
@@ -92,6 +111,7 @@ const InvoiceView: React.FC = () => {
     const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
     const [paymentReturnStatus, setPaymentReturnStatus] = useState<'success' | 'failed' | null>(null);
     const [momoPhone, setMomoPhone] = useState('');
+    const [momoNetwork, setMomoNetwork] = useState('');
 
     useEffect(() => {
         const load = async () => {
@@ -171,10 +191,15 @@ const InvoiceView: React.FC = () => {
             setErrorMessage(t('Enter your mobile money number to receive the payment prompt.'));
             return;
         }
+        if (gateway === 'momo' && momoNetworkRequired && !momoNetwork.trim()) {
+            setPaymentStatus('error');
+            setErrorMessage(t('Enter your mobile money network to continue.'));
+            return;
+        }
         setIsProcessing(true);
         setSelectedGateway(gateway);
         setErrorMessage('');
-        setPaymentStatus(gateway === 'momo' ? 'pending' : 'redirecting');
+        setPaymentStatus('redirecting');
 
         const result = await processPayment(gateway as PaymentGateway, {
             invoiceId: data.invoice.id,
@@ -184,6 +209,7 @@ const InvoiceView: React.FC = () => {
             customerName: data.invoice.clientName,
             description: `Payment for Invoice ${data.invoice.invoiceNumber}`,
             payerPhone: momoPhone.trim(),
+            payerNetwork: momoNetwork.trim(),
         });
 
         if (result.redirectUrl) {
@@ -192,6 +218,7 @@ const InvoiceView: React.FC = () => {
         }
 
         if (gateway === 'momo' && result.success && result.reference) {
+            setPaymentStatus('pending');
             setPaymentNotice(t('MoMo prompt sent. Please approve the payment on your phone.'));
             const reference = result.reference;
             if (!reference) {
@@ -269,6 +296,9 @@ const InvoiceView: React.FC = () => {
 
     const { invoice, org } = data;
     const paymentConfig = org.paymentConfig;
+    const momoCountry = (paymentConfig?.bankCountry || MOMO_COUNTRY_BY_CURRENCY[String(org.currency || '').toUpperCase()] || '').toUpperCase();
+    const momoNetworkRequired = Boolean(momoCountry && MOMO_NETWORK_REQUIRED.has(momoCountry));
+    const momoNetworkHint = momoCountry ? MOMO_NETWORK_HINTS[momoCountry] : '';
     const paymentProvider = paymentConfig?.bankCountry
         ? resolvePayoutProvider(paymentConfig.bankCountry)
         : (paymentConfig?.provider || 'flutterwave');
@@ -484,11 +514,27 @@ const InvoiceView: React.FC = () => {
                                             value={momoPhone}
                                             inputMode="tel"
                                             onChange={(e) => setMomoPhone(e.target.value)}
-                                            className="bg-slate-50"
+                                            className="bg-white border-slate-200 focus:border-primary"
                                         />
                                         <p className="text-xs text-slate-500 mt-1">
                                             {t('Enter your mobile money number to receive the payment prompt.')}
                                         </p>
+                                        {momoNetworkRequired && (
+                                            <div className="mt-3">
+                                                <Input
+                                                    label={t('Mobile money network')}
+                                                    value={momoNetwork}
+                                                    placeholder={momoNetworkHint || t('Enter your mobile money network (e.g., MTN).')}
+                                                    onChange={(e) => setMomoNetwork(e.target.value)}
+                                                    className="bg-white border-slate-200 focus:border-primary"
+                                                />
+                                                {momoNetworkHint && (
+                                                    <p className="text-xs text-slate-500 mt-1">
+                                                        {momoNetworkHint}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
