@@ -340,7 +340,7 @@ const Settings: React.FC = () => {
             return;
         }
 
-        const updated = {
+        const updated: Organization = {
             ...formData,
             paymentConfig: {
                 ...(formData.paymentConfig || {}),
@@ -378,7 +378,7 @@ const Settings: React.FC = () => {
             return;
         }
 
-        const updated = {
+        const updated: Organization = {
             ...formData,
             paymentConfig: {
                 ...(formData.paymentConfig || {}),
@@ -650,6 +650,7 @@ const Settings: React.FC = () => {
                             label={t('Default Currency')}
                             options={[
                                 { label: 'USD ($)', value: 'USD' },
+                                { label: 'CAD (CA$)', value: 'CAD' },
                                 { label: 'NGN (₦)', value: 'NGN' },
                                 { label: 'GHS (GH₵)', value: 'GHS' },
                                 { label: 'KES (KSh)', value: 'KES' },

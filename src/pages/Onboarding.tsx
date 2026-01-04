@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input, Select } from '../components/ui';
-import { createAccount, createOrganization, createUser, getCurrentAccountId, getCurrentUserId, getOrganizations, setCurrentAccountId, setCurrentUserId } from '../services/storage';
+import { createAccount, createOrganization, createUser, getCurrentAccountId, getCurrentUserId, getOrganizationBySlug, setCurrentAccountId, setCurrentUserId } from '../services/storage';
 import { UserRole } from '../types';
 import { Zap, ShieldCheck, Clock3, Sparkles } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -100,11 +100,11 @@ const Onboarding: React.FC = () => {
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-+|-+$/g, '') || 'business';
-        const orgs = await getOrganizations();
-        if (!orgs.some(org => org.slug === base)) return base;
+        const existing = await getOrganizationBySlug(base);
+        if (!existing) return base;
         let count = 2;
         let candidate = `${base}-${count}`;
-        while (orgs.some(org => org.slug === candidate)) {
+        while (await getOrganizationBySlug(candidate)) {
             count += 1;
             candidate = `${base}-${count}`;
         }
@@ -184,6 +184,7 @@ const Onboarding: React.FC = () => {
                 KES: 'Kenyan Shilling',
                 ZAR: 'South African Rand',
                 RWF: 'Rwandan Franc',
+                CAD: 'Canadian Dollar',
             };
             setCurrencyInfo({
                 code: resolvedCode,

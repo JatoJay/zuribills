@@ -400,6 +400,30 @@ export const getOrganizationsByAccount = async (accountId: string): Promise<Orga
   return (data || []).map(mapOrganizationFromDb);
 };
 
+export const getOrganizationsForUser = async (userId: string, accountId?: string): Promise<Organization[]> => {
+  if (!userId) return [];
+  const supabase = getSupabaseClient();
+  const { data: memberships, error: membershipError } = await supabase
+    .from('org_memberships')
+    .select('organization_id')
+    .eq('user_id', userId);
+  if (membershipError) throw membershipError;
+  const orgIds = (memberships || []).map((row) => row.organization_id);
+  if (!orgIds.length) return [];
+
+  let query = supabase
+    .from('organizations')
+    .select('*')
+    .in('id', orgIds)
+    .order('created_at', { ascending: false });
+  if (accountId) {
+    query = query.eq('account_id', accountId);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []).map(mapOrganizationFromDb);
+};
+
 export const getAccountById = async (accountId: string): Promise<Account | undefined> => {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
@@ -454,6 +478,8 @@ export const createOrganization = async (org: Omit<Organization, 'id' | 'created
   }
 
   const now = new Date();
+  const accountOrgs = org.accountId ? await getOrganizationsByAccount(org.accountId) : [];
+  const activeSubscription = accountOrgs.find((existingOrg) => existingOrg.subscription?.status === 'active')?.subscription;
   const bankCountry = resolveCountryCode(org.paymentConfig?.bankCountry, org.address?.country);
   const provider = resolvePayoutProvider(bankCountry || org.paymentConfig?.bankCountry);
   const newOrg: Organization = {
@@ -468,6 +494,7 @@ export const createOrganization = async (org: Omit<Organization, 'id' | 'created
       bankCountry: bankCountry || undefined,
       platformFeePercent: 1.5,
     },
+    subscription: org.subscription ?? activeSubscription,
     trial: org.trial ?? buildTrial(now),
     id: crypto.randomUUID(),
     createdAt: now.toISOString(),
@@ -527,6 +554,16 @@ export const updateOrganization = async (updatedOrg: Organization): Promise<Orga
     .eq('id', updatedOrg.id);
   if (error) throw error;
   return updatedOrg;
+};
+
+export const updateAccountSubscription = async (accountId: string, subscription: Organization['subscription']): Promise<void> => {
+  if (!accountId || !subscription) return;
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from('organizations')
+    .update({ subscription })
+    .eq('account_id', accountId);
+  if (error) throw error;
 };
 
 // --- Memberships ---

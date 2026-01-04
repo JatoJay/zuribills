@@ -11,6 +11,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 // Currency configuration
 const CURRENCIES = [
     { value: 'USD', label: 'USD ($)', symbol: '$' },
+    { value: 'CAD', label: 'CAD (CA$)', symbol: 'CA$' },
     { value: 'NGN', label: 'NGN (₦)', symbol: '₦' },
     { value: 'GHS', label: 'GHS (GH₵)', symbol: 'GH₵' },
     { value: 'KES', label: 'KES (KSh)', symbol: 'KSh' },
@@ -27,6 +28,7 @@ const COUNTRY_CURRENCY_MAP: Record<string, string> = {
     'KE': 'KES', // Kenya
     'ZA': 'ZAR', // South Africa
     'RW': 'RWF', // Rwanda
+    'CA': 'CAD', // Canada
     'GB': 'GBP', // United Kingdom
     'US': 'USD', // United States
     'DE': 'EUR', // Germany
@@ -109,6 +111,7 @@ const Checkout: React.FC = () => {
     // Currency conversion rates (simplified - in production use real API)
     const conversionRates: Record<string, number> = {
         'USD': 1,
+        'CAD': 1.36,
         'NGN': 1550,
         'GHS': 12.5,
         'KES': 150,
