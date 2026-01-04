@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, createContext, useContext } from 'react';
-import { Outlet, useParams, useNavigate } from '@tanstack/react-router';
+import { Outlet, useParams, useNavigate, useRouterState } from '@tanstack/react-router';
 import { getOrganizationBySlug } from '@/services/storage';
 import { Organization, Service } from '@/types';
 import { ShoppingCart, X, Trash2 } from 'lucide-react';
@@ -26,6 +26,9 @@ const CatalogLayout: React.FC = () => {
     const [org, setOrg] = useState<Organization | null>(null);
     const [cart, setCart] = useState<CartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const isSuccessRoute = useRouterState({
+        select: (state) => state.location.pathname.includes('/success/'),
+    });
     const translationStrings = useMemo(() => ([
         'Loading...',
         'Cart',
@@ -75,10 +78,17 @@ const CatalogLayout: React.FC = () => {
 
     const clearCart = () => setCart([]);
 
-    if (!org) return <div className="p-8 text-center text-foreground">{t('Loading...')}</div>;
-
     const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const isCatalogEnabled = org.catalogEnabled !== false;
+    const isCatalogEnabled = Boolean(org && org.catalogEnabled !== false);
+    const showCart = isCatalogEnabled && !isSuccessRoute;
+
+    useEffect(() => {
+        if (isSuccessRoute && isCartOpen) {
+            setIsCartOpen(false);
+        }
+    }, [isSuccessRoute, isCartOpen]);
+
+    if (!org) return <div className="p-8 text-center text-foreground">{t('Loading...')}</div>;
 
     return (
         <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, isCartOpen, setIsCartOpen }}>
@@ -90,7 +100,7 @@ const CatalogLayout: React.FC = () => {
                             <div className="font-bold text-xl text-foreground">{org.name}</div>
                             <div className="flex items-center gap-3">
                                 <ThemeToggle />
-                                {isCatalogEnabled && (
+                                {showCart && (
                                     <Button variant="outline" onClick={() => setIsCartOpen(!isCartOpen)} className={`relative ${isCartOpen ? 'bg-primary/10 border-primary/20 text-primary' : ''}`}>
                                         <ShoppingCart className="w-4 h-4 mr-2" />
                                         {isCartOpen ? t('Close') : t('Cart')}
@@ -109,13 +119,13 @@ const CatalogLayout: React.FC = () => {
                     <div className="flex flex-1 relative overflow-hidden">
                         {/* Content Scroll Area */}
                         <div className="flex-1 overflow-y-auto h-[calc(100vh-4rem)]">
-                            <main className="max-w-7xl mx-auto px-4 py-8">
+                            <main className={isSuccessRoute ? "w-full max-w-none px-4 py-8 flex justify-center" : "max-w-7xl mx-auto px-4 py-8"}>
                                 <Outlet />
                             </main>
                         </div>
 
                         {/* Desktop Sidebar (Resizes Content) */}
-                        {isCatalogEnabled && (
+                        {showCart && (
                             <aside className={`
                                 hidden lg:flex flex-col w-96 border-l border-border bg-surface
                                 transition-all duration-300 ease-in-out h-[calc(100vh-4rem)]
@@ -126,7 +136,7 @@ const CatalogLayout: React.FC = () => {
                         )}
 
                         {/* Mobile Overlay (Modal) */}
-                        {isCatalogEnabled && isCartOpen && (
+                        {showCart && isCartOpen && (
                             <div className="lg:hidden fixed inset-0 z-50 flex justify-end">
                                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
                                 <div className="relative w-full max-w-md bg-surface h-full shadow-2xl flex flex-col border-l border-border animate-slide-in-right">

@@ -24,6 +24,7 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY;
 const flutterwaveWebhookSecret = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const platformFeePercent = Number.parseFloat(process.env.PLATFORM_FEE_PERCENT || '1.5');
 const momoApiBaseUrl = process.env.MOMO_API_BASE_URL || 'https://sandbox.momodeveloper.mtn.com';
 const momoTargetEnvironment = process.env.MOMO_TARGET_ENVIRONMENT || 'sandbox';
@@ -131,6 +132,58 @@ const getMomoDisbursementToken = () => getMomoToken({
     product: 'disbursement',
 });
 
+const RATE_CACHE_TTL_MS = 5 * 60 * 1000;
+const rateCache = new Map();
+
+const getCachedRate = (key) => {
+    const entry = rateCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > RATE_CACHE_TTL_MS) {
+        rateCache.delete(key);
+        return null;
+    }
+    return entry;
+};
+
+const setCachedRate = (key, rate, source) => {
+    rateCache.set(key, { rate, source, timestamp: Date.now() });
+};
+
+const fetchStripeRate = async (from, to) => {
+    if (!stripeSecretKey) return null;
+    const response = await fetch(`https://api.stripe.com/v1/exchange_rates/${from.toLowerCase()}`, {
+        headers: {
+            Authorization: `Bearer ${stripeSecretKey}`,
+        },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        console.error('Stripe rate error', data);
+        return null;
+    }
+    const rateValue = data?.rates?.[to.toLowerCase()];
+    const rate = Number.parseFloat(rateValue);
+    return Number.isFinite(rate) ? rate : null;
+};
+
+const fetchFlutterwaveRate = async (from, to, amount = 1) => {
+    if (!flutterwaveSecretKey) return null;
+    const response = await fetch(`https://api.flutterwave.com/v3/rates?from=${from}&to=${to}&amount=${amount}`, {
+        headers: {
+            Authorization: `Bearer ${flutterwaveSecretKey}`,
+            'Content-Type': 'application/json',
+        },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        console.error('Flutterwave rate error', data);
+        return null;
+    }
+    const rateValue = data?.data?.rate ?? data?.data?.exchange_rate ?? data?.data?.fx_rate ?? data?.rate;
+    const rate = Number.parseFloat(rateValue);
+    return Number.isFinite(rate) ? rate : null;
+};
+
 app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
 });
@@ -209,6 +262,50 @@ app.get('/api/payments/flutterwave/banks', async (req, res) => {
     }
 });
 
+app.get('/api/payments/rates', async (req, res) => {
+    const from = String(req.query.from || '').toUpperCase();
+    const to = String(req.query.to || '').toUpperCase();
+    const provider = String(req.query.provider || '').toLowerCase();
+    const amount = Number.parseFloat(String(req.query.amount || '1'));
+
+    if (!from || !to) {
+        return res.status(400).json({ error: 'from and to are required.' });
+    }
+    if (from === to) {
+        return res.json({ rate: 1, source: 'same-currency' });
+    }
+
+    const safeAmount = Number.isFinite(amount) && amount > 0 ? amount : 1;
+    const requestedProviders = [];
+    if (provider) {
+        requestedProviders.push(provider);
+    }
+    if (!requestedProviders.includes('flutterwave')) requestedProviders.push('flutterwave');
+    if (!requestedProviders.includes('stripe')) requestedProviders.push('stripe');
+
+    for (const current of requestedProviders) {
+        const cacheKey = `${current}:${from}:${to}`;
+        const cached = getCachedRate(cacheKey);
+        if (cached) {
+            return res.json({ rate: cached.rate, source: cached.source, cached: true });
+        }
+
+        let rate = null;
+        if (current === 'stripe') {
+            rate = await fetchStripeRate(from, to);
+        } else if (current === 'flutterwave') {
+            rate = await fetchFlutterwaveRate(from, to, safeAmount);
+        }
+
+        if (Number.isFinite(rate)) {
+            setCachedRate(cacheKey, rate, current);
+            return res.json({ rate, source: current, cached: false });
+        }
+    }
+
+    return res.status(503).json({ error: 'No exchange rate available from configured providers.' });
+});
+
 app.post('/api/payments/flutterwave/payouts', async (req, res) => {
     if (!flutterwaveSecretKey) {
         return res.status(500).json({ error: 'FLUTTERWAVE_SECRET_KEY is not configured.' });
@@ -233,12 +330,17 @@ app.post('/api/payments/flutterwave/payouts', async (req, res) => {
 
     const bankCodeValue = String(bankCode || '').trim();
     const accountNumberValue = String(accountNumber || '').trim();
+    const accountNameValue = String(accountName || '').trim();
+    const bankCountryValue = String(bankCountry || '').trim().toUpperCase();
 
     if (!orgId) {
         return res.status(400).json({ error: 'orgId is required.' });
     }
-    if (!bankCodeValue || !accountNumberValue) {
-        return res.status(400).json({ error: 'Bank code and account number are required.' });
+    if (!bankCountryValue || !bankCodeValue || !accountNumberValue || !accountNameValue) {
+        return res.status(400).json({ error: 'Bank country, bank, account number, and account name are required.' });
+    }
+    if (!/^\d+$/.test(accountNumberValue)) {
+        return res.status(400).json({ error: 'Account number must be numeric.' });
     }
 
     const { data: org, error: orgError } = await supabaseAdmin
@@ -267,7 +369,7 @@ app.post('/api/payments/flutterwave/payouts', async (req, res) => {
         return res.status(403).json({ error: 'Not authorized to update this organization.' });
     }
 
-    const country = String(bankCountry || 'NG').toUpperCase();
+    const country = bankCountryValue;
     const feePercent = resolvePlatformFeePercent(org.payment_config?.platformFeePercent);
 
     const payload = {
@@ -316,7 +418,7 @@ app.post('/api/payments/flutterwave/payouts', async (req, res) => {
             bankName: bankName || subaccount.bank_name || null,
             bankCode: bankCodeValue,
             bankCountry: country,
-            accountName: accountName || subaccount.account_name || null,
+            accountName: accountNameValue || subaccount.account_name || null,
             accountNumberLast4,
             platformFeePercent: feePercent,
         };

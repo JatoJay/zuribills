@@ -37,6 +37,70 @@ const languageOptions = [
 ];
 
 const PLATFORM_FEE_PERCENT = 1.5;
+const MOMO_MSISDN_RULES: Record<string, { countryCode: string; nationalLength: number; example: string }> = {
+    RW: { countryCode: '250', nationalLength: 9, example: '+2507XXXXXXXX' },
+    GH: { countryCode: '233', nationalLength: 9, example: '+2335XXXXXXX' },
+    KE: { countryCode: '254', nationalLength: 9, example: '+2547XXXXXXXX' },
+    ZA: { countryCode: '27', nationalLength: 9, example: '+278XXXXXXXX' },
+};
+const BANK_ACCOUNT_RULES: Record<string, { minLength: number; maxLength: number; example: string }> = {
+    NG: { minLength: 10, maxLength: 10, example: '0123456789' },
+};
+const DEFAULT_ACCOUNT_RULE = { minLength: 6, maxLength: 18, example: '0123456789' };
+
+const stripToDigits = (value: string) => value.replace(/\D/g, '');
+
+const resolveMomoRule = (countryCode?: string) => {
+    if (!countryCode) return undefined;
+    return MOMO_MSISDN_RULES[countryCode];
+};
+
+const normalizeMomoMsisdn = (value: string, countryCode?: string) => {
+    const rule = resolveMomoRule(countryCode);
+    const digits = stripToDigits(value);
+
+    if (!rule) {
+        return {
+            normalized: digits,
+            formatted: digits ? `+${digits}` : '',
+            expectedLength: 0,
+            example: '',
+        };
+    }
+
+    let normalized = digits;
+    const expectedLength = rule.countryCode.length + rule.nationalLength;
+
+    if (normalized.startsWith('0')) {
+        normalized = rule.countryCode + normalized.slice(1);
+    } else if (!normalized.startsWith(rule.countryCode) && normalized.length <= rule.nationalLength) {
+        normalized = rule.countryCode + normalized;
+    }
+
+    if (normalized.length > expectedLength) {
+        normalized = normalized.slice(0, expectedLength);
+    }
+
+    return {
+        normalized,
+        formatted: normalized ? `+${normalized}` : '',
+        expectedLength,
+        example: rule.example,
+    };
+};
+
+const resolveAccountRule = (countryCode?: string) => {
+    if (countryCode && BANK_ACCOUNT_RULES[countryCode]) {
+        return BANK_ACCOUNT_RULES[countryCode];
+    }
+    return DEFAULT_ACCOUNT_RULE;
+};
+
+const formatAccountNumberInput = (value: string, countryCode?: string) => {
+    const digits = stripToDigits(value);
+    const rule = resolveAccountRule(countryCode);
+    return digits.slice(0, rule.maxLength);
+};
 
 const Settings: React.FC = () => {
     const { org, refreshOrg } = useAdminContext();
@@ -74,6 +138,7 @@ const Settings: React.FC = () => {
         'Payouts & Payments',
         'Payout method',
         'Payout account connected',
+        'Receiving Country',
         'Bank',
         'Bank Code',
         'Select a bank',
@@ -100,6 +165,17 @@ const Settings: React.FC = () => {
         'MoMo wallet connected successfully.',
         'Stripe payout connected successfully.',
         'Failed to connect payout account.',
+        'Set your business country before connecting payouts.',
+        'Please select a bank.',
+        'Please enter your bank account number.',
+        'Account number should be numeric.',
+        'Account number should be 10 digits.',
+        'Account number should be at least 6 digits.',
+        'Please enter the bank account name.',
+        'Please enter your MoMo wallet number.',
+        'Please enter your MoMo wallet name.',
+        'MoMo wallet number should include country code.',
+        'Please enter your Stripe account ID.',
         'Loading banks...',
         'Language & Localization',
         'Preferred Language',
@@ -118,28 +194,11 @@ const Settings: React.FC = () => {
         '94105',
         'USA',
         '+1 (555) 000-0000',
+        'e.g. Nigeria or NG',
     ]), []);
     const { t } = useTranslation(translationStrings);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-    const [payoutForm, setPayoutForm] = useState({
-        bankCountry: '',
-        bankCode: '',
-        bankName: '',
-        accountNumber: '',
-        accountName: '',
-        momoMsisdn: '',
-        stripeAccountId: '',
-    });
-    const [banks, setBanks] = useState<FlutterwaveBank[]>([]);
-    const [banksLoading, setBanksLoading] = useState(false);
-    const [payoutLoading, setPayoutLoading] = useState(false);
-
-    const payoutProvider = resolvePayoutProvider(payoutForm.bankCountry);
-    const isFlutterwaveProvider = payoutProvider === 'flutterwave';
-    const isMomoProvider = payoutProvider === 'momo';
-    const isStripeProvider = payoutProvider === 'stripe';
-
     const [formData, setFormData] = useState<Organization>({
         id: '',
         accountId: '',
@@ -170,6 +229,35 @@ const Settings: React.FC = () => {
         },
         createdAt: ''
     });
+    const [payoutForm, setPayoutForm] = useState({
+        bankCountry: '',
+        bankCode: '',
+        bankName: '',
+        accountNumber: '',
+        accountName: '',
+        momoMsisdn: '',
+        stripeAccountId: '',
+    });
+    const [banks, setBanks] = useState<FlutterwaveBank[]>([]);
+    const [banksLoading, setBanksLoading] = useState(false);
+    const [payoutLoading, setPayoutLoading] = useState(false);
+
+    const resolvedPayoutCountry = useMemo(
+        () => resolveCountryCode(payoutForm.bankCountry, formData.address?.country),
+        [payoutForm.bankCountry, formData.address?.country]
+    );
+    const accountRule = useMemo(
+        () => resolveAccountRule(resolvedPayoutCountry),
+        [resolvedPayoutCountry]
+    );
+    const momoState = useMemo(
+        () => normalizeMomoMsisdn(payoutForm.momoMsisdn, resolvedPayoutCountry),
+        [payoutForm.momoMsisdn, resolvedPayoutCountry]
+    );
+    const payoutProvider = resolvePayoutProvider(resolvedPayoutCountry);
+    const isFlutterwaveProvider = payoutProvider === 'flutterwave';
+    const isMomoProvider = payoutProvider === 'momo';
+    const isStripeProvider = payoutProvider === 'stripe';
 
     useEffect(() => {
         if (org) {
@@ -196,20 +284,53 @@ const Settings: React.FC = () => {
                     enabled: isEnabled,
                 },
             });
+            const payoutCountry = inferredCountry || paymentConfig.bankCountry || '';
+            const formattedMomoMsisdn = paymentConfig.momoMsisdn
+                ? normalizeMomoMsisdn(paymentConfig.momoMsisdn, payoutCountry).formatted || paymentConfig.momoMsisdn
+                : '';
             setPayoutForm({
-                bankCountry: inferredCountry || paymentConfig.bankCountry || '',
+                bankCountry: payoutCountry,
                 bankCode: paymentConfig.bankCode || '',
                 bankName: paymentConfig.bankName || '',
                 accountNumber: '',
                 accountName: paymentConfig.momoAccountName || paymentConfig.accountName || '',
-                momoMsisdn: paymentConfig.momoMsisdn || '',
+                momoMsisdn: formattedMomoMsisdn,
                 stripeAccountId: payoutProvider === 'stripe' ? paymentConfig.accountId || '' : '',
             });
         }
     }, [org]);
 
     useEffect(() => {
+        if (!payoutForm.bankCountry && formData.address?.country) {
+            const resolved = resolveCountryCode('', formData.address.country);
+            if (resolved) {
+                setPayoutForm(prev => ({ ...prev, bankCountry: resolved }));
+            }
+        }
+    }, [formData.address?.country, payoutForm.bankCountry]);
+
+    useEffect(() => {
+        if (isMomoProvider && payoutForm.momoMsisdn) {
+            const formatted = normalizeMomoMsisdn(payoutForm.momoMsisdn, resolvedPayoutCountry).formatted;
+            if (formatted && formatted !== payoutForm.momoMsisdn) {
+                setPayoutForm(prev => ({ ...prev, momoMsisdn: formatted }));
+            }
+        }
+        if (isFlutterwaveProvider && payoutForm.accountNumber) {
+            const formatted = formatAccountNumberInput(payoutForm.accountNumber, resolvedPayoutCountry);
+            if (formatted !== payoutForm.accountNumber) {
+                setPayoutForm(prev => ({ ...prev, accountNumber: formatted }));
+            }
+        }
+    }, [isFlutterwaveProvider, isMomoProvider, payoutForm.accountNumber, payoutForm.momoMsisdn, resolvedPayoutCountry]);
+
+    useEffect(() => {
         if (!isFlutterwaveProvider) {
+            setBanks([]);
+            setBanksLoading(false);
+            return;
+        }
+        if (!resolvedPayoutCountry) {
             setBanks([]);
             setBanksLoading(false);
             return;
@@ -219,7 +340,7 @@ const Settings: React.FC = () => {
 
         const loadBanks = async () => {
             setBanksLoading(true);
-            const data = await fetchFlutterwaveBanks(payoutForm.bankCountry);
+            const data = await fetchFlutterwaveBanks(resolvedPayoutCountry);
             if (!cancelled) {
                 setBanks(data);
                 setBanksLoading(false);
@@ -237,7 +358,44 @@ const Settings: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [payoutForm.bankCountry, isFlutterwaveProvider]);
+    }, [resolvedPayoutCountry, isFlutterwaveProvider]);
+
+    const payoutValidationError = useMemo(() => {
+        if (!resolvedPayoutCountry) {
+            return t('Set your business country before connecting payouts.');
+        }
+        if (isFlutterwaveProvider) {
+            const bankCode = payoutForm.bankCode.trim();
+            const accountNumber = formatAccountNumberInput(payoutForm.accountNumber, resolvedPayoutCountry);
+            const accountName = payoutForm.accountName.trim();
+            if (!bankCode) return t('Please select a bank.');
+            if (!accountNumber) return t('Please enter your bank account number.');
+            if (!/^\d+$/.test(accountNumber)) return t('Account number should be numeric.');
+            if (accountRule.minLength === accountRule.maxLength && accountNumber.length !== accountRule.minLength) {
+                return t('Account number should be 10 digits.');
+            }
+            if (accountRule.minLength !== accountRule.maxLength && accountNumber.length < accountRule.minLength) {
+                return t('Account number should be at least 6 digits.');
+            }
+            if (!accountName) return t('Please enter the bank account name.');
+            return '';
+        }
+        if (isMomoProvider) {
+            const msisdn = momoState.normalized;
+            const accountName = payoutForm.accountName.trim();
+            if (!msisdn) return t('Please enter your MoMo wallet number.');
+            if (!accountName) return t('Please enter your MoMo wallet name.');
+            if (momoState.expectedLength && msisdn.length !== momoState.expectedLength) {
+                return t('MoMo wallet number should include country code.');
+            }
+            return '';
+        }
+        if (isStripeProvider) {
+            const accountId = payoutForm.stripeAccountId.trim();
+            if (!accountId) return t('Please enter your Stripe account ID.');
+        }
+        return '';
+    }, [accountRule, isFlutterwaveProvider, isMomoProvider, isStripeProvider, momoState, payoutForm, resolvedPayoutCountry, t]);
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -292,13 +450,25 @@ const Settings: React.FC = () => {
         setPayoutLoading(true);
         setMessage(null);
 
+        if (payoutValidationError) {
+            setMessage({ type: 'error', text: payoutValidationError });
+            setPayoutLoading(false);
+            return;
+        }
+
+        const bankCountry = resolvedPayoutCountry;
+        const bankCode = payoutForm.bankCode.trim();
+        const bankName = payoutForm.bankName.trim() || undefined;
+        const accountNumber = formatAccountNumberInput(payoutForm.accountNumber, resolvedPayoutCountry);
+        const accountName = payoutForm.accountName.trim();
+
         const result = await createFlutterwavePayoutAccount({
             orgId: org.id,
-            bankCode: payoutForm.bankCode,
-            bankName: payoutForm.bankName,
-            accountNumber: payoutForm.accountNumber,
-            accountName: payoutForm.accountName,
-            bankCountry: payoutForm.bankCountry,
+            bankCode,
+            bankName,
+            accountNumber,
+            accountName,
+            bankCountry,
         });
 
         if (!result.success) {
@@ -316,8 +486,8 @@ const Settings: React.FC = () => {
                 accountId: result.accountId,
                 bankName: result.bankName || payoutForm.bankName,
                 bankCode: result.bankCode || payoutForm.bankCode,
-                bankCountry: result.bankCountry || payoutForm.bankCountry,
-                accountName: result.accountName || payoutForm.accountName,
+                bankCountry: result.bankCountry || bankCountry,
+                accountName: result.accountName || accountName,
                 accountNumberLast4: result.accountNumberLast4,
                 platformFeePercent: PLATFORM_FEE_PERCENT,
             },
@@ -333,12 +503,15 @@ const Settings: React.FC = () => {
         setPayoutLoading(true);
         setMessage(null);
 
-        const msisdn = payoutForm.momoMsisdn.trim();
-        if (!msisdn) {
-            setMessage({ type: 'error', text: t('Failed to connect payout account.') });
+        if (payoutValidationError) {
+            setMessage({ type: 'error', text: payoutValidationError });
             setPayoutLoading(false);
             return;
         }
+
+        const msisdn = momoState.normalized;
+        const accountName = payoutForm.accountName.trim();
+        const bankCountry = resolvedPayoutCountry;
 
         const updated: Organization = {
             ...formData,
@@ -346,9 +519,9 @@ const Settings: React.FC = () => {
                 ...(formData.paymentConfig || {}),
                 enabled: true,
                 provider: 'momo',
-                bankCountry: payoutForm.bankCountry,
+                bankCountry,
                 momoMsisdn: msisdn,
-                momoAccountName: payoutForm.accountName.trim() || undefined,
+                momoAccountName: accountName || undefined,
                 platformFeePercent: PLATFORM_FEE_PERCENT,
             },
         };
@@ -371,12 +544,14 @@ const Settings: React.FC = () => {
         setPayoutLoading(true);
         setMessage(null);
 
-        const accountId = payoutForm.stripeAccountId.trim();
-        if (!accountId) {
-            setMessage({ type: 'error', text: t('Failed to connect payout account.') });
+        if (payoutValidationError) {
+            setMessage({ type: 'error', text: payoutValidationError });
             setPayoutLoading(false);
             return;
         }
+
+        const accountId = payoutForm.stripeAccountId.trim();
+        const bankCountry = resolvedPayoutCountry;
 
         const updated: Organization = {
             ...formData,
@@ -384,7 +559,7 @@ const Settings: React.FC = () => {
                 ...(formData.paymentConfig || {}),
                 enabled: true,
                 provider: 'stripe',
-                bankCountry: payoutForm.bankCountry,
+                bankCountry,
                 accountId,
                 platformFeePercent: PLATFORM_FEE_PERCENT,
             },
@@ -443,11 +618,7 @@ const Settings: React.FC = () => {
 
     const payoutProviderLabel = isMomoProvider ? 'MoMo' : isFlutterwaveProvider ? 'Flutterwave' : 'Stripe';
 
-    const canConnectPayout = isFlutterwaveProvider
-        ? Boolean(payoutForm.bankCode && payoutForm.accountNumber && !payoutLoading)
-        : isMomoProvider
-            ? Boolean(payoutForm.momoMsisdn && !payoutLoading)
-            : Boolean(payoutForm.stripeAccountId && !payoutLoading);
+    const canConnectPayout = !payoutValidationError && !payoutLoading;
 
     if (!org) return <div>{t('Loading...')}</div>;
 
@@ -687,6 +858,15 @@ const Settings: React.FC = () => {
                             </div>
                         )}
 
+                        <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input
+                                label={t('Receiving Country')}
+                                placeholder={t('e.g. Nigeria or NG')}
+                                value={payoutForm.bankCountry}
+                                onChange={(e) => setPayoutForm(prev => ({ ...prev, bankCountry: e.target.value }))}
+                            />
+                        </div>
+
                         {isFlutterwaveProvider && (
                             <>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -716,7 +896,12 @@ const Settings: React.FC = () => {
                                         label={t('Account Number')}
                                         value={payoutForm.accountNumber}
                                         inputMode="numeric"
-                                        onChange={(e) => setPayoutForm(prev => ({ ...prev, accountNumber: e.target.value }))}
+                                        placeholder={accountRule.example}
+                                        maxLength={accountRule.maxLength}
+                                        onChange={(e) => setPayoutForm(prev => ({
+                                            ...prev,
+                                            accountNumber: formatAccountNumberInput(e.target.value, resolvedPayoutCountry),
+                                        }))}
                                     />
                                 </div>
 
@@ -752,7 +937,11 @@ const Settings: React.FC = () => {
                                         label={t('MoMo Wallet Number')}
                                         value={payoutForm.momoMsisdn}
                                         inputMode="tel"
-                                        onChange={(e) => setPayoutForm(prev => ({ ...prev, momoMsisdn: e.target.value }))}
+                                        placeholder={momoState.example || '+<country code><number>'}
+                                        onChange={(e) => {
+                                            const formatted = normalizeMomoMsisdn(e.target.value, resolvedPayoutCountry).formatted;
+                                            setPayoutForm(prev => ({ ...prev, momoMsisdn: formatted }));
+                                        }}
                                     />
                                     <Input
                                         label={t('MoMo Wallet Name')}
@@ -795,6 +984,12 @@ const Settings: React.FC = () => {
                                     </Button>
                                 </div>
                             </>
+                        )}
+
+                        {payoutValidationError && (
+                            <p className="mt-3 text-xs text-amber-600">
+                                {payoutValidationError}
+                            </p>
                         )}
 
                         <p className="text-xs text-slate-500 mt-2">
