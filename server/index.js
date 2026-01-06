@@ -729,12 +729,21 @@ app.post('/api/payments/momo/initialize', async (req, res) => {
                 if (!link) {
                     return res.status(500).json({ error: 'Flutterwave did not return a payment link.' });
                 }
-                return res.json({ reference: txRef, link });
+                return res.json({ reference: txRef, referenceType: 'tx_ref', link });
             }
             return res.status(response.status).json({ error: data?.message || 'Failed to initialize MoMo payment.' });
         }
 
-        return res.json({ reference: txRef, status: data?.data?.status || 'pending' });
+        const chargeData = data?.data || {};
+        const resolvedTxRef = chargeData?.tx_ref || txRef;
+        const reference = chargeData?.id ? String(chargeData.id) : resolvedTxRef;
+        const referenceType = chargeData?.id ? 'id' : 'tx_ref';
+        return res.json({
+            reference,
+            referenceType,
+            txRef: resolvedTxRef,
+            status: chargeData?.status || 'pending',
+        });
     } catch (error) {
         console.error('Flutterwave MoMo initialize error', error);
         return res.status(500).json({ error: 'Failed to initialize MoMo payment.' });
@@ -750,19 +759,43 @@ app.get('/api/payments/momo/status', async (req, res) => {
     }
 
     const reference = String(req.query.reference || '').trim();
+    const referenceType = String(req.query.type || '').trim().toLowerCase();
+    const txRef = String(req.query.txRef || '').trim();
     const invoiceId = String(req.query.invoiceId || '').trim();
     if (!reference) {
         return res.status(400).json({ error: 'reference is required.' });
     }
 
     try {
-        const response = await fetch(`https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`, {
+        const isIdReference = referenceType === 'id';
+        const endpoint = isIdReference
+            ? `https://api.flutterwave.com/v3/transactions/${encodeURIComponent(reference)}/verify`
+            : `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`;
+        const response = await fetch(endpoint, {
             headers: {
                 Authorization: `Bearer ${flutterwaveSecretKey}`,
             },
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
+            const message = String(data?.message || '').toLowerCase();
+            if (response.status === 404 || message.includes('no transaction')) {
+                if (isIdReference && txRef) {
+                    const fallbackResponse = await fetch(
+                        `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(txRef)}`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${flutterwaveSecretKey}`,
+                            },
+                        }
+                    );
+                    const fallbackData = await fallbackResponse.json().catch(() => ({}));
+                    if (fallbackResponse.ok) {
+                        return res.json({ status: String(fallbackData?.data?.status || 'PENDING').toUpperCase() });
+                    }
+                }
+                return res.json({ status: 'PENDING' });
+            }
             console.error('Flutterwave MoMo status check failed', data);
             return res.status(response.status).json({ error: data?.message || 'Failed to check MoMo status.' });
         }

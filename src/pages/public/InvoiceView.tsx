@@ -221,6 +221,8 @@ const InvoiceView: React.FC = () => {
             setPaymentStatus('pending');
             setPaymentNotice(t('MoMo prompt sent. Please approve the payment on your phone.'));
             const reference = result.reference;
+            const referenceType = result.referenceType || 'tx_ref';
+            const txRef = result.txRef || reference;
             if (!reference) {
                 setPaymentStatus('error');
                 setErrorMessage(t('Payment failed. Please try again.'));
@@ -233,7 +235,7 @@ const InvoiceView: React.FC = () => {
                 if (cancelled) return;
                 attempts += 1;
                 try {
-                    const response = await fetch(`/api/payments/momo/status?reference=${encodeURIComponent(reference)}&invoiceId=${data.invoice.id}`);
+                    const response = await fetch(`/api/payments/momo/status?reference=${encodeURIComponent(reference)}&invoiceId=${data.invoice.id}&type=${encodeURIComponent(referenceType)}&txRef=${encodeURIComponent(txRef)}`);
                     const statusData = await response.json().catch(() => ({}));
                     if (statusData?.status === 'SUCCESSFUL') {
                         setPaymentStatus('success');
