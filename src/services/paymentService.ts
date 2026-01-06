@@ -26,6 +26,8 @@ export interface PaymentConfig {
 export interface PaymentResult {
     success: boolean;
     reference?: string;
+    referenceType?: 'id' | 'tx_ref';
+    txRef?: string;
     redirectUrl?: string;
     error?: string;
 }
@@ -296,7 +298,13 @@ export const initMomoPayment = async (config: PaymentConfig): Promise<PaymentRes
 
         const data = await response.json();
         if (data?.link) {
-            return { success: true, redirectUrl: data.link, reference: data.reference };
+            return {
+                success: true,
+                redirectUrl: data.link,
+                reference: data.reference,
+                referenceType: data.referenceType || 'tx_ref',
+                txRef: data.txRef || data.reference,
+            };
         }
         if (!data?.reference) {
             return { success: false, error: 'Missing MoMo reference.' };
@@ -305,6 +313,8 @@ export const initMomoPayment = async (config: PaymentConfig): Promise<PaymentRes
         return {
             success: true,
             reference: data.reference,
+            referenceType: data.referenceType || 'tx_ref',
+            txRef: data.txRef || data.reference,
         };
     } catch (error: any) {
         console.error('MoMo payment error:', error);
