@@ -16,6 +16,7 @@ import {
   Play,
   Bot,
   Wallet,
+  ChevronDown,
 } from 'lucide-react';
 
 const NAV_ITEMS = ['Product', 'How it works', 'AI insights', 'Pricing'];
@@ -80,10 +81,54 @@ const PRICING_FEATURES = [
   'API Access',
 ];
 
+const OWNER_STORIES = [
+  {
+    name: 'Amina Yusuf',
+    role: 'Boutique Owner - Lagos',
+    quote: 'InvoiceFlow keeps my catalog polished and payments predictable without extra admin work.',
+    image: '/owners/owner-1.jpg',
+  },
+  {
+    name: 'Daniel Brooks',
+    role: 'Creative Studio Lead - Nairobi',
+    quote: 'We send a shareable link and get paid faster. The reports are ready for tax time.',
+    image: '/owners/owner-2.jpg',
+  },
+  {
+    name: 'Priya Shah',
+    role: 'Consulting Partner - London',
+    quote: 'The AI insights save hours each week. Everything feels calm and organized.',
+    image: '/owners/owner-3.jpg',
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    question: 'How do I accept payments from clients?',
+    answer: 'Send your catalog or invoice link. Clients pay through Afnex providers and InvoiceFlow updates the invoice status automatically.',
+  },
+  {
+    question: 'Can I invite my team to collaborate?',
+    answer: 'Yes. Add teammates to your workspace and control permissions for invoices, expenses, and reports.',
+  },
+  {
+    question: 'What if my business operates in multiple countries?',
+    answer: 'Set your payout details per business and keep each region aligned with the right currency and provider.',
+  },
+  {
+    question: 'Is my data secure?',
+    answer: 'We use Supabase with row level security, encrypted connections, and audit logs so your data stays protected.',
+  },
+  {
+    question: 'Do I need to be an accountant to use this?',
+    answer: 'No. The dashboard is designed for small teams, with guided flows and AI insights for quick decisions.',
+  },
+];
+
 const NavBar: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   const navigate = useNavigate();
   return (
-    <nav className="fixed w-full z-50 bg-background/90 backdrop-blur-md border-b border-border">
+    <nav className="fixed w-full z-50 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl border-b border-white/40 dark:border-slate-800/60 shadow-[0_10px_40px_-30px_rgba(15,23,42,0.4)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div
@@ -132,42 +177,40 @@ const NavBar: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 };
 
 const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => (
-  <div className="relative w-full max-w-[520px] aspect-square">
-    <div className="absolute inset-0 rounded-full border border-foreground/10" />
-    <div className="absolute inset-12 rounded-full border border-foreground/10" />
-    <div className="absolute inset-24 rounded-full border border-foreground/10" />
+  <div className="relative w-full max-w-[560px] aspect-[6/7]">
+    <div className="absolute -top-10 right-4 w-56 h-56 rounded-full bg-primary/20 blur-[120px]" />
+    <div className="absolute bottom-8 -left-8 w-64 h-64 rounded-full bg-sky-200/40 dark:bg-sky-500/10 blur-[120px]" />
+    <div className="absolute inset-0 rounded-[42px] border border-white/40 dark:border-slate-800/60 bg-white/40 dark:bg-slate-900/30 backdrop-blur-2xl shadow-[0_40px_120px_-60px_rgba(15,23,42,0.6)]" />
+
+    <div className="absolute left-8 top-10 w-44 rounded-3xl border border-white/50 dark:border-slate-700/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)] -rotate-6">
+      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Service')}</div>
+      <div className="font-display text-sm text-foreground mt-1">{t('Brand Strategy')}</div>
+      <div className="text-xs text-muted mt-2">$2,400</div>
+    </div>
+
+    <div className="absolute right-8 top-16 w-44 rounded-3xl border border-white/50 dark:border-slate-700/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)] rotate-[5deg]">
+      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Timeline')}</div>
+      <div className="font-display text-sm text-foreground mt-1">{t('3 Weeks')}</div>
+      <div className="text-xs text-muted mt-2">{t('Milestones synced')}</div>
+    </div>
+
+    <div className="absolute left-10 bottom-24 w-44 rounded-3xl border border-white/50 dark:border-slate-700/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)] rotate-[2deg]">
+      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Invoice')}</div>
+      <div className="font-display text-sm text-foreground mt-1">{t('INV-1042')}</div>
+      <div className="text-xs text-muted mt-2">{t('Sent in 2s')}</div>
+    </div>
+
+    <div className="absolute right-10 bottom-10 w-48 rounded-3xl border border-foreground/10 bg-foreground text-background p-4 shadow-lift">
+      <div className="text-[10px] uppercase tracking-widest text-background/60">{t('Status')}</div>
+      <div className="font-display text-sm text-background mt-1">{t('Paid')}</div>
+      <div className="text-xs text-primary mt-2">{t('Cleared instantly')}</div>
+    </div>
 
     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
       <div className="w-28 h-28 rounded-full bg-primary text-[var(--on-primary)] flex items-center justify-center font-display text-sm uppercase tracking-widest shadow-soft">
         {t('Pay')}
       </div>
     </div>
-
-    <div className="absolute top-10 left-6 bg-background border border-foreground/10 rounded-2xl p-4 w-40 shadow-soft animate-drift">
-      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Service')}</div>
-      <div className="font-display text-sm text-foreground mt-1">{t('Brand Strategy')}</div>
-      <div className="text-xs text-muted mt-2">$2,400</div>
-    </div>
-
-    <div className="absolute top-24 right-6 bg-background border border-foreground/10 rounded-2xl p-4 w-40 shadow-soft animate-float">
-      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Timeline')}</div>
-      <div className="font-display text-sm text-foreground mt-1">{t('3 Weeks')}</div>
-      <div className="text-xs text-muted mt-2">{t('Milestones synced')}</div>
-    </div>
-
-    <div className="absolute bottom-16 left-10 bg-background border border-foreground/10 rounded-2xl p-4 w-40 shadow-soft animate-drift">
-      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Invoice')}</div>
-      <div className="font-display text-sm text-foreground mt-1">{t('INV-1042')}</div>
-      <div className="text-xs text-muted mt-2">{t('Sent in 2s')}</div>
-    </div>
-
-    <div className="absolute bottom-8 right-8 bg-foreground text-background rounded-2xl p-4 w-44 shadow-lift">
-      <div className="text-[10px] uppercase tracking-widest text-background/60">{t('Status')}</div>
-      <div className="font-display text-sm text-background mt-1">{t('Paid')}</div>
-      <div className="text-xs text-primary mt-2">{t('Cleared instantly')}</div>
-    </div>
-
-    <div className="absolute left-1/2 top-1/2 w-[120%] h-px -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-foreground/15 to-transparent rotate-[18deg]" />
   </div>
 );
 
@@ -177,8 +220,8 @@ const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; description:
   description,
   className = '',
 }) => (
-  <div className={`p-6 rounded-2xl border border-border bg-surface text-foreground shadow-sm transition-transform duration-300 hover:-translate-y-1 ${className}`}>
-    <div className="w-12 h-12 rounded-full bg-primary text-[var(--on-primary)] flex items-center justify-center mb-4">
+  <div className={`p-6 rounded-3xl border border-white/40 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl text-foreground shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)] transition-transform duration-300 hover:-translate-y-1 ${className}`}>
+    <div className="w-12 h-12 rounded-full bg-primary text-[var(--on-primary)] flex items-center justify-center mb-4 shadow-soft">
       {icon}
     </div>
     <h3 className="text-lg font-display font-semibold text-current mb-2">{title}</h3>
@@ -283,7 +326,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
   };
 
   return (
-    <div className="bg-background rounded-3xl border border-foreground/10 p-4 shadow-lift max-w-md mx-auto relative z-10">
+    <div className="bg-white/70 dark:bg-slate-900/60 rounded-3xl border border-white/40 dark:border-slate-700/60 backdrop-blur-xl p-4 shadow-lift max-w-md mx-auto relative z-10">
       <div className="flex items-center justify-between border-b border-foreground/10 pb-4 mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-foreground text-background rounded-full flex items-center justify-center">
@@ -301,7 +344,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
           onClick={() => setUseRealAI(!useRealAI)}
           className={`text-xs px-2 py-1 rounded-full border transition-colors ${useRealAI
             ? 'bg-primary/20 border-primary/40 text-foreground'
-            : 'bg-background border-foreground/10 text-muted hover:text-foreground'
+            : 'bg-white/70 dark:bg-slate-950/60 border-white/40 dark:border-slate-700/60 text-muted hover:text-foreground'
             }`}
           title={useRealAI ? t('Using real Gemini AI') : t('Using simulated responses')}
         >
@@ -315,7 +358,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
             <div
               className={`px-4 py-2 rounded-2xl max-w-[85%] ${msg.role === 'user'
                 ? 'bg-foreground text-background rounded-tr-none'
-                : 'bg-surface border border-border text-foreground rounded-tl-none'
+                : 'bg-white/80 dark:bg-slate-900/70 border border-white/40 dark:border-slate-700/60 text-foreground rounded-tl-none'
                 }`}
               dangerouslySetInnerHTML={{ __html: msg.text }}
             />
@@ -323,7 +366,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
         ))}
         {isTyping && (
           <div className="flex justify-start animate-fade-in-up">
-            <div className="bg-surface border border-border text-muted px-4 py-2 rounded-2xl rounded-tl-none">
+            <div className="bg-white/80 dark:bg-slate-900/70 border border-white/40 dark:border-slate-700/60 text-muted px-4 py-2 rounded-2xl rounded-tl-none">
               <span className="flex gap-1">
                 <span className="w-2 h-2 bg-foreground/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
                 <span className="w-2 h-2 bg-foreground/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
@@ -341,7 +384,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder={t('Ask about revenue, clients, invoices...')}
-          className="h-10 bg-background border border-border rounded-full flex-1 px-4 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none transition-colors"
+        className="h-10 bg-white/70 dark:bg-slate-950/60 border border-white/40 dark:border-slate-700/60 rounded-full flex-1 px-4 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none transition-colors"
         />
         <button
           onClick={handleSend}
@@ -361,7 +404,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   return (
     <div className="w-full max-w-5xl mx-auto">
       <div className="flex justify-center mb-12">
-        <div className="bg-surface border border-border p-1 rounded-full flex relative">
+        <div className="bg-white/70 dark:bg-slate-900/60 border border-white/40 dark:border-slate-700/60 backdrop-blur-xl p-1 rounded-full flex relative shadow-soft">
           <button
             onClick={() => setBillingCycle('monthly')}
             className={`px-6 py-2 rounded-full text-sm font-semibold transition-all duration-300 relative z-10 ${billingCycle === 'monthly' ? 'text-[var(--on-primary)]' : 'text-muted hover:text-foreground'}`}
@@ -386,7 +429,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
       </div>
 
       <div className="grid md:grid-cols-2 gap-8 items-center">
-        <div className={`relative p-8 rounded-3xl border transition-all duration-300 ${billingCycle === 'monthly' ? 'bg-foreground text-background border-primary shadow-lift scale-[1.02] z-10' : 'bg-surface border-border hover:border-foreground/30'}`}>
+        <div className={`relative p-8 rounded-3xl border transition-all duration-300 ${billingCycle === 'monthly' ? 'bg-foreground/90 text-background border-primary shadow-lift scale-[1.02] z-10 backdrop-blur-xl' : 'bg-white/70 dark:bg-slate-900/60 border-white/40 dark:border-slate-700/60 backdrop-blur-xl hover:border-primary/30'}`}>
           <h3 className="text-xl font-display font-semibold mb-2">{t('Monthly Plan')}</h3>
           <p className="text-sm opacity-80 mb-6">{t('Perfect for short-term projects and starters.')}</p>
           <div className="flex items-baseline gap-1 mb-6">
@@ -408,7 +451,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           </Button>
         </div>
 
-        <div className={`relative p-8 rounded-3xl border transition-all duration-300 ${billingCycle === 'yearly' ? 'bg-foreground text-background border-primary shadow-lift scale-[1.02] z-10' : 'bg-surface border-border hover:border-foreground/30'}`}>
+        <div className={`relative p-8 rounded-3xl border transition-all duration-300 ${billingCycle === 'yearly' ? 'bg-foreground/90 text-background border-primary shadow-lift scale-[1.02] z-10 backdrop-blur-xl' : 'bg-white/70 dark:bg-slate-900/60 border-white/40 dark:border-slate-700/60 backdrop-blur-xl hover:border-primary/30'}`}>
           {billingCycle === 'yearly' && (
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-[var(--on-primary)] text-xs font-bold px-3 py-1 rounded-full shadow-soft">
               {t('MOST POPULAR')}
@@ -529,6 +572,14 @@ const Landing: React.FC = () => {
     'Track revenue, manage expenses, and export tax-ready cash-flow reports with a dashboard designed for clarity.',
     ...ANALYTICS_BULLETS,
     'Admin Dashboard Interface',
+    'Business owners',
+    'Built for small and medium teams.',
+    'Owners use InvoiceFlow to keep invoices, expenses, and payouts calm and ready for audit.',
+    ...OWNER_STORIES.flatMap(owner => [owner.name, owner.role, owner.quote]),
+    'FAQ',
+    'Answers for growing teams.',
+    'Everything you need before you start billing clients.',
+    ...FAQ_ITEMS.flatMap(item => [item.question, item.answer]),
     'Pricing that scales with your studio.',
     'Start free, upgrade when you need more automation and analytics.',
     'Privacy',
@@ -563,10 +614,10 @@ const Landing: React.FC = () => {
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-black overflow-x-hidden">
       <NavBar t={t} />
 
-      <section className="relative pt-36 pb-24 bg-background overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-40" />
-        <div className="absolute -top-24 right-0 w-[480px] h-[480px] bg-primary/30 blur-[140px]" />
-        <div className="absolute bottom-0 left-0 w-[320px] h-[320px] bg-foreground/10 blur-[120px]" />
+      <section className="relative pt-36 pb-28 bg-[radial-gradient(circle_at_top,_#eef9ff_0%,_#f7fff9_45%,_#ffffff_100%)] dark:bg-[radial-gradient(circle_at_top,_#0b1311_0%,_#060b12_55%,_#05070d_100%)] overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-20" />
+        <div className="absolute -top-24 right-0 w-[520px] h-[520px] bg-primary/25 blur-[160px]" />
+        <div className="absolute bottom-0 left-0 w-[360px] h-[360px] bg-sky-200/40 dark:bg-sky-500/10 blur-[140px]" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-16 items-center relative z-10">
           <div>
@@ -598,7 +649,7 @@ const Landing: React.FC = () => {
               ))}
             </div>
 
-            <div id="admin-signin" className="mt-10 rounded-2xl border border-foreground/10 bg-background/80 p-5 shadow-soft max-w-md">
+            <div id="admin-signin" className="mt-10 rounded-3xl border border-white/40 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-5 shadow-soft max-w-md">
               <h3 className="text-xs uppercase tracking-widest text-muted mb-3">{t('Admin sign-in')}</h3>
               <form onSubmit={handleAdminLogin} className="flex gap-2">
                 <div className="flex-1">
@@ -637,17 +688,18 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <section id="product" className="py-24 bg-foreground text-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-invert opacity-20" />
+      <section id="product" className="py-24 bg-transparent relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-15" />
+        <div className="absolute -top-20 right-8 w-64 h-64 bg-primary/10 blur-[120px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-14">
             <div>
-              <div className="text-xs uppercase tracking-widest text-background/60 mb-4">{t('Product')}</div>
+              <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('Product')}</div>
               <h2 className="text-3xl md:text-4xl font-display font-semibold">
                 {t('A single canvas for every client touchpoint.')}
               </h2>
             </div>
-            <p className="text-background/70 max-w-xl">
+            <p className="text-muted max-w-xl">
               {t('Replace scattered tools with a focused experience. Your catalog, invoices, expenses, and payments live in one place.')}
             </p>
           </div>
@@ -659,15 +711,14 @@ const Landing: React.FC = () => {
                 icon={[<Layers className="w-5 h-5" />, <Wallet className="w-5 h-5" />, <BarChart3 className="w-5 h-5" />][index]}
                 title={t(feature.title)}
                 description={t(feature.description)}
-                className="bg-white border-slate-200 text-slate-900"
               />
             ))}
           </div>
         </div>
       </section>
 
-      <section id="how-it-works" className="py-24 bg-background relative">
-        <div className="absolute inset-0 bg-spotlight" />
+      <section id="how-it-works" className="py-24 bg-transparent relative">
+        <div className="absolute inset-0 bg-spotlight opacity-40" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-14">
             <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('How it works')}</div>
@@ -675,7 +726,7 @@ const Landing: React.FC = () => {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {HOW_IT_WORKS_STEPS.map((item) => (
-              <div key={item.step} className="p-6 rounded-2xl border border-border bg-surface">
+              <div key={item.step} className="p-6 rounded-3xl border border-white/40 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]">
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-xs uppercase tracking-widest text-muted">{item.step}</span>
                   <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center">
@@ -690,7 +741,8 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <section id="ai-insights" className="py-24 bg-background border-t border-border relative overflow-hidden">
+      <section id="ai-insights" className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[520px] h-[520px] bg-primary/10 blur-[140px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             <div className="lg:w-1/2 order-2 lg:order-1">
@@ -720,24 +772,24 @@ const Landing: React.FC = () => {
         </div>
       </section>
                 
-      <section className="py-24 bg-foreground text-background border-t border-border relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] -z-10" />
+      <section className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[760px] h-[760px] bg-primary/10 rounded-full blur-[140px] -z-10" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             <div className="lg:w-1/2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-background/20 text-xs uppercase tracking-widest text-background/70 mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-foreground/10 text-xs uppercase tracking-widest text-muted mb-6">
                 <BarChart3 className="w-4 h-4 text-primary" /> {t('Analytics')}
               </div>
               <h2 className="text-3xl md:text-4xl font-display font-semibold mb-6">
                 {t('Everything you need to run the back office.')}
               </h2>
-              <p className="text-lg text-background/70 mb-8">
+              <p className="text-lg text-muted mb-8">
                 {t('Track revenue, manage expenses, and export tax-ready cash-flow reports with a dashboard designed for clarity.')}
               </p>
 
               <div className="space-y-4">
                 {ANALYTICS_BULLETS.map((item) => (
-                  <div key={item} className="flex items-center gap-3 text-background/80">
+                  <div key={item} className="flex items-center gap-3 text-muted">
                     <CheckCircle className="w-5 h-5 text-primary" /> {t(item)}
                   </div>
                 ))}
@@ -745,7 +797,7 @@ const Landing: React.FC = () => {
             </div>
 
             <div className="lg:w-1/2">
-              <div className="relative shadow-lift rounded-3xl border border-background/10 overflow-hidden bg-background/5">
+              <div className="relative shadow-lift rounded-3xl border border-white/40 dark:border-slate-800/60 overflow-hidden bg-white/60 dark:bg-slate-900/50 backdrop-blur-xl">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent" />
                 <img
                   src="/dashboard_sync.svg"
@@ -758,7 +810,78 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <section id="pricing" className="py-24 bg-background border-t border-border">
+      <section className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
+        <div className="absolute -top-24 right-8 w-72 h-72 bg-primary/10 blur-[140px]" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid lg:grid-cols-[1fr_2fr] gap-12 items-start">
+            <div>
+              <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('Business owners')}</div>
+              <h2 className="text-3xl md:text-4xl font-display font-semibold mb-6">
+                {t('Built for small and medium teams.')}
+              </h2>
+              <p className="text-muted text-lg leading-relaxed">
+                {t('Owners use InvoiceFlow to keep invoices, expenses, and payouts calm and ready for audit.')}
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {OWNER_STORIES.map((owner) => (
+                <div
+                  key={owner.name}
+                  className="group rounded-3xl border border-white/40 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]"
+                >
+                  <div className="relative overflow-hidden rounded-2xl">
+                    <img
+                      src={owner.image}
+                      alt={t(owner.name)}
+                      className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent" />
+                    <div className="absolute bottom-3 left-3 text-white">
+                      <div className="text-sm font-semibold">{t(owner.name)}</div>
+                      <div className="text-xs text-white/70">{t(owner.role)}</div>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm text-muted leading-relaxed">{t(owner.quote)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" className="py-24 bg-transparent border-t border-border/40 relative">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('FAQ')}</div>
+            <h2 className="text-3xl md:text-4xl font-display font-semibold mb-4">
+              {t('Answers for growing teams.')}
+            </h2>
+            <p className="text-muted max-w-2xl mx-auto">
+              {t('Everything you need before you start billing clients.')}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {FAQ_ITEMS.map((item) => (
+              <details
+                key={item.question}
+                className="group rounded-3xl border border-white/40 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-semibold text-foreground">
+                  <span>{t(item.question)}</span>
+                  <ChevronDown className="w-4 h-4 text-muted transition-transform duration-300 group-open:rotate-180" />
+                </summary>
+                <p className="mt-4 text-sm text-muted leading-relaxed">{t(item.answer)}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="py-24 bg-transparent border-t border-border/40 relative">
+        <div className="absolute -top-24 left-1/3 w-72 h-72 bg-primary/10 blur-[140px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-display font-semibold mb-6">
