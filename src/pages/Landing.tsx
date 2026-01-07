@@ -719,7 +719,7 @@ const Landing: React.FC = () => {
           </div>
         </div>
       </section>
-
+                
       <section className="py-24 bg-foreground text-background border-t border-border relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] -z-10" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
