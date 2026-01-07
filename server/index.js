@@ -34,6 +34,7 @@ const momoCollectionApiKey = process.env.MOMO_COLLECTION_API_KEY;
 const momoDisbursementSubscriptionKey = process.env.MOMO_DISBURSEMENT_SUBSCRIPTION_KEY;
 const momoDisbursementUserId = process.env.MOMO_DISBURSEMENT_USER_ID;
 const momoDisbursementApiKey = process.env.MOMO_DISBURSEMENT_API_KEY;
+const afnexDemoBaseUrl = process.env.AFNEX_DEMO_BASE_URL || 'https://afnex.dev/api/demo';
 
 const FLUTTERWAVE_MOMO_TYPES = {
     RW: 'mobile_money_rwanda',
@@ -56,6 +57,14 @@ const MOMO_COUNTRY_BY_CURRENCY = {
     GHS: 'GH',
     KES: 'KE',
     ZAR: 'ZA',
+};
+
+const AFNEX_PROVIDER_BY_CURRENCY = {
+    NGN: 'paystack',
+    KES: 'pesapal',
+    RWF: 'mtn_momo',
+    GHS: 'mtn_momo',
+    ZAR: 'mtn_momo',
 };
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -128,6 +137,26 @@ const resolveFlutterwaveMomoType = (countryCode) =>
 
 const resolveFlutterwaveMomoOption = (countryCode) =>
     FLUTTERWAVE_MOMO_OPTIONS[String(countryCode || '').trim().toUpperCase()] || null;
+
+const resolveAfnexProvider = (currency) => {
+    const normalized = String(currency || '').trim().toUpperCase();
+    return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
+};
+
+const normalizeAfnexStatus = (status) => {
+    const normalized = String(status || '').trim().toLowerCase();
+    if (normalized === 'success' || normalized === 'successful') return 'SUCCESS';
+    if (normalized === 'pending') return 'PENDING';
+    if (normalized === 'failed' || normalized === 'error') return 'FAILED';
+    return normalized ? normalized.toUpperCase() : '';
+};
+
+const parseAfnexAmount = (value, fallback) => {
+    const numeric = Number.parseFloat(String(value ?? '').replace(/[^0-9.-]/g, ''));
+    if (Number.isFinite(numeric)) return numeric;
+    const fallbackValue = Number.parseFloat(String(fallback ?? ''));
+    return Number.isFinite(fallbackValue) ? fallbackValue : 0;
+};
 
 const maybeTriggerFlutterwaveMomoPayout = async ({
     org,
@@ -460,6 +489,239 @@ app.get('/api/payments/rates', async (req, res) => {
     }
 
     return res.status(503).json({ error: 'No exchange rate available from configured providers.' });
+});
+
+app.post('/api/payments/afnex/charge', async (req, res) => {
+    if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured.' });
+    }
+
+    const { invoiceId, provider, payerPhone, customerEmail } = req.body || {};
+    const invoiceIdValue = String(invoiceId || '').trim();
+    if (!invoiceIdValue) {
+        return res.status(400).json({ error: 'invoiceId is required.' });
+    }
+
+    const { data: invoice, error: invoiceError } = await supabaseAdmin
+        .from('invoices')
+        .select('id, organization_id, total, client_name, client_email, invoice_number')
+        .eq('id', invoiceIdValue)
+        .maybeSingle();
+    if (invoiceError) {
+        console.error('Failed to load invoice', invoiceError);
+        return res.status(500).json({ error: 'Failed to load invoice.' });
+    }
+    if (!invoice) {
+        return res.status(404).json({ error: 'Invoice not found.' });
+    }
+
+    const { data: org, error: orgError } = await supabaseAdmin
+        .from('organizations')
+        .select('id, slug, currency, payment_config')
+        .eq('id', invoice.organization_id)
+        .maybeSingle();
+    if (orgError) {
+        console.error('Failed to load organization', orgError);
+        return res.status(500).json({ error: 'Failed to load organization.' });
+    }
+    if (!org) {
+        return res.status(404).json({ error: 'Organization not found.' });
+    }
+
+    const paymentConfig = org.payment_config || {};
+    if (paymentConfig.enabled !== true) {
+        return res.status(400).json({ error: 'Payments are not enabled for this organization.' });
+    }
+
+    const currency = String(org.currency || 'USD').toUpperCase();
+    const resolvedProvider = String(provider || '').trim().toLowerCase() || resolveAfnexProvider(currency);
+    const amount = parseAfnexAmount(invoice.total, 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'Invalid invoice amount.' });
+    }
+
+    const payload = {
+        provider: resolvedProvider,
+        amount,
+        currency,
+        metadata: {
+            invoice_id: invoice.id,
+            organization_id: org.id,
+            invoice_number: invoice.invoice_number,
+        },
+    };
+
+    if (resolvedProvider === 'mtn_momo') {
+        const phone = String(payerPhone || '').trim();
+        if (!phone) {
+            return res.status(400).json({ error: 'payerPhone is required for mobile money payments.' });
+        }
+        payload.phone = phone;
+    } else {
+        const email = String(customerEmail || invoice.client_email || '').trim();
+        if (!email) {
+            return res.status(400).json({ error: 'customerEmail is required for card payments.' });
+        }
+        payload.email = email;
+    }
+
+    try {
+        const response = await fetch(`${afnexDemoBaseUrl}/charge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.success === false) {
+            console.error('Afnex charge failed', data);
+            return res.status(response.status || 500).json({ error: data?.error || 'Failed to initialize payment.' });
+        }
+
+        return res.json({
+            reference: data?.reference,
+            provider: data?.provider || resolvedProvider,
+            paymentUrl: data?.payment_url || data?.paymentUrl || data?.link,
+            status: data?.status,
+        });
+    } catch (error) {
+        console.error('Afnex charge error', error);
+        return res.status(500).json({ error: 'Failed to initialize payment.' });
+    }
+});
+
+app.post('/api/payments/afnex/verify', async (req, res) => {
+    if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured.' });
+    }
+
+    const { reference, provider, invoiceId } = req.body || {};
+    const referenceValue = String(reference || '').trim();
+    const providerValue = String(provider || '').trim().toLowerCase();
+    const invoiceIdValue = String(invoiceId || '').trim();
+
+    if (!referenceValue || !providerValue || !invoiceIdValue) {
+        return res.status(400).json({ error: 'reference, provider, and invoiceId are required.' });
+    }
+
+    const { data: invoice, error: invoiceError } = await supabaseAdmin
+        .from('invoices')
+        .select('id, organization_id, total, invoice_number, status')
+        .eq('id', invoiceIdValue)
+        .maybeSingle();
+    if (invoiceError) {
+        console.error('Failed to load invoice', invoiceError);
+        return res.status(500).json({ error: 'Failed to load invoice.' });
+    }
+    if (!invoice) {
+        return res.status(404).json({ error: 'Invoice not found.' });
+    }
+
+    const { data: org, error: orgError } = await supabaseAdmin
+        .from('organizations')
+        .select('id, payment_config, currency, name')
+        .eq('id', invoice.organization_id)
+        .maybeSingle();
+    if (orgError) {
+        console.error('Failed to load organization', orgError);
+        return res.status(500).json({ error: 'Failed to load organization.' });
+    }
+
+    let verifyData = {};
+    try {
+        const response = await fetch(`${afnexDemoBaseUrl}/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                provider: providerValue,
+                reference: referenceValue,
+            }),
+        });
+        verifyData = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            console.error('Afnex verify failed', verifyData);
+            return res.json({
+                status: 'FAILED',
+                reference: referenceValue,
+                provider: providerValue,
+                error: verifyData?.error || 'Verification failed.',
+            });
+        }
+    } catch (error) {
+        console.error('Afnex verify error', error);
+        return res.json({
+            status: 'FAILED',
+            reference: referenceValue,
+            provider: providerValue,
+            error: 'Verification failed.',
+        });
+    }
+
+    const normalizedStatus = normalizeAfnexStatus(verifyData?.status);
+    const resolvedStatus = verifyData?.success === false && normalizedStatus !== 'PENDING'
+        ? 'FAILED'
+        : (normalizedStatus || 'PENDING');
+
+    if (resolvedStatus === 'SUCCESS' && invoice.status !== 'PAID') {
+        const feePercent = resolvePlatformFeePercent(org?.payment_config?.platformFeePercent);
+        const amount = parseAfnexAmount(verifyData?.amount, invoice.total);
+        const platformFeeAmount = Number.isFinite(amount)
+            ? Math.round((amount * (feePercent / 100)) * 100) / 100
+            : 0;
+        const netAmount = Number.isFinite(amount) ? amount - platformFeeAmount : 0;
+        const currency = String(verifyData?.currency || org?.currency || 'USD').toUpperCase();
+        const paymentId = `afnex_${referenceValue}`;
+
+        const paymentRecord = {
+            id: paymentId,
+            invoice_id: invoice.id,
+            amount: Number.isFinite(amount) ? amount : 0,
+            currency,
+            status: resolvedStatus,
+            provider: verifyData?.provider || providerValue,
+            provider_reference: referenceValue,
+            platform_fee_percent: feePercent,
+            platform_fee_amount: platformFeeAmount,
+            net_amount: netAmount,
+            date: new Date().toISOString(),
+            method: providerValue,
+        };
+
+        const { error: paymentError } = await supabaseAdmin
+            .from('payments')
+            .upsert(paymentRecord, { onConflict: 'id' });
+        if (paymentError) {
+            console.error('Failed to record Afnex payment', paymentError);
+        }
+
+        const { error: invoiceUpdateError } = await supabaseAdmin
+            .from('invoices')
+            .update({ status: 'PAID' })
+            .eq('id', invoice.id);
+        if (invoiceUpdateError) {
+            console.error('Failed to update invoice status for Afnex', invoiceUpdateError);
+        }
+
+        await createAgentLog({
+            organizationId: org?.id,
+            action: 'PAYMENT_CONFIRMED',
+            details: JSON.stringify({
+                provider: verifyData?.provider || providerValue,
+                reference: referenceValue,
+                amount,
+                currency,
+            }),
+            relatedId: invoice.id,
+            type: 'INFO',
+        });
+    }
+
+    return res.json({
+        status: resolvedStatus,
+        reference: referenceValue,
+        provider: verifyData?.provider || providerValue,
+        amount: verifyData?.amount,
+        currency: verifyData?.currency || org?.currency,
+    });
 });
 
 app.post('/api/payments/flutterwave/payouts', async (req, res) => {

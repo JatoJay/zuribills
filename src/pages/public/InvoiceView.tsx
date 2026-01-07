@@ -1,53 +1,41 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams } from '@tanstack/react-router';
 import { Invoice, Organization, InvoiceStatus } from '@/types';
 import { getOrganizationBySlug, getInvoices } from '@/services/storage';
 import { Button, formatCurrency, Badge, Card, Input } from '@/components/ui';
-import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, Zap, RefreshCw, Smartphone } from 'lucide-react';
-import { processPayment, PaymentGateway } from '@/services/paymentService';
+import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw, Smartphone } from 'lucide-react';
+import { processPayment, resolveAfnexProvider, requiresAfnexPhone, AfnexProvider } from '@/services/paymentService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { resolvePayoutProvider } from '@/services/paymentRouting';
 
-// Payment gateway configurations
-const PAYMENT_GATEWAYS: Record<string, any> = {
-    momo: {
-        name: 'MoMo',
-        currencies: ['RWF', 'GHS', 'KES', 'ZAR'],
-        icon: Smartphone,
-        description: 'Pay with mobile money',
-        color: 'bg-emerald-500',
-    },
-    flutterwave: {
-        name: 'Flutterwave',
-        currencies: ['USD', 'NGN', 'GBP', 'EUR', 'KES', 'GHS', 'ZAR', 'RWF'],
-        icon: Zap,
-        description: 'Pay with card, bank, or mobile money',
-        color: 'bg-orange-500',
-    },
-    stripe: {
-        name: 'Card',
-        currencies: ['*'],
+const AFNEX_PROVIDER_DETAILS: Record<AfnexProvider, { name: string; icon: React.ElementType; description: string; color: string }> = {
+    paystack: {
+        name: 'Card or Bank Transfer',
         icon: CreditCard,
-        description: 'Pay with card or bank',
+        description: 'Processed by Afnex (Paystack)',
         color: 'bg-slate-900',
     },
+    flutterwave: {
+        name: 'Card or Bank',
+        icon: CreditCard,
+        description: 'Processed by Afnex (Flutterwave)',
+        color: 'bg-orange-500',
+    },
+    pesapal: {
+        name: 'Card or Mobile Money',
+        icon: CreditCard,
+        description: 'Processed by Afnex (Pesapal)',
+        color: 'bg-indigo-600',
+    },
+    mtn_momo: {
+        name: 'Mobile Money',
+        icon: Smartphone,
+        description: 'Pay with mobile money via Afnex',
+        color: 'bg-emerald-500',
+    },
 };
 
-const MOMO_COUNTRY_BY_CURRENCY: Record<string, string> = {
-    RWF: 'RW',
-    GHS: 'GH',
-    KES: 'KE',
-    ZAR: 'ZA',
-};
-
-const MOMO_NETWORK_HINTS: Record<string, string> = {
-    GH: 'MTN, Vodafone, AirtelTigo',
-    RW: 'MTN, Airtel',
-    KE: 'M-Pesa',
-    ZA: 'MTN, Vodacom',
-};
-
-const MOMO_NETWORK_REQUIRED = new Set(['GH']);
+const PENDING_PAYMENT_KEY = 'invoiceflow_afnex_pending_payment';
 
 const InvoiceView: React.FC = () => {
     const params = useParams({ strict: false });
@@ -68,7 +56,7 @@ const InvoiceView: React.FC = () => {
         'Price',
         'Amount',
         'Subtotal',
-        'Tax (0%)',
+        'VAT',
         'Total',
         'Notes & Terms',
         'Thank you for your business.',
@@ -82,36 +70,30 @@ const InvoiceView: React.FC = () => {
         'Close',
         'Try Again',
         'Secured with 256-bit SSL encryption',
-        'Pay with credit/debit card',
-        'Pay with card, bank transfer, or USSD',
-        'Pay with card, bank, or mobile money',
-        'Pay with card or bank',
-        'Pay with mobile money',
+        'Processed by Afnex (Paystack)',
+        'Processed by Afnex (Flutterwave)',
+        'Processed by Afnex (Pesapal)',
+        'Pay with mobile money via Afnex',
         'Payments unavailable',
         'This business needs to connect a payout account before it can accept payments.',
-        'Redirecting to Flutterwave...',
-        'Payment received. Waiting for Flutterwave to confirm the transfer...',
+        'Redirecting to secure checkout...',
         'Payment received. Updating invoice status...',
-        'MoMo prompt sent. Please approve the payment on your phone.',
-        'Waiting for MoMo confirmation...',
+        'Payment prompt sent. Please approve on your phone.',
+        'Waiting for payment confirmation...',
         'Mobile money number',
         'Enter your mobile money number to receive the payment prompt.',
-        'Mobile money network',
-        'Enter your mobile money network (e.g., MTN).',
-        'Enter your mobile money network to continue.',
         'Payment cancelled.',
     ]), []);
     const { t } = useTranslation(translationStrings);
     const [data, setData] = useState<{ invoice: Invoice, org: Organization } | null>(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [selectedGateway, setSelectedGateway] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'redirecting' | 'pending' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
     const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
     const [paymentReturnStatus, setPaymentReturnStatus] = useState<'success' | 'failed' | null>(null);
     const [momoPhone, setMomoPhone] = useState('');
-    const [momoNetwork, setMomoNetwork] = useState('');
+    const resumedPendingRef = useRef(false);
 
     useEffect(() => {
         const load = async () => {
@@ -172,36 +154,121 @@ const InvoiceView: React.FC = () => {
         };
     }, [data, paymentReturnStatus]);
 
-    // Determine available gateways based on currency
-    const getAvailableGateways = (currency: string) => {
-        return Object.entries(PAYMENT_GATEWAYS).filter(([_, gateway]) =>
-            gateway.currencies.includes(currency) || gateway.currencies.includes('*')
-        );
+    const clearPendingPayment = () => {
+        localStorage.removeItem(PENDING_PAYMENT_KEY);
     };
 
-    const handlePayment = async (gateway: string) => {
+    const persistPendingPayment = (reference: string, provider: AfnexProvider) => {
+        if (!data) return;
+        localStorage.setItem(PENDING_PAYMENT_KEY, JSON.stringify({
+            invoiceId: data.invoice.id,
+            reference,
+            provider,
+        }));
+    };
+
+    const pollAfnexStatus = (reference: string, provider: AfnexProvider) => {
+        if (!data) return () => {};
+        let cancelled = false;
+        let attempts = 0;
+
+        const pollStatus = async () => {
+            if (cancelled) return;
+            attempts += 1;
+            try {
+                const response = await fetch('/api/payments/afnex/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reference,
+                        provider,
+                        invoiceId: data.invoice.id,
+                    }),
+                });
+                const statusData = await response.json().catch(() => ({}));
+                const normalizedStatus = String(statusData?.status || '').toUpperCase();
+                if (normalizedStatus === 'SUCCESS' || normalizedStatus === 'SUCCESSFUL') {
+                    setPaymentStatus('success');
+                    setPaymentNotice(t('Payment received. Updating invoice status...'));
+                    clearPendingPayment();
+                    try {
+                        const invoices = await getInvoices(data.org.id);
+                        const updatedInvoice = invoices.find(i => i.id === data.invoice.id);
+                        if (updatedInvoice) {
+                            setData(prev => prev ? { ...prev, invoice: updatedInvoice } : prev);
+                        }
+                    } catch (error) {
+                        console.error('Failed to refresh invoice status', error);
+                    }
+                    setTimeout(() => {
+                        setShowPaymentModal(false);
+                        setPaymentStatus('idle');
+                    }, 2500);
+                    return;
+                }
+                if (normalizedStatus && normalizedStatus !== 'PENDING') {
+                    setPaymentStatus('error');
+                    setErrorMessage(t('Payment failed. Please try again.'));
+                    clearPendingPayment();
+                    return;
+                }
+            } catch (error) {
+                console.error('Failed to check payment status', error);
+                setPaymentStatus('error');
+                setErrorMessage(t('Payment failed. Please try again.'));
+                clearPendingPayment();
+                return;
+            }
+
+            if (attempts < 10) {
+                setTimeout(pollStatus, 4000);
+            }
+        };
+
+        pollStatus();
+
+        return () => {
+            cancelled = true;
+        };
+    };
+
+    useEffect(() => {
+        if (!data || resumedPendingRef.current || data.invoice.status === InvoiceStatus.PAID) {
+            return;
+        }
+        const raw = localStorage.getItem(PENDING_PAYMENT_KEY);
+        if (!raw) return;
+        try {
+            const pending = JSON.parse(raw);
+            if (pending?.invoiceId !== data.invoice.id || !pending?.reference || !pending?.provider) {
+                return;
+            }
+            resumedPendingRef.current = true;
+            setPaymentStatus('pending');
+            setPaymentNotice(t('Waiting for payment confirmation...'));
+            pollAfnexStatus(pending.reference, pending.provider);
+        } catch (error) {
+            console.error('Failed to resume pending payment', error);
+        }
+    }, [data, t]);
+
+    const handlePayment = async (provider: AfnexProvider, requiresPhone: boolean) => {
         if (!data) return;
         if (!paymentsEnabled) {
             setPaymentStatus('error');
             setErrorMessage(t('Payments unavailable'));
             return;
         }
-        if (gateway === 'momo' && !momoPhone.trim()) {
+        if (requiresPhone && !momoPhone.trim()) {
             setPaymentStatus('error');
             setErrorMessage(t('Enter your mobile money number to receive the payment prompt.'));
             return;
         }
-        if (gateway === 'momo' && momoNetworkRequired && !momoNetwork.trim()) {
-            setPaymentStatus('error');
-            setErrorMessage(t('Enter your mobile money network to continue.'));
-            return;
-        }
         setIsProcessing(true);
-        setSelectedGateway(gateway);
         setErrorMessage('');
         setPaymentStatus('redirecting');
 
-        const result = await processPayment(gateway as PaymentGateway, {
+        const result = await processPayment(provider, {
             invoiceId: data.invoice.id,
             amount: data.invoice.total,
             currency: data.org.currency,
@@ -209,78 +276,28 @@ const InvoiceView: React.FC = () => {
             customerName: data.invoice.clientName,
             description: `Payment for Invoice ${data.invoice.invoiceNumber}`,
             payerPhone: momoPhone.trim(),
-            payerNetwork: momoNetwork.trim(),
         });
+
+        if (result.reference) {
+            persistPendingPayment(result.reference, provider);
+        }
 
         if (result.redirectUrl) {
             window.location.href = result.redirectUrl;
             return;
         }
 
-        if (gateway === 'momo' && result.success && result.reference) {
+        if (result.success && result.reference && requiresPhone) {
             setPaymentStatus('pending');
-            setPaymentNotice(t('MoMo prompt sent. Please approve the payment on your phone.'));
-            const reference = result.reference;
-            const referenceType = result.referenceType || 'tx_ref';
-            const txRef = result.txRef || reference;
-            if (!reference) {
-                setPaymentStatus('error');
-                setErrorMessage(t('Payment failed. Please try again.'));
-                return;
-            }
-            let cancelled = false;
-            let attempts = 0;
-
-            const pollStatus = async () => {
-                if (cancelled) return;
-                attempts += 1;
-                try {
-                    const response = await fetch(`/api/payments/momo/status?reference=${encodeURIComponent(reference)}&invoiceId=${data.invoice.id}&type=${encodeURIComponent(referenceType)}&txRef=${encodeURIComponent(txRef)}`);
-                    const statusData = await response.json().catch(() => ({}));
-                    if (statusData?.status === 'SUCCESSFUL') {
-                        setPaymentStatus('success');
-                        setPaymentNotice(t('Payment received. Updating invoice status...'));
-                        try {
-                            const invoices = await getInvoices(data.org.id);
-                            const updatedInvoice = invoices.find(i => i.id === data.invoice.id);
-                            if (updatedInvoice) {
-                                setData(prev => prev ? { ...prev, invoice: updatedInvoice } : prev);
-                            }
-                        } catch (error) {
-                            console.error('Failed to refresh invoice status', error);
-                        }
-                        setTimeout(() => {
-                            setShowPaymentModal(false);
-                            setPaymentStatus('idle');
-                        }, 2500);
-                        return;
-                    }
-                    if (statusData?.status && statusData.status !== 'PENDING') {
-                        setPaymentStatus('error');
-                        setErrorMessage(t('Payment failed. Please try again.'));
-                        return;
-                    }
-                } catch (error) {
-                    console.error('Failed to check MoMo status', error);
-                    setPaymentStatus('error');
-                    setErrorMessage(t('Payment failed. Please try again.'));
-                    return;
-                }
-
-                if (attempts < 10) {
-                    setTimeout(pollStatus, 4000);
-                }
-            };
-
-            pollStatus();
-
+            setPaymentNotice(t('Payment prompt sent. Please approve on your phone.'));
+            pollAfnexStatus(result.reference, provider);
             setIsProcessing(false);
-            setSelectedGateway(null);
             return;
         }
 
         if (result.success) {
             setPaymentStatus('success');
+            clearPendingPayment();
             setTimeout(() => {
                 setShowPaymentModal(false);
                 setPaymentStatus('idle');
@@ -291,16 +308,12 @@ const InvoiceView: React.FC = () => {
         }
 
         setIsProcessing(false);
-        setSelectedGateway(null);
     };
 
     if (!data) return <div className="p-8 text-center">{t('Loading Invoice...')}</div>;
 
     const { invoice, org } = data;
     const paymentConfig = org.paymentConfig;
-    const momoCountry = (paymentConfig?.bankCountry || MOMO_COUNTRY_BY_CURRENCY[String(org.currency || '').toUpperCase()] || '').toUpperCase();
-    const momoNetworkRequired = Boolean(momoCountry && MOMO_NETWORK_REQUIRED.has(momoCountry));
-    const momoNetworkHint = momoCountry ? MOMO_NETWORK_HINTS[momoCountry] : '';
     const paymentProvider = paymentConfig?.bankCountry
         ? resolvePayoutProvider(paymentConfig.bankCountry)
         : (paymentConfig?.provider || 'flutterwave');
@@ -312,11 +325,14 @@ const InvoiceView: React.FC = () => {
             || (paymentProvider === 'stripe' && paymentConfig?.accountId)
         )
     );
-    const availableGateways = paymentsEnabled
-        ? getAvailableGateways(org.currency).filter(([key]) => key === paymentProvider)
-        : [];
-    const hasMomoGateway = availableGateways.some(([key]) => key === 'momo');
+    const afnexProvider = resolveAfnexProvider(org.currency);
+    const afnexDetails = AFNEX_PROVIDER_DETAILS[afnexProvider];
+    const requiresPhone = requiresAfnexPhone(afnexProvider);
     const isPaid = invoice.status === InvoiceStatus.PAID;
+    const vatRate = Number.isFinite(invoice.taxRate) ? Math.max(0, invoice.taxRate) : 0;
+    const vatAmount = Number.isFinite(invoice.taxAmount) ? invoice.taxAmount : 0;
+    const vatLabel = `${t('VAT')} (${vatRate}%)`;
+    const AfnexIcon = afnexDetails.icon;
 
     return (
         <div className="min-h-screen bg-slate-100 p-8 print:p-0 print:bg-white">
@@ -330,7 +346,7 @@ const InvoiceView: React.FC = () => {
                 {/* Action Buttons */}
                 <div className="mb-6 flex justify-between items-center print:hidden">
                     <div className="flex gap-3">
-                        {!isPaid && paymentsEnabled && availableGateways.length > 0 && (
+                        {!isPaid && paymentsEnabled && (
                             <Button onClick={() => setShowPaymentModal(true)} className="shadow-neon">
                                 <CreditCard className="w-4 h-4 mr-2" /> {t('Pay Now')}
                             </Button>
@@ -438,8 +454,8 @@ const InvoiceView: React.FC = () => {
                                 <span>{formatCurrency(invoice.subtotal, org.currency)}</span>
                             </div>
                             <div className="flex justify-between text-slate-500">
-                                <span>{t('Tax (0%)')}</span>
-                                <span>{formatCurrency(0, org.currency)}</span>
+                                <span>{vatLabel}</span>
+                                <span>{formatCurrency(vatAmount, org.currency)}</span>
                             </div>
                             <div className="flex justify-between font-bold text-xl pt-4 border-t border-slate-200">
                                 <span>{t('Total')}</span>
@@ -488,14 +504,14 @@ const InvoiceView: React.FC = () => {
                             </div>
                             <h3 className="text-xl font-bold">
                                 {paymentStatus === 'success' ? t('Payment Successful!') :
-                                    paymentStatus === 'redirecting' ? t('Redirecting to Flutterwave...') :
-                                        paymentStatus === 'pending' ? t('Waiting for MoMo confirmation...') :
+                                    paymentStatus === 'redirecting' ? t('Redirecting to secure checkout...') :
+                                        paymentStatus === 'pending' ? t('Waiting for payment confirmation...') :
                                         paymentStatus === 'error' ? t('Payment Failed') : t('Pay Invoice')}
                             </h3>
                             <p className="text-slate-500 text-sm mt-1">
                                 {paymentStatus === 'success' ? t('Your invoice has been marked as paid.') :
                                     paymentStatus === 'redirecting' ? `${t('Invoice:')} ${invoice.invoiceNumber}` :
-                                        paymentStatus === 'pending' ? t('MoMo prompt sent. Please approve the payment on your phone.') :
+                                        paymentStatus === 'pending' ? t('Payment prompt sent. Please approve on your phone.') :
                                         paymentStatus === 'error' ? errorMessage : `${t('Invoice:')} ${invoice.invoiceNumber}`}
                             </p>
                             {paymentStatus === 'idle' && (
@@ -509,7 +525,7 @@ const InvoiceView: React.FC = () => {
                             <div className="space-y-3">
                                 <p className="text-sm font-medium text-slate-600 mb-2">{t('Select Payment Method:')}</p>
 
-                                {hasMomoGateway && (
+                                {requiresPhone && (
                                     <div className="mb-2">
                                         <Input
                                             label={t('Mobile money number')}
@@ -521,63 +537,38 @@ const InvoiceView: React.FC = () => {
                                         <p className="text-xs text-slate-500 mt-1">
                                             {t('Enter your mobile money number to receive the payment prompt.')}
                                         </p>
-                                        {momoNetworkRequired && (
-                                            <div className="mt-3">
-                                                <Input
-                                                    label={t('Mobile money network')}
-                                                    value={momoNetwork}
-                                                    placeholder={momoNetworkHint || t('Enter your mobile money network (e.g., MTN).')}
-                                                    onChange={(e) => setMomoNetwork(e.target.value)}
-                                                    className="bg-white border-slate-200 focus:border-primary"
-                                                />
-                                                {momoNetworkHint && (
-                                                    <p className="text-xs text-slate-500 mt-1">
-                                                        {momoNetworkHint}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
                                 )}
 
-                                {availableGateways.map(([key, gateway]) => {
-                                    const Icon = gateway.icon;
-                                    const isSelected = selectedGateway === key;
-                                    const isLoading = isProcessing && isSelected;
-
-                                    return (
-                                        <button
-                                            key={key}
-                                            onClick={() => handlePayment(key)}
-                                            disabled={isProcessing}
-                                            className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${isSelected
-                                                ? 'border-primary bg-primary/5'
-                                                : 'border-slate-200 hover:border-primary/50 hover:bg-slate-50'
-                                                } ${isProcessing && !isSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        >
-                                            <div className={`w-12 h-12 ${gateway.color} rounded-lg flex items-center justify-center text-white`}>
-                                                <Icon className="w-6 h-6" />
-                                            </div>
-                                            <div className="flex-1 text-left">
-                                                <p className="font-bold">{gateway.name}</p>
-                                                <p className="text-sm text-slate-500">{t(gateway.description)}</p>
-                                            </div>
-                                            {isLoading && (
-                                                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                            )}
-                                        </button>
-                                    );
-                                })}
+                                <button
+                                    onClick={() => handlePayment(afnexProvider, requiresPhone)}
+                                    disabled={isProcessing}
+                                    className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${isProcessing
+                                        ? 'border-primary bg-primary/5'
+                                        : 'border-slate-200 hover:border-primary/50 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    <div className={`w-12 h-12 ${afnexDetails.color} rounded-lg flex items-center justify-center text-white`}>
+                                        <AfnexIcon className="w-6 h-6" />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <p className="font-bold">{afnexDetails.name}</p>
+                                        <p className="text-sm text-slate-500">{t(afnexDetails.description)}</p>
+                                    </div>
+                                    {isProcessing && (
+                                        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                    )}
+                                </button>
                             </div>
                         ) : paymentStatus === 'redirecting' ? (
                             <div className="py-6 text-center text-sm text-slate-500">
                                 <div className="mx-auto mb-3 h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                {t('Redirecting to Flutterwave...')}
+                                {t('Redirecting to secure checkout...')}
                             </div>
                         ) : paymentStatus === 'pending' ? (
                             <div className="py-6 text-center text-sm text-slate-500">
                                 <div className="mx-auto mb-3 h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                {t('Waiting for MoMo confirmation...')}
+                                {t('Waiting for payment confirmation...')}
                             </div>
                         ) : paymentStatus === 'success' ? (
                             <div className="py-8 text-center">

@@ -38,6 +38,8 @@ const InvoiceCreate: React.FC = () => {
         'Price',
         'Add Line Item',
         'Subtotal',
+        'VAT',
+        'VAT (%)',
         'Total',
         'Please fill client info and add items',
         'AI Error:',
@@ -57,6 +59,7 @@ const InvoiceCreate: React.FC = () => {
         clientCompany: '',
         dueDate: '',
         notes: '',
+        vatRate: 0,
     });
 
     const [items, setItems] = useState<InvoiceItem[]>([]);
@@ -80,6 +83,7 @@ const InvoiceCreate: React.FC = () => {
                 clientCompany: source.clientCompany || '',
                 dueDate: '',
                 notes: source.notes || '',
+                vatRate: Number.isFinite(source.taxRate) ? source.taxRate : 0,
             });
 
             setItems(source.items.map(item => ({
@@ -166,7 +170,10 @@ const InvoiceCreate: React.FC = () => {
     };
 
     const subtotal = items.reduce((sum, i) => sum + i.total, 0);
-    const total = subtotal;
+    const vatRate = Number.isFinite(formData.vatRate) ? Math.max(0, formData.vatRate) : 0;
+    const vatAmount = subtotal * (vatRate / 100);
+    const total = subtotal + vatAmount;
+    const vatLabel = `${t('VAT')} (${vatRate}%)`;
 
     const handleSubmit = async () => {
         if (!formData.clientName || items.length === 0) return alert(t('Please fill client info and add items'));
@@ -178,8 +185,8 @@ const InvoiceCreate: React.FC = () => {
             clientCompany: formData.clientCompany,
             items,
             subtotal,
-            taxRate: 0,
-            taxAmount: 0,
+            taxRate: vatRate,
+            taxAmount: vatAmount,
             total,
             status: InvoiceStatus.SENT,
             date: new Date().toISOString(),
@@ -246,6 +253,20 @@ const InvoiceCreate: React.FC = () => {
                     <h3 className="font-bold mb-4">{t('Invoice Settings')}</h3>
                     <div className="space-y-4">
                         <Input label={t('Due Date')} type="date" value={formData.dueDate} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} />
+                        <Input
+                            label={t('VAT (%)')}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formData.vatRate}
+                            onChange={e => {
+                                const nextRate = Number(e.target.value);
+                                setFormData({
+                                    ...formData,
+                                    vatRate: Number.isFinite(nextRate) ? Math.max(0, nextRate) : 0,
+                                });
+                            }}
+                        />
                         <div>
                             <label className="text-sm font-medium leading-none mb-2 block">{t('Notes / Terms')}</label>
                             <textarea
@@ -315,6 +336,10 @@ const InvoiceCreate: React.FC = () => {
                         <div className="flex justify-between text-sm">
                             <span>{t('Subtotal')}</span>
                             <span>{formatCurrency(subtotal, org.currency)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span>{vatLabel}</span>
+                            <span>{formatCurrency(vatAmount, org.currency)}</span>
                         </div>
                         <div className="flex justify-between font-bold text-lg pt-2 border-t">
                             <span>{t('Total')}</span>
