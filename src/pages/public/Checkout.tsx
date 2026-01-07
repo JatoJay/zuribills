@@ -66,6 +66,9 @@ const Checkout: React.FC = () => {
         'Order Summary',
         'each',
         'Subtotal',
+        'VAT',
+        'VAT (%)',
+        'Total',
         'Payment Currency',
         'Detecting your location...',
         'Currency detected based on your location. You can change it below.',
@@ -98,6 +101,7 @@ const Checkout: React.FC = () => {
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
     const [detectingLocation, setDetectingLocation] = useState(true);
     const [conversionRate, setConversionRate] = useState<number | null>(null);
+    const [vatRate, setVatRate] = useState(0);
     const catalogEnabled = org.catalogEnabled !== false;
 
     useEffect(() => {
@@ -108,7 +112,10 @@ const Checkout: React.FC = () => {
         });
     }, [catalogEnabled]);
 
-    const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const normalizedVatRate = Number.isFinite(vatRate) ? Math.max(0, vatRate) : 0;
+    const vatAmount = subtotal * (normalizedVatRate / 100);
+    const totalWithVat = subtotal + vatAmount;
 
     const conversionRates: Record<string, number> = {
         'USD': 1,
@@ -159,7 +166,7 @@ const Checkout: React.FC = () => {
     }, [catalogEnabled, org.currency, org.paymentConfig?.provider, selectedCurrency]);
 
     const effectiveRate = conversionRate ?? getFallbackRate(org.currency, selectedCurrency);
-    const convertedTotal = total * effectiveRate;
+    const convertedTotal = totalWithVat * effectiveRate;
     const currencySymbol = CURRENCIES.find(c => c.value === selectedCurrency)?.symbol || '$';
 
     const handleCheckout = async (e: React.FormEvent) => {
@@ -180,10 +187,10 @@ const Checkout: React.FC = () => {
                 unitPrice: c.price,
                 total: c.price * c.quantity
             })),
-            subtotal: total,
-            taxRate: 0,
-            taxAmount: 0,
-            total: total,
+            subtotal,
+            taxRate: normalizedVatRate,
+            taxAmount: vatAmount,
+            total: totalWithVat,
             status: InvoiceStatus.DRAFT,
             date: new Date().toISOString(),
             dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -301,10 +308,33 @@ const Checkout: React.FC = () => {
                         </div>
 
                         {/* Total Section */}
-                        <div className="mt-6 pt-6 border-t border-border">
-                            <div className="flex justify-between items-center text-lg">
+                        <div className="mt-6 pt-6 border-t border-border space-y-3">
+                            <div className="flex justify-between items-center text-sm">
                                 <span className="text-muted">{t('Subtotal')} ({org.currency})</span>
-                                <span className="font-bold text-foreground">{formatCurrency(total, org.currency)}</span>
+                                <span className="font-semibold text-foreground">{formatCurrency(subtotal, org.currency)}</span>
+                            </div>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                                <div className="sm:flex-1">
+                                    <Input
+                                        label={t('VAT (%)')}
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        inputMode="decimal"
+                                        value={vatRate}
+                                        onChange={(e) => {
+                                            const nextRate = Number(e.target.value);
+                                            setVatRate(Number.isFinite(nextRate) ? Math.max(0, nextRate) : 0);
+                                        }}
+                                    />
+                                </div>
+                                <div className="text-right text-sm font-semibold text-foreground sm:min-w-[120px] sm:pb-2">
+                                    {formatCurrency(vatAmount, org.currency)}
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center text-lg border-t border-border pt-3">
+                                <span className="font-semibold text-foreground">{t('Total')} ({org.currency})</span>
+                                <span className="font-bold text-foreground">{formatCurrency(totalWithVat, org.currency)}</span>
                             </div>
                         </div>
                     </Card>
