@@ -60,6 +60,37 @@ const MOMO_COUNTRY_BY_CURRENCY = {
     ZAR: 'ZA',
 };
 
+// Afnex providers cache - fetched dynamically from API
+let afnexProvidersCache = null;
+let afnexProvidersCacheTime = 0;
+const AFNEX_PROVIDERS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+const fetchAfnexProviders = async () => {
+    const now = Date.now();
+    if (afnexProvidersCache && now - afnexProvidersCacheTime < AFNEX_PROVIDERS_CACHE_TTL_MS) {
+        return afnexProvidersCache;
+    }
+    try {
+        const response = await fetch(`${afnexDemoBaseUrl}/providers`);
+        if (response.ok) {
+            afnexProvidersCache = await response.json();
+            afnexProvidersCacheTime = now;
+            return afnexProvidersCache;
+        }
+    } catch (error) {
+        console.error('Failed to fetch Afnex providers', error);
+    }
+    // Fallback to cached or default
+    return afnexProvidersCache || [];
+};
+
+const getProvidersForCurrency = async (currency) => {
+    const providers = await fetchAfnexProviders();
+    const normalized = String(currency || '').trim().toUpperCase();
+    return providers.filter((p) => p.currencies?.includes(normalized));
+};
+
+// Legacy fallback mapping (used if API is unavailable)
 const AFNEX_PROVIDER_BY_CURRENCY = {
     NGN: 'paystack',
     KES: 'pesapal',
@@ -171,6 +202,18 @@ const resolveFlutterwaveMomoOption = (countryCode) =>
 
 const resolveAfnexProvider = (currency) => {
     const normalized = String(currency || '').trim().toUpperCase();
+    return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
+};
+
+// Async version that uses dynamic providers from Afnex API
+const resolveAfnexProviderAsync = async (currency) => {
+    const normalized = String(currency || '').trim().toUpperCase();
+    const providers = await getProvidersForCurrency(normalized);
+    if (providers.length > 0) {
+        // Return first matching provider (Afnex returns them in priority order)
+        return providers[0].name;
+    }
+    // Fallback to static mapping
     return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
 };
 
@@ -528,6 +571,29 @@ app.get('/api/payments/rates', async (req, res) => {
     return res.status(503).json({ error: 'No exchange rate available from configured providers.' });
 });
 
+app.get('/api/payments/afnex/providers', async (req, res) => {
+    const currency = String(req.query.currency || '').trim().toUpperCase();
+
+    try {
+        const allProviders = await fetchAfnexProviders();
+
+        if (!currency) {
+            // Return all providers
+            return res.json({ providers: allProviders });
+        }
+
+        // Filter by currency
+        const matching = allProviders.filter((p) => p.currencies?.includes(currency));
+        return res.json({
+            currency,
+            providers: matching,
+        });
+    } catch (error) {
+        console.error('Failed to fetch Afnex providers', error);
+        return res.status(500).json({ error: 'Failed to fetch providers.' });
+    }
+});
+
 app.post('/api/payments/afnex/charge', async (req, res) => {
     if (!supabaseAdmin) {
         return res.status(500).json({ error: 'Supabase admin is not configured.' });
@@ -571,7 +637,7 @@ app.post('/api/payments/afnex/charge', async (req, res) => {
     }
 
     const currency = String(org.currency || 'USD').toUpperCase();
-    const resolvedProvider = String(provider || '').trim().toLowerCase() || resolveAfnexProvider(currency);
+    const resolvedProvider = String(provider || '').trim().toLowerCase() || await resolveAfnexProviderAsync(currency);
     const amount = parseAfnexAmount(invoice.total, 0);
     if (!Number.isFinite(amount) || amount <= 0) {
         return res.status(400).json({ error: 'Invalid invoice amount.' });
