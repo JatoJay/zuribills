@@ -18,6 +18,7 @@ const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const googleRedirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI || 'http://localhost:8787/api/auth/google/callback';
 const appBaseUrl = process.env.VITE_APP_BASE_URL || 'http://localhost:3004';
+const googleTranslateApiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
 const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.VITE_API_KEY;
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -65,6 +66,36 @@ const AFNEX_PROVIDER_BY_CURRENCY = {
     RWF: 'mtn_momo',
     GHS: 'mtn_momo',
     ZAR: 'mtn_momo',
+};
+
+const GOOGLE_LANGUAGE_CODE_MAP = {
+    english: 'en',
+    french: 'fr',
+    spanish: 'es',
+    portuguese: 'pt',
+    arabic: 'ar',
+    swahili: 'sw',
+    kinyarwanda: 'rw',
+    hausa: 'ha',
+    yoruba: 'yo',
+    igbo: 'ig',
+    twi: 'ak',
+    zulu: 'zu',
+    afrikaans: 'af',
+    'nigerian pidgin': 'pcm',
+    german: 'de',
+    hindi: 'hi',
+    bengali: 'bn',
+    'chinese (simplified)': 'zh-CN',
+    'chinese (traditional)': 'zh-TW',
+    japanese: 'ja',
+    korean: 'ko',
+    italian: 'it',
+    dutch: 'nl',
+    russian: 'ru',
+    turkish: 'tr',
+    indonesian: 'id',
+    vietnamese: 'vi',
 };
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -141,6 +172,12 @@ const resolveFlutterwaveMomoOption = (countryCode) =>
 const resolveAfnexProvider = (currency) => {
     const normalized = String(currency || '').trim().toUpperCase();
     return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
+};
+
+const resolveGoogleLanguageCode = (language, fallback) => {
+    if (!language) return fallback;
+    const normalized = String(language).trim().toLowerCase();
+    return GOOGLE_LANGUAGE_CODE_MAP[normalized] || fallback;
 };
 
 const normalizeAfnexStatus = (status) => {
@@ -1448,6 +1485,58 @@ app.post('/api/ai/generate', async (req, res) => {
     } catch (error) {
         console.error('Gemini API error:', error);
         return res.status(500).json({ error: 'Gemini API request failed.' });
+    }
+});
+
+app.post('/api/translate', async (req, res) => {
+    if (!googleTranslateApiKey) {
+        return res.status(500).json({ error: 'Google Translate API key is not configured.' });
+    }
+
+    const { texts, targetLanguage, sourceLanguage } = req.body || {};
+    if (!Array.isArray(texts) || texts.length === 0) {
+        return res.status(400).json({ error: 'Texts array is required.' });
+    }
+    if (!targetLanguage) {
+        return res.status(400).json({ error: 'Target language is required.' });
+    }
+
+    const target = resolveGoogleLanguageCode(targetLanguage, 'en');
+    const source = sourceLanguage ? resolveGoogleLanguageCode(sourceLanguage, '') : '';
+    const payload = {
+        q: texts.map((text) => String(text)),
+        target,
+        format: 'text',
+        ...(source ? { source } : {}),
+    };
+
+    try {
+        const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${googleTranslateApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            return res.status(response.status).json({
+                error: errData.error?.message || 'Google Translate request failed.',
+            });
+        }
+
+        const data = await response.json();
+        const translations = Array.isArray(data?.data?.translations)
+            ? data.data.translations.map((item) => item.translatedText || '')
+            : [];
+
+        if (!translations.length) {
+            return res.status(500).json({ error: 'No translations returned.' });
+        }
+
+        return res.json({ translations });
+    } catch (error) {
+        console.error('Google Translate API error:', error);
+        return res.status(500).json({ error: 'Google Translate request failed.' });
     }
 });
 

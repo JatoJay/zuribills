@@ -7,6 +7,7 @@ import { Button, formatCurrency } from '@/components/ui';
 import { CartContext, CartItem } from '@/context/CartContext';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
+import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 
 interface CatalogContextType {
     org: Organization;
@@ -50,9 +51,11 @@ const CatalogLayout: React.FC = () => {
     }, [slug]);
 
     useEffect(() => {
-        if (org?.preferredLanguage) {
-            setLanguage(org.preferredLanguage);
-        }
+        if (!org?.preferredLanguage) return;
+        const source = localStorage.getItem(LANGUAGE_SOURCE_KEY);
+        if (source === 'user') return;
+        localStorage.setItem(LANGUAGE_SOURCE_KEY, 'org');
+        setLanguage(org.preferredLanguage);
     }, [org?.preferredLanguage, setLanguage]);
 
     const addToCart = (service: Service) => {

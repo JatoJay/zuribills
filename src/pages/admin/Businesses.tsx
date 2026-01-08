@@ -13,6 +13,7 @@ import { Organization } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Building2, Plus } from 'lucide-react';
 import { resolveDefaultCurrency, resolvePayoutProvider } from '@/services/paymentRouting';
+import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 
 type CountryOption = {
   code: string;
@@ -36,32 +37,6 @@ const fallbackCountries: CountryOption[] = [
   { code: 'IN', name: 'India', currencyCode: 'INR', currencyName: 'Indian Rupee' },
   { code: 'AE', name: 'United Arab Emirates', currencyCode: 'AED', currencyName: 'UAE Dirham' },
   { code: 'AU', name: 'Australia', currencyCode: 'AUD', currencyName: 'Australian Dollar' },
-];
-
-const languageSuggestions = [
-  'English',
-  'French',
-  'Spanish',
-  'Portuguese',
-  'Arabic',
-  'Swahili',
-  'Hausa',
-  'Yoruba',
-  'Igbo',
-  'Nigerian Pidgin',
-  'Hindi',
-  'Bengali',
-  'Chinese (Simplified)',
-  'Chinese (Traditional)',
-  'Japanese',
-  'Korean',
-  'German',
-  'Italian',
-  'Dutch',
-  'Russian',
-  'Turkish',
-  'Indonesian',
-  'Vietnamese',
 ];
 
 const Businesses: React.FC = () => {
@@ -375,7 +350,7 @@ const Businesses: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, preferredLanguage: e.target.value }))}
                 />
                 <datalist id="language-options-business">
-                  {languageSuggestions.map(option => (
+                  {SUPPORTED_LANGUAGES.map(option => (
                     <option key={option} value={option} />
                   ))}
                 </datalist>
