@@ -5,7 +5,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import BusinessChatWidget from '@/components/BusinessChatWidget';
 import { Button, Card } from '@/components/ui';
 import { getSupabaseClient } from '@/services/supabaseClient';
-import { clearCurrentAccountId, clearCurrentUserId, getAccountById, getCurrentUserId, getOrganizationBySlug, getUserByEmail, setCurrentAccountId, setCurrentUserId, updateAccountSubscription } from '@/services/storage';
+import { clearCurrentAccountId, clearCurrentUserId, getAccountById, getCurrentUserId, getOrganizationBySlug, getUserByEmail, setCurrentAccountId, setCurrentUserId } from '@/services/storage';
 import { Account, Organization } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
@@ -77,6 +77,7 @@ const AdminLayout: React.FC = () => {
     'Included features',
     'Activate subscription',
     'Upgrade failed. Please try again.',
+    'Authentication failed. Please try again.',
     'Close',
   ]), []);
   const { t, setLanguage } = useTranslation(translationStrings);
@@ -229,13 +230,37 @@ const AdminLayout: React.FC = () => {
     setIsUpgrading(true);
     setUpgradeError(null);
     try {
-      await updateAccountSubscription(org.accountId, {
-        status: 'active',
-        billingCycle,
-        startedAt: new Date().toISOString(),
+      const supabase = getSupabaseClient();
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        throw new Error(t('Authentication failed. Please try again.'));
+      }
+
+      const response = await fetch('/api/billing/flutterwave/initialize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          orgId: org.id,
+          billingCycle,
+        }),
       });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.error || t('Upgrade failed. Please try again.'));
+      }
+
+      const payload = await response.json().catch(() => ({}));
+      if (!payload?.link) {
+        throw new Error(t('Upgrade failed. Please try again.'));
+      }
+
       setShowUpgradeModal(false);
-      refreshOrg();
+      window.location.href = payload.link;
     } catch (error: any) {
       setUpgradeError(error?.message || t('Upgrade failed. Please try again.'));
     } finally {

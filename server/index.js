@@ -99,6 +99,13 @@ const AFNEX_PROVIDER_BY_CURRENCY = {
     ZAR: 'mtn_momo',
 };
 
+const SUBSCRIPTION_PRICING = {
+    monthly: { amount: 4.99, label: 'Monthly' },
+    yearly: { amount: 54, label: 'Yearly' },
+};
+
+const SUBSCRIPTION_CURRENCY = 'USD';
+
 const GOOGLE_LANGUAGE_CODE_MAP = {
     english: 'en',
     french: 'fr',
@@ -221,6 +228,111 @@ const resolveGoogleLanguageCode = (language, fallback) => {
     if (!language) return fallback;
     const normalized = String(language).trim().toLowerCase();
     return GOOGLE_LANGUAGE_CODE_MAP[normalized] || fallback;
+};
+
+const resolveSubscriptionPlan = (billingCycle) => {
+    const normalized = String(billingCycle || '').trim().toLowerCase();
+    if (normalized === 'yearly') return { key: 'yearly', ...SUBSCRIPTION_PRICING.yearly };
+    return { key: 'monthly', ...SUBSCRIPTION_PRICING.monthly };
+};
+
+const ensureOrgUserAccess = async ({ authUser, org }) => {
+    if (!supabaseAdmin) {
+        return { error: 'Supabase admin is not configured.', status: 500 };
+    }
+    if (!authUser?.id) {
+        return { error: 'Unauthorized.', status: 401 };
+    }
+    if (!org?.account_id) {
+        return { error: 'Organization account is missing.', status: 500 };
+    }
+
+    const authUserId = authUser.id;
+    const authEmail = String(authUser.email || '').trim().toLowerCase();
+
+    const { data: directUser, error: directError } = await supabaseAdmin
+        .from('users')
+        .select('id, account_id, email, name, role, permissions')
+        .eq('id', authUserId)
+        .maybeSingle();
+    if (directError) {
+        console.error('Failed to load user by id', directError);
+        return { error: 'Failed to load user.', status: 500 };
+    }
+    if (directUser) {
+        if (directUser.account_id !== org.account_id) {
+            return { error: 'Not authorized to update this organization.', status: 403 };
+        }
+        return { user: directUser, repaired: false };
+    }
+
+    if (!authEmail) {
+        return { error: 'Not authorized to update this organization.', status: 403 };
+    }
+
+    const { data: legacyUser, error: legacyError } = await supabaseAdmin
+        .from('users')
+        .select('id, account_id, email, name, role, permissions')
+        .eq('account_id', org.account_id)
+        .ilike('email', authEmail)
+        .maybeSingle();
+    if (legacyError) {
+        console.error('Failed to load legacy user by email', legacyError);
+        return { error: 'Failed to load user.', status: 500 };
+    }
+    if (!legacyUser) {
+        return { error: 'Not authorized to update this organization.', status: 403 };
+    }
+
+    const legacyUserId = legacyUser.id;
+    const { error: updateUserError } = await supabaseAdmin
+        .from('users')
+        .update({
+            id: authUserId,
+            email: authEmail,
+            account_id: org.account_id,
+        })
+        .eq('id', legacyUserId);
+    if (updateUserError) {
+        console.error('Failed to update legacy user id', updateUserError);
+        return { error: 'Failed to update user.', status: 500 };
+    }
+
+    const { error: membershipError } = await supabaseAdmin
+        .from('org_memberships')
+        .update({ user_id: authUserId })
+        .eq('user_id', legacyUserId);
+    if (membershipError) {
+        console.error('Failed to update org memberships', membershipError);
+    }
+
+    const { error: orgOwnerError } = await supabaseAdmin
+        .from('organizations')
+        .update({ owner_id: authUserId })
+        .eq('owner_id', legacyUserId)
+        .eq('account_id', org.account_id);
+    if (orgOwnerError) {
+        console.error('Failed to update organization owners', orgOwnerError);
+    }
+
+    const { error: accountOwnerError } = await supabaseAdmin
+        .from('accounts')
+        .update({ owner_user_id: authUserId })
+        .eq('id', org.account_id)
+        .eq('owner_user_id', legacyUserId);
+    if (accountOwnerError) {
+        console.error('Failed to update account owner', accountOwnerError);
+    }
+
+    return {
+        user: {
+            ...legacyUser,
+            id: authUserId,
+            email: authEmail,
+            account_id: org.account_id,
+        },
+        repaired: true,
+    };
 };
 
 const normalizeAfnexStatus = (status) => {
@@ -877,22 +989,19 @@ app.post('/api/payments/flutterwave/payouts', async (req, res) => {
         return res.status(404).json({ error: 'Organization not found.' });
     }
 
-    const { data: userRow, error: userError } = await supabaseAdmin
-        .from('users')
-        .select('id, account_id, email, name')
-        .eq('id', user.id)
-        .maybeSingle();
-    if (userError) {
-        console.error('Failed to load user', userError);
-        return res.status(500).json({ error: 'Failed to load user.' });
+    const accessResult = await ensureOrgUserAccess({ authUser: user, org });
+    if (accessResult?.error) {
+        return res.status(accessResult.status || 403).json({ error: accessResult.error });
     }
-    if (!userRow || userRow.account_id !== org.account_id) {
+    const userRow = accessResult.user;
+    if (!userRow) {
         return res.status(403).json({ error: 'Not authorized to update this organization.' });
     }
 
     const country = bankCountryValue;
     const feePercent = resolvePlatformFeePercent(org.payment_config?.platformFeePercent);
 
+    const splitValue = Math.max(0, Math.min(feePercent / 100, 1));
     const payload = {
         account_bank: bankCodeValue,
         account_number: accountNumberValue,
@@ -902,7 +1011,7 @@ app.post('/api/payments/flutterwave/payouts', async (req, res) => {
         business_contact_mobile: org.contact_phone || undefined,
         country,
         split_type: 'percentage',
-        split_value: 100,
+        split_value: splitValue,
         meta: {
             org_id: org.id,
             platform_fee_percent: String(feePercent),
@@ -964,6 +1073,97 @@ app.post('/api/payments/flutterwave/payouts', async (req, res) => {
     } catch (error) {
         console.error('Flutterwave subaccount error', error);
         return res.status(500).json({ error: 'Failed to create payout account.' });
+    }
+});
+
+app.post('/api/billing/flutterwave/initialize', async (req, res) => {
+    if (!flutterwaveSecretKey) {
+        return res.status(500).json({ error: 'FLUTTERWAVE_SECRET_KEY is not configured.' });
+    }
+    if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured.' });
+    }
+
+    const { user, error: authError } = await getAuthenticatedUser(req);
+    if (authError || !user) {
+        return res.status(401).json({ error: authError || 'Unauthorized.' });
+    }
+
+    const { orgId, billingCycle } = req.body || {};
+    if (!orgId) {
+        return res.status(400).json({ error: 'orgId is required.' });
+    }
+
+    const { data: org, error: orgError } = await supabaseAdmin
+        .from('organizations')
+        .select('id, slug, account_id, owner_id, name, contact_email')
+        .eq('id', orgId)
+        .maybeSingle();
+    if (orgError) {
+        console.error('Failed to load organization', orgError);
+        return res.status(500).json({ error: 'Failed to load organization.' });
+    }
+    if (!org) {
+        return res.status(404).json({ error: 'Organization not found.' });
+    }
+
+    const accessResult = await ensureOrgUserAccess({ authUser: user, org });
+    if (accessResult?.error) {
+        return res.status(accessResult.status || 403).json({ error: accessResult.error });
+    }
+    const userRow = accessResult.user;
+    const isOwner = userRow?.role === 'OWNER' || userRow?.role === 'ADMIN' || org.owner_id === user.id;
+    if (!isOwner) {
+        return res.status(403).json({ error: 'Only account owners can upgrade subscriptions.' });
+    }
+
+    const plan = resolveSubscriptionPlan(billingCycle);
+    const txRef = `sub_${org.account_id}_${Date.now()}`;
+    const redirectUrl = `${appBaseUrl}/org/${org.slug}?billing=processing`;
+
+    const payload = {
+        tx_ref: txRef,
+        amount: plan.amount,
+        currency: SUBSCRIPTION_CURRENCY,
+        redirect_url: redirectUrl,
+        customer: {
+            email: user.email || org.contact_email,
+            name: userRow?.name || org.name,
+        },
+        meta: {
+            account_id: org.account_id,
+            organization_id: org.id,
+            billing_cycle: plan.key,
+            billing_type: 'subscription',
+        },
+        customizations: {
+            title: 'InvoiceFlow Subscription',
+            description: `${plan.label} plan`,
+        },
+    };
+
+    try {
+        const response = await fetch('https://api.flutterwave.com/v3/payments', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${flutterwaveSecretKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            console.error('Flutterwave subscription init failed', data);
+            return res.status(response.status).json({ error: data?.message || 'Flutterwave initialization failed.' });
+        }
+        const link = data?.data?.link;
+        if (!link) {
+            return res.status(500).json({ error: 'Flutterwave did not return a payment link.' });
+        }
+        return res.json({ link, reference: txRef });
+    } catch (error) {
+        console.error('Flutterwave subscription init error', error);
+        return res.status(500).json({ error: 'Failed to initialize Flutterwave payment.' });
     }
 });
 
@@ -1380,12 +1580,39 @@ app.post('/api/webhooks/flutterwave', async (req, res) => {
         return res.json({ received: true });
     }
 
+    const txRef = data?.tx_ref || data?.txRef || data?.reference || data?.flw_ref;
     const invoiceId = data?.meta?.invoice_id
         || data?.meta?.invoiceId
-        || parseInvoiceIdFromRef(data?.tx_ref || data?.txRef || data?.reference || data?.flw_ref);
+        || parseInvoiceIdFromRef(txRef);
     const organizationId = data?.meta?.organization_id || data?.meta?.organizationId;
+    const billingType = data?.meta?.billing_type || data?.meta?.billingType;
 
     if (isChargeCompleted) {
+        const isSubscriptionCharge = billingType === 'subscription'
+            || String(txRef || '').startsWith('sub_');
+        if (isSubscriptionCharge) {
+            const accountId = data?.meta?.account_id || data?.meta?.accountId;
+            const billingCycle = String(data?.meta?.billing_cycle || data?.meta?.billingCycle || 'monthly')
+                .trim()
+                .toLowerCase() === 'yearly' ? 'yearly' : 'monthly';
+            if (accountId) {
+                const { error: subscriptionError } = await supabaseAdmin
+                    .from('organizations')
+                    .update({
+                        subscription: {
+                            status: 'active',
+                            billingCycle,
+                            startedAt: new Date().toISOString(),
+                        },
+                    })
+                    .eq('account_id', accountId);
+                if (subscriptionError) {
+                    console.error('Failed to update subscription from webhook', subscriptionError);
+                }
+            }
+            return res.json({ received: true });
+        }
+
         if (!invoiceId) {
             return res.json({ received: true });
         }

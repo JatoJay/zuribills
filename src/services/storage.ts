@@ -357,6 +357,46 @@ export const getUserByEmail = async (email: string): Promise<User | undefined> =
   return data ? mapUserFromDb(data) : undefined;
 };
 
+export const getUserById = async (userId: string): Promise<User | undefined> => {
+  const normalizedId = userId.trim();
+  if (!normalizedId) return undefined;
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', normalizedId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapUserFromDb(data) : undefined;
+};
+
+export const ensureAuthUser = async (payload: {
+  id: string;
+  accountId: string;
+  name: string;
+  email: string;
+  role?: UserRole;
+  permissions?: string[];
+  avatarUrl?: string;
+}): Promise<User> => {
+  const existing = await getUserById(payload.id);
+  if (existing) return existing;
+  const supabase = getSupabaseClient();
+  const newUser: User = {
+    id: payload.id,
+    accountId: payload.accountId,
+    name: payload.name,
+    email: payload.email.trim().toLowerCase(),
+    role: payload.role ?? UserRole.OWNER,
+    permissions: payload.permissions ?? ['ALL'],
+    avatarUrl: payload.avatarUrl,
+    createdAt: new Date().toISOString(),
+  };
+  const { error } = await supabase.from('users').insert(mapUserToDb(newUser));
+  if (error) throw error;
+  return newUser;
+};
+
 export const createUser = async (user: Omit<User, 'id' | 'createdAt'>): Promise<User> => {
   const supabase = getSupabaseClient();
   const newUser: User = {
@@ -640,13 +680,17 @@ export const removeOrgMembership = async (orgId: string, userId: string): Promis
 // --- Services ---
 
 export const getServices = async (orgId: string): Promise<Service[]> => {
+  if (!orgId) return [];
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('services')
     .select('*')
     .eq('organization_id', orgId);
-  if (error) throw error;
-  return (data || []).map(mapServiceFromDb);
+  if (error) {
+    console.error('Failed to load services', error);
+    return [];
+  }
+  return (data || []).map(mapServiceFromDb).filter((service) => service.organizationId === orgId);
 };
 
 export const createService = async (service: Omit<Service, 'id'>): Promise<Service> => {

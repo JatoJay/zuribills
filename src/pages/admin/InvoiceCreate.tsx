@@ -70,8 +70,23 @@ const InvoiceCreate: React.FC = () => {
     const [complianceResult, setComplianceResult] = useState<ComplianceResult | null>(null);
 
     useEffect(() => {
-        if (org) getServices(org.id).then(setServices);
-    }, [org]);
+        let isActive = true;
+        if (!org?.id) {
+            setServices([]);
+            return () => {
+                isActive = false;
+            };
+        }
+        setServices([]);
+        getServices(org.id).then((data) => {
+            if (isActive) {
+                setServices(data.filter(service => service.organizationId === org.id));
+            }
+        });
+        return () => {
+            isActive = false;
+        };
+    }, [org?.id]);
 
     useEffect(() => {
         const state = location.state as any;

@@ -9,6 +9,7 @@ import {
   getOrganizationsForUser,
   getOrgMemberships,
   getUserByEmail,
+  upsertOrgMembership,
   setCurrentAccountId,
   setCurrentUserId,
 } from '@/services/storage';
@@ -109,8 +110,26 @@ const Login: React.FC = () => {
         const memberships = await getOrgMemberships(org.id);
         const hasAccess = memberships.some((membership) => membership.userId === userRecord.id);
         if (!hasAccess) {
-          setMessage({ type: 'error', text: t('You do not have access to that workspace.') });
-          return;
+          const isAccountOwner = org.accountId
+            && userRecord.accountId === org.accountId
+            && [UserRole.OWNER, UserRole.ADMIN].includes(userRecord.role);
+          if (!isAccountOwner) {
+            setMessage({ type: 'error', text: t('You do not have access to that workspace.') });
+            return;
+          }
+
+          try {
+            await upsertOrgMembership({
+              organizationId: org.id,
+              userId: userRecord.id,
+              role: userRecord.role,
+              permissions: userRecord.permissions?.length ? userRecord.permissions : ['ALL'],
+            });
+          } catch (error) {
+            console.error('Failed to restore org membership', error);
+            setMessage({ type: 'error', text: t('You do not have access to that workspace.') });
+            return;
+          }
         }
       } else {
         const orgs = await getOrganizationsForUser(userRecord.id, userRecord.accountId);

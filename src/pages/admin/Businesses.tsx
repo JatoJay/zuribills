@@ -4,7 +4,6 @@ import { Button, Card, Input, Select } from '@/components/ui';
 import { useAdminContext } from './AdminLayout';
 import {
   createOrganization,
-  getOrganizationsByAccount,
   getOrganizationsForUser,
   getOrganizationBySlug,
   getCurrentUserId,
@@ -40,7 +39,7 @@ const fallbackCountries: CountryOption[] = [
 ];
 
 const Businesses: React.FC = () => {
-  const { org, account, isOwner } = useAdminContext();
+  const { org, account } = useAdminContext();
   const navigate = useNavigate();
   const translationStrings = useMemo(() => ([
     'Businesses',
@@ -64,6 +63,7 @@ const Businesses: React.FC = () => {
     'Loading countries...',
     'Please select a country.',
     'Please enter your business name and contact email.',
+    'Please sign in again to continue.',
     'Slug might already exist or invalid data.',
   ]), []);
   const { t } = useTranslation(translationStrings);
@@ -89,12 +89,12 @@ const Businesses: React.FC = () => {
   const loadBusinesses = async () => {
     setLoading(true);
     const accountId = org.accountId;
-    if (accountId) {
-      const currentUserId = getCurrentUserId();
-      const orgs = isOwner
-        ? await getOrganizationsByAccount(accountId)
-        : await getOrganizationsForUser(currentUserId, accountId);
+    const currentUserId = getCurrentUserId();
+    if (accountId && currentUserId) {
+      const orgs = await getOrganizationsForUser(currentUserId, accountId);
       setBusinesses(orgs);
+    } else {
+      setBusinesses([]);
     }
     setLoading(false);
   };
@@ -221,9 +221,16 @@ const Businesses: React.FC = () => {
       const slug = await generateUniqueSlug(formData.name);
       const resolvedCurrency = resolveDefaultCurrency(selectedCountry.code, selectedCountry.currencyCode);
       const payoutProvider = resolvePayoutProvider(selectedCountry.code);
+      const currentUserId = getCurrentUserId();
+      if (!currentUserId) {
+        alert(t('Please sign in again to continue.'));
+        setSaving(false);
+        return;
+      }
+
       const newOrg = await createOrganization({
         accountId: org.accountId,
-        ownerId: org.ownerId,
+        ownerId: currentUserId,
         name: formData.name.trim(),
         slug,
         contactEmail: formData.contactEmail.trim(),
