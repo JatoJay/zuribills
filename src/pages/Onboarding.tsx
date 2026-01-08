@@ -1,13 +1,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input, Select } from '../components/ui';
-import { createAccount, createOrganization, createUser, getCurrentAccountId, getCurrentUserId, getOrganizationBySlug, setCurrentAccountId, setCurrentUserId } from '../services/storage';
+import { createAccount, createOrganization, ensureAuthUser, getAccountById, getOrganizationBySlug, setCurrentAccountId, setCurrentUserId } from '../services/storage';
 import { UserRole } from '../types';
 import { Zap, ShieldCheck, Clock3, Sparkles } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { resolveDefaultCurrency, resolvePayoutProvider } from '@/services/paymentRouting';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
+import { getSupabaseClient } from '@/services/supabaseClient';
 
 type CountryOption = {
     code: string;
@@ -113,6 +114,7 @@ const Onboarding: React.FC = () => {
         'Signed in as',
         'Use a different account',
         'Google sign-in failed. Please try again.',
+        'Please sign in to continue.',
         'Create & Launch Dashboard',
         'Back to Home',
         'Select your country',
@@ -251,7 +253,18 @@ const Onboarding: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name.trim() || !formData.contactEmail.trim()) {
+        const supabase = getSupabaseClient();
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        const authUser = authData?.user;
+        const authEmail = authUser?.email?.trim().toLowerCase() || '';
+
+        if (authError || !authUser || !authEmail) {
+            alert(t('Please sign in to continue.'));
+            navigate({ to: '/login', search: formData.contactEmail ? ({ email: formData.contactEmail.trim() } as any) : {} as any });
+            return;
+        }
+
+        if (!formData.name.trim() || !(formData.contactEmail.trim() || authEmail)) {
             alert(t('Please enter your business name and contact email.'));
             return;
         }
@@ -262,33 +275,33 @@ const Onboarding: React.FC = () => {
         }
         setLoading(true);
         try {
-            const existingAccountId = getCurrentAccountId();
-            const existingUserId = getCurrentUserId();
-            let accountId = existingAccountId;
-            let ownerId = existingUserId;
+            const ownerName = googleProfile?.name || deriveOwnerName(authEmail);
+            const accountId = authUser.id;
+            const ownerId = authUser.id;
+            const contactEmail = formData.contactEmail.trim() || authEmail;
 
-            if (!accountId || !ownerId) {
-                const nextAccountId = crypto.randomUUID();
-                const ownerName = deriveOwnerName(formData.contactEmail.trim());
-                const ownerUser = await createUser({
-                    accountId: nextAccountId,
+            await ensureAuthUser({
+                id: ownerId,
+                accountId,
+                name: ownerName,
+                email: authEmail,
+                role: UserRole.OWNER,
+                permissions: ['ALL'],
+                avatarUrl: googleProfile?.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(ownerName)}&background=random`,
+            });
+
+            const existingAccount = await getAccountById(accountId);
+            if (!existingAccount) {
+                await createAccount({
+                    id: accountId,
                     name: ownerName,
-                    email: formData.contactEmail.trim(),
-                    role: UserRole.OWNER,
-                    permissions: ['ALL'],
-                    avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(ownerName)}&background=random`,
+                    ownerUserId: ownerId,
+                    contactEmail: authEmail,
                 });
-                const account = await createAccount({
-                    id: nextAccountId,
-                    name: ownerName,
-                    ownerUserId: ownerUser.id,
-                    contactEmail: formData.contactEmail.trim(),
-                });
-                accountId = account.id;
-                ownerId = ownerUser.id;
-                setCurrentAccountId(accountId);
-                setCurrentUserId(ownerId);
             }
+
+            setCurrentAccountId(accountId);
+            setCurrentUserId(ownerId);
 
             const slug = await generateUniqueSlug(formData.name);
             const resolvedCurrency = resolveDefaultCurrency(selectedCountry.code, selectedCountry.currencyCode);
@@ -298,7 +311,7 @@ const Onboarding: React.FC = () => {
                 ownerId: ownerId!,
                 name: formData.name.trim(),
                 slug,
-                contactEmail: formData.contactEmail.trim(),
+                contactEmail,
                 currency: resolvedCurrency,
                 primaryColor: '#0EA5A4',
                 catalogEnabled: false,

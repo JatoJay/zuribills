@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Service } from '@/types';
 import { getServices, createService, deleteService } from '@/services/storage';
 import { Button, Input, Card, formatCurrency } from '@/components/ui';
@@ -33,6 +33,7 @@ const Services: React.FC = () => {
     const [services, setServices] = useState<Service[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const loadRequestId = useRef(0);
 
     // Form State
     const [newService, setNewService] = useState<Partial<Service>>({
@@ -45,13 +46,21 @@ const Services: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
 
-    const loadServices = () => {
-        if (org) getServices(org.id).then(setServices);
+    const loadServices = async (orgId: string) => {
+        const requestId = ++loadRequestId.current;
+        setServices([]);
+        const data = await getServices(orgId);
+        if (requestId !== loadRequestId.current) return;
+        setServices(data.filter(service => service.organizationId === orgId));
     };
 
     useEffect(() => {
-        loadServices();
-    }, [org]);
+        if (!org?.id) {
+            setServices([]);
+            return;
+        }
+        loadServices(org.id);
+    }, [org?.id]);
 
     const handleGenerateDescription = async () => {
         if (!newService.name || !newService.category) {
@@ -79,7 +88,7 @@ const Services: React.FC = () => {
             });
             setNewService({ name: '', price: 0, category: '', description: '', imageUrl: '' });
             setIsModalOpen(false);
-            loadServices();
+            loadServices(org.id);
         }
         setLoading(false);
     };
@@ -87,14 +96,17 @@ const Services: React.FC = () => {
     const handleDelete = async (id: string) => {
         if (confirm(t('Are you sure?'))) {
             await deleteService(id);
-            loadServices();
+            loadServices(org.id);
         }
     }
 
+    const normalizedSearch = searchTerm.toLowerCase();
     const filteredServices = services.filter(service =>
-        service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.category.toLowerCase().includes(searchTerm.toLowerCase())
+        service.organizationId === org?.id && (
+            service.name.toLowerCase().includes(normalizedSearch) ||
+            service.description.toLowerCase().includes(normalizedSearch) ||
+            service.category.toLowerCase().includes(normalizedSearch)
+        )
     );
 
     return (
