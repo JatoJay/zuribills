@@ -35,29 +35,18 @@ export const translateBatch = async (
 ): Promise<string[]> => {
     if (!texts.length) return [];
 
-    const prompt = `
-        Translate the following UI copy from ${sourceLanguage} to ${targetLanguage}.
-        Keep product names like "InvoiceFlow" unchanged.
-        Preserve punctuation and keep the same order.
-        Return JSON only with a "translations" array of strings in the same order.
+    const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texts, targetLanguage, sourceLanguage })
+    });
 
-        STRINGS:
-        ${JSON.stringify(texts)}
-    `;
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Translation request failed.');
+    }
 
-    const schema = {
-        type: 'OBJECT',
-        properties: {
-            translations: {
-                type: 'ARRAY',
-                items: { type: 'STRING' }
-            }
-        },
-        required: ['translations']
-    };
-
-    const responseText = await generateContent(prompt, schema);
-    const data = JSON.parse(responseText) as { translations?: string[] };
+    const data = await response.json() as { translations?: string[] };
 
     if (!data.translations || !Array.isArray(data.translations)) {
         throw new Error('Translation response missing translations array.');

@@ -8,6 +8,7 @@ import { getSupabaseClient } from '@/services/supabaseClient';
 import { clearCurrentAccountId, clearCurrentUserId, getAccountById, getCurrentUserId, getOrganizationBySlug, getUserByEmail, setCurrentAccountId, setCurrentUserId, updateAccountSubscription } from '@/services/storage';
 import { Account, Organization } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
+import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 
 interface AdminContextType {
   org: Organization;
@@ -193,9 +194,11 @@ const AdminLayout: React.FC = () => {
   }, [slug, navigate, refreshTrigger, authReady]);
 
   useEffect(() => {
-    if (org?.preferredLanguage) {
-      setLanguage(org.preferredLanguage);
-    }
+    if (!org?.preferredLanguage) return;
+    const source = localStorage.getItem(LANGUAGE_SOURCE_KEY);
+    if (source === 'user') return;
+    localStorage.setItem(LANGUAGE_SOURCE_KEY, 'org');
+    setLanguage(org.preferredLanguage);
   }, [org?.preferredLanguage, setLanguage]);
 
   const formatMoney = (amount: number, currencyCode?: string) => {

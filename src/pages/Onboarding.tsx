@@ -6,6 +6,8 @@ import { UserRole } from '../types';
 import { Zap, ShieldCheck, Clock3, Sparkles } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { resolveDefaultCurrency, resolvePayoutProvider } from '@/services/paymentRouting';
+import { SUPPORTED_LANGUAGES } from '@/constants/languages';
+import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 
 type CountryOption = {
     code: string;
@@ -29,32 +31,6 @@ const fallbackCountries: CountryOption[] = [
     { code: 'IN', name: 'India', currencyCode: 'INR', currencyName: 'Indian Rupee' },
     { code: 'AE', name: 'United Arab Emirates', currencyCode: 'AED', currencyName: 'UAE Dirham' },
     { code: 'AU', name: 'Australia', currencyCode: 'AUD', currencyName: 'Australian Dollar' },
-];
-
-const languageSuggestions = [
-    'English',
-    'French',
-    'Spanish',
-    'Portuguese',
-    'Arabic',
-    'Swahili',
-    'Hausa',
-    'Yoruba',
-    'Igbo',
-    'Nigerian Pidgin',
-    'Hindi',
-    'Bengali',
-    'Chinese (Simplified)',
-    'Chinese (Traditional)',
-    'Japanese',
-    'Korean',
-    'German',
-    'Italian',
-    'Dutch',
-    'Russian',
-    'Turkish',
-    'Indonesian',
-    'Vietnamese',
 ];
 
 const baseSlides = [
@@ -544,10 +520,13 @@ const Onboarding: React.FC = () => {
                                     label={t('Preferred Language')}
                                     list="language-options"
                                     value={language}
-                                    onChange={(e) => setLanguage(e.target.value)}
+                                    onChange={(e) => {
+                                        localStorage.setItem(LANGUAGE_SOURCE_KEY, 'user');
+                                        setLanguage(e.target.value);
+                                    }}
                                 />
                                 <datalist id="language-options">
-                                    {languageSuggestions.map(option => (
+                                    {SUPPORTED_LANGUAGES.map(option => (
                                         <option key={option} value={option} />
                                     ))}
                                 </datalist>

@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input } from '../components/ui';
-import ThemeToggle from '../components/ThemeToggle';
 import { askBusinessAnalyst } from '@/services/geminiService';
 import { useTranslation } from '@/hooks/useTranslation';
+import { SUPPORTED_LANGUAGES } from '@/constants/languages';
+import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 import {
   ArrowRight,
   CheckCircle,
@@ -17,9 +18,10 @@ import {
   Bot,
   Wallet,
   ChevronDown,
+  Globe,
 } from 'lucide-react';
 
-const NAV_ITEMS = ['Product', 'How it works', 'AI insights', 'Pricing'];
+const NAV_ITEMS = ['Product', 'How it works', 'AI insights', 'FAQ', 'Pricing'];
 
 const HERO_HIGHLIGHTS = ['No credit card', 'Setup in minutes', 'Shareable link'];
 
@@ -72,6 +74,28 @@ const ANALYTICS_BULLETS = [
   'Monthly and yearly cash-flow exports',
 ];
 
+const LANGUAGE_WAVE_BARS = [
+  'h-2',
+  'h-3',
+  'h-4',
+  'h-2',
+  'h-5',
+  'h-3',
+  'h-4',
+  'h-2',
+  'h-3',
+  'h-5',
+  'h-2',
+];
+
+const LOCAL_LANGUAGES = [
+  { code: 'rw', label: 'Kinyarwanda' },
+  { code: 'sw', label: 'Swahili' },
+  { code: 'tw', label: 'Twi' },
+  { code: 'yo', label: 'Yoruba, Hausa, Igbo'},
+  { code: 'zu', label: 'Zulu' },
+];
+
 const PRICING_FEATURES = [
   'Unlimited Invoices',
   'Client Portal',
@@ -80,6 +104,17 @@ const PRICING_FEATURES = [
   'Custom Branding',
   'API Access',
 ];
+
+const LIGHT_THEME: React.CSSProperties = {
+  '--background': '#ffffff',
+  '--surface': '#f6f6f3',
+  '--primary': '#0EA5A4',
+  '--on-primary': '#0b0b0b',
+  '--secondary': '#0b0b0b',
+  '--text': '#0b0b0b',
+  '--text-muted': '#5f6368',
+  '--border': '#e6e6e6',
+};
 
 const OWNER_STORIES = [
   {
@@ -123,12 +158,21 @@ const FAQ_ITEMS = [
     question: 'Do I need to be an accountant to use this?',
     answer: 'No. The dashboard is designed for small teams, with guided flows and AI insights for quick decisions.',
   },
+  {
+    question: 'How long is the free trial?',
+    answer: 'New workspaces get full access for 7 days, then you can choose a plan that fits your volume.',
+  },
 ];
 
-const NavBar: React.FC<{ t: (text: string) => string }> = ({ t }) => {
+const NavBar: React.FC<{
+  t: (text: string) => string;
+  language: string;
+  languages: string[];
+  onLanguageChange: (nextLanguage: string) => void;
+}> = ({ t, language, languages, onLanguageChange }) => {
   const navigate = useNavigate();
   return (
-    <nav className="fixed w-full z-50 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl border-b border-white/40 dark:border-slate-800/60 shadow-[0_10px_40px_-30px_rgba(15,23,42,0.4)]">
+    <nav className="fixed w-full z-50 bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-[0_10px_40px_-30px_rgba(15,23,42,0.4)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div
@@ -138,7 +182,7 @@ const NavBar: React.FC<{ t: (text: string) => string }> = ({ t }) => {
             <div className="w-9 h-9 rounded-full bg-[#A9F5D9] text-black flex items-center justify-center shadow-soft ring-1 ring-black/10">
               <Zap className="w-4 h-4" />
             </div>
-            <span className="font-display text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+            <span className="font-display text-lg font-semibold tracking-tight text-slate-900">
               Invoice<span className="text-primary">Flow</span>
             </span>
           </div>
@@ -156,7 +200,21 @@ const NavBar: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            <ThemeToggle />
+            <div className="flex items-center gap-2 rounded-full border border-foreground/10 bg-white/70 px-3 py-1.5 text-xs text-muted shadow-soft">
+              <Globe className="w-3.5 h-3.5" />
+              <select
+                aria-label={t('Language')}
+                value={language}
+                onChange={(e) => onLanguageChange(e.target.value)}
+                className="bg-transparent text-foreground text-xs sm:text-sm focus:outline-none w-[92px] sm:w-[140px]"
+              >
+                {languages.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={() => navigate({ to: '/login' })}
               className="hidden md:inline text-sm font-medium text-muted hover:text-foreground transition-colors"
@@ -177,40 +235,42 @@ const NavBar: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 };
 
 const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => (
-  <div className="relative w-full max-w-[560px] aspect-[6/7]">
-    <div className="absolute -top-10 right-4 w-56 h-56 rounded-full bg-primary/20 blur-[120px]" />
-    <div className="absolute bottom-8 -left-8 w-64 h-64 rounded-full bg-sky-200/40 dark:bg-sky-500/10 blur-[120px]" />
-    <div className="absolute inset-0 rounded-[42px] border border-white/40 dark:border-slate-800/60 bg-white/40 dark:bg-slate-900/30 backdrop-blur-2xl shadow-[0_40px_120px_-60px_rgba(15,23,42,0.6)]" />
-
-    <div className="absolute left-8 top-10 w-44 rounded-3xl border border-white/50 dark:border-slate-700/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)] -rotate-6">
-      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Service')}</div>
-      <div className="font-display text-sm text-foreground mt-1">{t('Brand Strategy')}</div>
-      <div className="text-xs text-muted mt-2">$2,400</div>
-    </div>
-
-    <div className="absolute right-8 top-16 w-44 rounded-3xl border border-white/50 dark:border-slate-700/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)] rotate-[5deg]">
-      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Timeline')}</div>
-      <div className="font-display text-sm text-foreground mt-1">{t('3 Weeks')}</div>
-      <div className="text-xs text-muted mt-2">{t('Milestones synced')}</div>
-    </div>
-
-    <div className="absolute left-10 bottom-24 w-44 rounded-3xl border border-white/50 dark:border-slate-700/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)] rotate-[2deg]">
-      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Invoice')}</div>
-      <div className="font-display text-sm text-foreground mt-1">{t('INV-1042')}</div>
-      <div className="text-xs text-muted mt-2">{t('Sent in 2s')}</div>
-    </div>
-
-    <div className="absolute right-10 bottom-10 w-48 rounded-3xl border border-foreground/10 bg-foreground text-background p-4 shadow-lift">
-      <div className="text-[10px] uppercase tracking-widest text-background/60">{t('Status')}</div>
-      <div className="font-display text-sm text-background mt-1">{t('Paid')}</div>
-      <div className="text-xs text-primary mt-2">{t('Cleared instantly')}</div>
-    </div>
+  <div className="relative w-full max-w-[520px] aspect-square">
+    <div className="absolute inset-0 rounded-full border border-foreground/10" />
+    <div className="absolute inset-12 rounded-full border border-foreground/10" />
+    <div className="absolute inset-24 rounded-full border border-foreground/10" />
 
     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
       <div className="w-28 h-28 rounded-full bg-primary text-[var(--on-primary)] flex items-center justify-center font-display text-sm uppercase tracking-widest shadow-soft">
         {t('Pay')}
       </div>
     </div>
+
+    <div className="absolute top-10 left-6 bg-background border border-foreground/10 rounded-2xl p-4 w-40 shadow-soft animate-drift">
+      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Service')}</div>
+      <div className="font-display text-sm text-foreground mt-1">{t('Brand Strategy')}</div>
+      <div className="text-xs text-muted mt-2">$2,400</div>
+    </div>
+
+    <div className="absolute top-24 right-6 bg-background border border-foreground/10 rounded-2xl p-4 w-40 shadow-soft animate-float">
+      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Timeline')}</div>
+      <div className="font-display text-sm text-foreground mt-1">{t('3 Weeks')}</div>
+      <div className="text-xs text-muted mt-2">{t('Milestones synced')}</div>
+    </div>
+
+    <div className="absolute bottom-16 left-10 bg-background border border-foreground/10 rounded-2xl p-4 w-40 shadow-soft animate-drift">
+      <div className="text-[10px] uppercase tracking-widest text-muted">{t('Invoice')}</div>
+      <div className="font-display text-sm text-foreground mt-1">{t('INV-1042')}</div>
+      <div className="text-xs text-muted mt-2">{t('Sent in 2s')}</div>
+    </div>
+
+    <div className="absolute bottom-8 right-8 bg-foreground text-background rounded-2xl p-4 w-44 shadow-lift">
+      <div className="text-[10px] uppercase tracking-widest text-background/60">{t('Status')}</div>
+      <div className="font-display text-sm text-background mt-1">{t('Paid')}</div>
+      <div className="text-xs text-primary mt-2">{t('Cleared instantly')}</div>
+    </div>
+
+    <div className="absolute left-1/2 top-1/2 w-[120%] h-px -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-foreground/15 to-transparent rotate-[18deg]" />
   </div>
 );
 
@@ -220,7 +280,7 @@ const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; description:
   description,
   className = '',
 }) => (
-  <div className={`p-6 rounded-3xl border border-white/40 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl text-foreground shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)] transition-transform duration-300 hover:-translate-y-1 ${className}`}>
+  <div className={`p-6 rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl text-foreground shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)] transition-transform duration-300 hover:-translate-y-1 ${className}`}>
     <div className="w-12 h-12 rounded-full bg-primary text-[var(--on-primary)] flex items-center justify-center mb-4 shadow-soft">
       {icon}
     </div>
@@ -326,7 +386,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
   };
 
   return (
-    <div className="bg-white/70 dark:bg-slate-900/60 rounded-3xl border border-white/40 dark:border-slate-700/60 backdrop-blur-xl p-4 shadow-lift max-w-md mx-auto relative z-10">
+    <div className="bg-white/70 rounded-3xl border border-white/40 backdrop-blur-xl p-4 shadow-lift max-w-md mx-auto relative z-10">
       <div className="flex items-center justify-between border-b border-foreground/10 pb-4 mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-foreground text-background rounded-full flex items-center justify-center">
@@ -344,7 +404,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
           onClick={() => setUseRealAI(!useRealAI)}
           className={`text-xs px-2 py-1 rounded-full border transition-colors ${useRealAI
             ? 'bg-primary/20 border-primary/40 text-foreground'
-            : 'bg-white/70 dark:bg-slate-950/60 border-white/40 dark:border-slate-700/60 text-muted hover:text-foreground'
+            : 'bg-white/70 border-white/40 text-muted hover:text-foreground'
             }`}
           title={useRealAI ? t('Using real Gemini AI') : t('Using simulated responses')}
         >
@@ -358,7 +418,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
             <div
               className={`px-4 py-2 rounded-2xl max-w-[85%] ${msg.role === 'user'
                 ? 'bg-foreground text-background rounded-tr-none'
-                : 'bg-white/80 dark:bg-slate-900/70 border border-white/40 dark:border-slate-700/60 text-foreground rounded-tl-none'
+                : 'bg-white/80 border border-white/40 text-foreground rounded-tl-none'
                 }`}
               dangerouslySetInnerHTML={{ __html: msg.text }}
             />
@@ -366,7 +426,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
         ))}
         {isTyping && (
           <div className="flex justify-start animate-fade-in-up">
-            <div className="bg-white/80 dark:bg-slate-900/70 border border-white/40 dark:border-slate-700/60 text-muted px-4 py-2 rounded-2xl rounded-tl-none">
+            <div className="bg-white/80 border border-white/40 text-muted px-4 py-2 rounded-2xl rounded-tl-none">
               <span className="flex gap-1">
                 <span className="w-2 h-2 bg-foreground/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
                 <span className="w-2 h-2 bg-foreground/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
@@ -384,7 +444,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder={t('Ask about revenue, clients, invoices...')}
-        className="h-10 bg-white/70 dark:bg-slate-950/60 border border-white/40 dark:border-slate-700/60 rounded-full flex-1 px-4 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none transition-colors"
+        className="h-10 bg-white/70 border border-white/40 rounded-full flex-1 px-4 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none transition-colors"
         />
         <button
           onClick={handleSend}
@@ -404,7 +464,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   return (
     <div className="w-full max-w-5xl mx-auto">
       <div className="flex justify-center mb-12">
-        <div className="bg-white/70 dark:bg-slate-900/60 border border-white/40 dark:border-slate-700/60 backdrop-blur-xl p-1 rounded-full flex relative shadow-soft">
+        <div className="bg-white/70 border border-white/40 backdrop-blur-xl p-1 rounded-full flex relative shadow-soft">
           <button
             onClick={() => setBillingCycle('monthly')}
             className={`px-6 py-2 rounded-full text-sm font-semibold transition-all duration-300 relative z-10 ${billingCycle === 'monthly' ? 'text-[var(--on-primary)]' : 'text-muted hover:text-foreground'}`}
@@ -429,16 +489,16 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
       </div>
 
       <div className="grid md:grid-cols-2 gap-8 items-center">
-        <div className={`relative p-8 rounded-3xl border transition-all duration-300 ${billingCycle === 'monthly' ? 'bg-foreground/90 text-background border-primary shadow-lift scale-[1.02] z-10 backdrop-blur-xl' : 'bg-white/70 dark:bg-slate-900/60 border-white/40 dark:border-slate-700/60 backdrop-blur-xl hover:border-primary/30'}`}>
+        <div className={`relative p-8 rounded-3xl border transition-all duration-300 ${billingCycle === 'monthly' ? 'bg-[#0b0b0b]/90 text-white border-primary shadow-lift scale-[1.02] z-10 backdrop-blur-xl' : 'bg-white/70 border-white/40 backdrop-blur-xl hover:border-primary/30'}`}>
           <h3 className="text-xl font-display font-semibold mb-2">{t('Monthly Plan')}</h3>
-          <p className="text-sm opacity-80 mb-6">{t('Perfect for short-term projects and starters.')}</p>
+          <p className={`text-sm mb-6 ${billingCycle === 'monthly' ? 'text-white/80' : 'text-muted'}`}>{t('Perfect for short-term projects and starters.')}</p>
           <div className="flex items-baseline gap-1 mb-6">
             <span className="text-4xl font-display font-semibold">$4.99</span>
-            <span className="text-sm opacity-70">/mo</span>
+            <span className={`text-sm ${billingCycle === 'monthly' ? 'text-white/70' : 'text-muted'}`}>/mo</span>
           </div>
           <ul className="space-y-4 mb-8">
             {PRICING_FEATURES.map((feat, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm">
+              <li key={i} className={`flex items-center gap-3 text-sm ${billingCycle === 'monthly' ? 'text-white/90' : 'text-foreground'}`}>
                 <CheckCircle className="w-5 h-5 text-primary" /> {t(feat)}
               </li>
             ))}
@@ -451,22 +511,22 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           </Button>
         </div>
 
-        <div className={`relative p-8 rounded-3xl border transition-all duration-300 ${billingCycle === 'yearly' ? 'bg-foreground/90 text-background border-primary shadow-lift scale-[1.02] z-10 backdrop-blur-xl' : 'bg-white/70 dark:bg-slate-900/60 border-white/40 dark:border-slate-700/60 backdrop-blur-xl hover:border-primary/30'}`}>
+        <div className={`relative p-8 rounded-3xl border transition-all duration-300 ${billingCycle === 'yearly' ? 'bg-[#0b0b0b]/90 text-white border-primary shadow-lift scale-[1.02] z-10 backdrop-blur-xl' : 'bg-white/70 border-white/40 backdrop-blur-xl hover:border-primary/30'}`}>
           {billingCycle === 'yearly' && (
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-[var(--on-primary)] text-xs font-bold px-3 py-1 rounded-full shadow-soft">
               {t('MOST POPULAR')}
             </div>
           )}
           <h3 className="text-xl font-display font-semibold mb-2">{t('Yearly Plan')}</h3>
-          <p className="text-sm opacity-80 mb-6">{t('Best value for growing businesses.')}</p>
+          <p className={`text-sm mb-6 ${billingCycle === 'yearly' ? 'text-white/80' : 'text-muted'}`}>{t('Best value for growing businesses.')}</p>
           <div className="flex items-baseline gap-1 mb-6">
             <span className="text-4xl font-display font-semibold">$4.50</span>
-            <span className="text-sm opacity-70">/mo</span>
+            <span className={`text-sm ${billingCycle === 'yearly' ? 'text-white/70' : 'text-muted'}`}>/mo</span>
           </div>
-          <p className="text-xs opacity-70 -mt-4 mb-6">{t('Billed $54 yearly')}</p>
+          <p className={`text-xs -mt-4 mb-6 ${billingCycle === 'yearly' ? 'text-white/80' : 'text-muted'}`}>{t('Billed $54 yearly')}</p>
           <ul className="space-y-4 mb-8">
             {PRICING_FEATURES.map((feat, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm">
+              <li key={i} className={`flex items-center gap-3 text-sm ${billingCycle === 'yearly' ? 'text-white/90' : 'text-foreground'}`}>
                 <CheckCircle className="w-5 h-5 text-primary" /> {t(feat)}
               </li>
             ))}
@@ -508,6 +568,7 @@ const Landing: React.FC = () => {
     ...NAV_ITEMS,
     'Sign in',
     'Start free',
+    'Language',
     'Pay',
     'Service',
     'Brand Strategy',
@@ -567,6 +628,13 @@ const Landing: React.FC = () => {
     'Let the AI analyst monitor every invoice and turn raw data into clear, actionable insights.',
     ...AI_BULLETS,
     'Try the AI demo',
+    'Local languages',
+    'Engage every business in their native language.',
+    'InvoiceFlow localizes catalogs, invoices, and payment prompts for every payout country, including Rwanda, Kenya, Ghana, South Africa, Nigeria, UK, US, and Canada.',
+    'Video overview',
+    'Payout-ready languages',
+    'Local language support preview',
+    ...LOCAL_LANGUAGES.flatMap(language => [language.label]),
     'Analytics',
     'Everything you need to run the back office.',
     'Track revenue, manage expenses, and export tax-ready cash-flow reports with a dashboard designed for clarity.',
@@ -587,7 +655,13 @@ const Landing: React.FC = () => {
     'Docs',
     'All rights reserved.',
   ]), []);
-  const { t } = useTranslation(translationStrings);
+  const { t, language, setLanguage } = useTranslation(translationStrings);
+  const languageOptions = useMemo(() => {
+    if (SUPPORTED_LANGUAGES.includes(language)) {
+      return SUPPORTED_LANGUAGES;
+    }
+    return [language, ...SUPPORTED_LANGUAGES];
+  }, [language]);
   const [slug, setSlug] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -610,14 +684,27 @@ const Landing: React.FC = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-black overflow-x-hidden">
-      <NavBar t={t} />
+  const handleLanguageChange = (nextLanguage: string) => {
+    localStorage.setItem(LANGUAGE_SOURCE_KEY, 'user');
+    setLanguage(nextLanguage);
+  };
 
-      <section className="relative pt-36 pb-28 bg-[radial-gradient(circle_at_top,_#eef9ff_0%,_#f7fff9_45%,_#ffffff_100%)] dark:bg-[radial-gradient(circle_at_top,_#0b1311_0%,_#060b12_55%,_#05070d_100%)] overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-20" />
-        <div className="absolute -top-24 right-0 w-[520px] h-[520px] bg-primary/25 blur-[160px]" />
-        <div className="absolute bottom-0 left-0 w-[360px] h-[360px] bg-sky-200/40 dark:bg-sky-500/10 blur-[140px]" />
+  return (
+    <div
+      className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-black overflow-x-hidden"
+      style={LIGHT_THEME}
+    >
+      <NavBar
+        t={t}
+        language={language}
+        languages={languageOptions}
+        onLanguageChange={handleLanguageChange}
+      />
+
+      <section className="relative pt-36 pb-24 bg-background overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-40" />
+        <div className="absolute -top-24 right-0 w-[480px] h-[480px] bg-primary/30 blur-[140px]" />
+        <div className="absolute bottom-0 left-0 w-[320px] h-[320px] bg-foreground/10 blur-[120px]" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-16 items-center relative z-10">
           <div>
@@ -649,7 +736,7 @@ const Landing: React.FC = () => {
               ))}
             </div>
 
-            <div id="admin-signin" className="mt-10 rounded-3xl border border-white/40 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-5 shadow-soft max-w-md">
+            <div id="admin-signin" className="mt-10 rounded-2xl border border-foreground/10 bg-background/80 p-5 shadow-soft max-w-md">
               <h3 className="text-xs uppercase tracking-widest text-muted mb-3">{t('Admin sign-in')}</h3>
               <form onSubmit={handleAdminLogin} className="flex gap-2">
                 <div className="flex-1">
@@ -689,7 +776,6 @@ const Landing: React.FC = () => {
       </section>
 
       <section id="product" className="py-24 bg-transparent relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-15" />
         <div className="absolute -top-20 right-8 w-64 h-64 bg-primary/10 blur-[120px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-14">
@@ -717,8 +803,9 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <section id="how-it-works" className="py-24 bg-transparent relative">
-        <div className="absolute inset-0 bg-spotlight opacity-40" />
+      <section id="how-it-works" className="py-24 bg-transparent relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-20" />
+        <div className="absolute inset-0 bg-spotlight opacity-35" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-14">
             <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('How it works')}</div>
@@ -726,7 +813,7 @@ const Landing: React.FC = () => {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {HOW_IT_WORKS_STEPS.map((item) => (
-              <div key={item.step} className="p-6 rounded-3xl border border-white/40 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]">
+              <div key={item.step} className="p-6 rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]">
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-xs uppercase tracking-widest text-muted">{item.step}</span>
                   <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center">
@@ -771,7 +858,68 @@ const Landing: React.FC = () => {
           </div>
         </div>
       </section>
-                
+
+      <section id="local-languages" className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-15" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="relative overflow-hidden rounded-[32px] border border-white/40 shadow-lift min-h-[420px]">
+            <img
+              src="/video/local-languages.jpg"
+              alt={t('Local language support preview')}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/10" />
+            <div className="relative z-10 p-8 sm:p-12 lg:p-14 grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center text-white">
+              <div className="max-w-xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/40 text-xs uppercase tracking-widest text-white/80 mb-6">
+                  <Sparkles className="w-4 h-4 text-white" />
+                  {t('Local languages')}
+                </div>
+                <h2 className="text-3xl md:text-4xl font-display font-semibold mb-4">
+                  {t('Engage every business in their native language.')}
+                </h2>
+                <p className="text-lg text-white/80 leading-relaxed mb-8">
+                  {t('InvoiceFlow localizes catalogs, invoices, and payment prompts for every payout country, including Rwanda, Kenya, Ghana, South Africa, Nigeria, UK, US, and Canada.')}
+                </p>
+                <div className="flex items-center gap-2 text-sm text-white/80">
+                  <Play className="w-4 h-4" />
+                  {t('Video overview')}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {LOCAL_LANGUAGES.map((language) => (
+                  <div
+                    key={language.code}
+                    className="flex items-center gap-4 rounded-2xl border border-white/40 bg-white/15 px-4 py-3 backdrop-blur-xl shadow-soft"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-white/20 text-white/90 flex items-center justify-center text-xs font-bold uppercase">
+                      {language.code}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold">{t(language.label)}</div>
+                      <div className="mt-2 flex items-end gap-1">
+                        {LANGUAGE_WAVE_BARS.map((height, index) => (
+                          <span key={`${language.code}-${index}`} className={`w-1 ${height} rounded-full bg-white/70`} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="w-9 h-9 rounded-full border border-white/50 bg-white/10 flex items-center justify-center">
+                      <Play className="w-3 h-3 text-white" />
+                    </div>
+                  </div>
+                ))}
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/15 px-4 py-2 text-xs uppercase tracking-widest text-white/80">
+                  <Sparkles className="w-3 h-3 text-white" />
+                  {t('Payout-ready languages')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[760px] h-[760px] bg-primary/10 rounded-full blur-[140px] -z-10" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -797,7 +945,7 @@ const Landing: React.FC = () => {
             </div>
 
             <div className="lg:w-1/2">
-              <div className="relative shadow-lift rounded-3xl border border-white/40 dark:border-slate-800/60 overflow-hidden bg-white/60 dark:bg-slate-900/50 backdrop-blur-xl">
+              <div className="relative shadow-lift rounded-3xl border border-white/40 overflow-hidden bg-white/60 backdrop-blur-xl">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent" />
                 <img
                   src="/dashboard_sync.svg"
@@ -811,6 +959,7 @@ const Landing: React.FC = () => {
       </section>
 
       <section className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-10" />
         <div className="absolute -top-24 right-8 w-72 h-72 bg-primary/10 blur-[140px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="grid lg:grid-cols-[1fr_2fr] gap-12 items-start">
@@ -828,7 +977,7 @@ const Landing: React.FC = () => {
               {OWNER_STORIES.map((owner) => (
                 <div
                   key={owner.name}
-                  className="group rounded-3xl border border-white/40 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]"
+                  className="group rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]"
                 >
                   <div className="relative overflow-hidden rounded-2xl">
                     <img
@@ -851,7 +1000,7 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <section id="faq" className="py-24 bg-transparent border-t border-border/40 relative">
+      <section id="faq" className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('FAQ')}</div>
@@ -867,7 +1016,7 @@ const Landing: React.FC = () => {
             {FAQ_ITEMS.map((item) => (
               <details
                 key={item.question}
-                className="group rounded-3xl border border-white/40 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]"
+                className="group rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]"
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-semibold text-foreground">
                   <span>{t(item.question)}</span>
@@ -881,6 +1030,7 @@ const Landing: React.FC = () => {
       </section>
 
       <section id="pricing" className="py-24 bg-transparent border-t border-border/40 relative">
+        <div className="absolute inset-0 bg-grid opacity-10" />
         <div className="absolute -top-24 left-1/3 w-72 h-72 bg-primary/10 blur-[140px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">

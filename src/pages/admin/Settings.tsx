@@ -9,32 +9,8 @@ import { Button, Input, Card, Select } from '@/components/ui';
 import { Upload, ImageIcon, X, AlertCircle } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
-
-const languageOptions = [
-    'English',
-    'French',
-    'Spanish',
-    'Portuguese',
-    'Arabic',
-    'Swahili',
-    'Hausa',
-    'Yoruba',
-    'Igbo',
-    'Nigerian Pidgin',
-    'Hindi',
-    'Bengali',
-    'Chinese (Simplified)',
-    'Chinese (Traditional)',
-    'Japanese',
-    'Korean',
-    'German',
-    'Italian',
-    'Dutch',
-    'Russian',
-    'Turkish',
-    'Indonesian',
-    'Vietnamese',
-];
+import { SUPPORTED_LANGUAGES } from '@/constants/languages';
+import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 
 const PLATFORM_FEE_PERCENT = 1.5;
 const MOMO_MSISDN_RULES: Record<string, { countryCode: string; nationalLength: number; example: string }> = {
@@ -218,7 +194,7 @@ const Settings: React.FC = () => {
         '+1 (555) 000-0000',
         'e.g. Nigeria or NG',
     ]), []);
-    const { t } = useTranslation(translationStrings);
+    const { t, setLanguage } = useTranslation(translationStrings);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [formData, setFormData] = useState<Organization>({
@@ -1248,10 +1224,15 @@ const Settings: React.FC = () => {
                             label={t('Preferred Language')}
                             list="language-options"
                             value={formData.preferredLanguage || ''}
-                            onChange={e => setFormData({ ...formData, preferredLanguage: e.target.value })}
+                            onChange={e => {
+                                const nextLanguage = e.target.value;
+                                localStorage.setItem(LANGUAGE_SOURCE_KEY, 'user');
+                                setLanguage(nextLanguage);
+                                setFormData({ ...formData, preferredLanguage: nextLanguage });
+                            }}
                         />
                         <datalist id="language-options">
-                            {languageOptions.map(option => (
+                            {SUPPORTED_LANGUAGES.map(option => (
                                 <option key={option} value={option} />
                             ))}
                         </datalist>

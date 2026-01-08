@@ -13,6 +13,7 @@ const TranslationContext = createContext<TranslationContextType | undefined>(und
 
 const LANGUAGE_KEY = 'invoiceflow:language';
 const CACHE_PREFIX = 'invoiceflow:translations:';
+export const LANGUAGE_SOURCE_KEY = 'invoiceflow:language:source';
 
 const normalizeLanguage = (language: string) => {
     const trimmed = language.trim();
