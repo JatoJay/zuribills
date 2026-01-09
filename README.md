@@ -1,8 +1,6 @@
 # Ogasir
-
-This repo now uses the fresh-app UI as the default app.
-
-View your app in AI Studio: https://ai.studio/apps/drive/1Jt6Nh3gLLHwqtQcpjRV-GEO85-hVRFV5
+One canvas for services, expenses, pricing, checkout, and follow-ups. 
+Take full control of your business with Ogasir; share a beautiful catalog, get paid faster, and file taxes with clean inflow/outflow reports.
 
 ## Run Locally
 
