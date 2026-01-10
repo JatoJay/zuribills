@@ -141,6 +141,7 @@ const Dashboard: React.FC = () => {
         { name: t('Overdue'), value: statusCounts[InvoiceStatus.OVERDUE] || 0, color: COLORS[3] },
     ].filter(d => d.value > 0);
 
+    if (!org.id) return <div className="p-8">Loading...</div>;
     return (
         <div className="space-y-6 animate-fade-in-up">
             <div className="flex justify-between items-center">

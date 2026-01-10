@@ -189,6 +189,7 @@ const Invoices: React.FC = () => {
         return null;
     };
 
+    if (!org.id) return <div className="p-8">Loading...</div>;
     return (
         <div className="space-y-6 relative">
             <div className="flex justify-between items-center">
