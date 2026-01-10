@@ -20,6 +20,7 @@ import { Route as OrgSlugTeamRouteImport } from './routes/org.$slug.team'
 import { Route as OrgSlugSettingsRouteImport } from './routes/org.$slug.settings'
 import { Route as OrgSlugServicesRouteImport } from './routes/org.$slug.services'
 import { Route as OrgSlugReportsRouteImport } from './routes/org.$slug.reports'
+import { Route as OrgSlugPayoutsRouteImport } from './routes/org.$slug.payouts'
 import { Route as OrgSlugInvoicesRouteImport } from './routes/org.$slug.invoices'
 import { Route as OrgSlugExpensesRouteImport } from './routes/org.$slug.expenses'
 import { Route as OrgSlugClientsRouteImport } from './routes/org.$slug.clients'
@@ -85,6 +86,11 @@ const OrgSlugReportsRoute = OrgSlugReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => OrgSlugRoute,
 } as any)
+const OrgSlugPayoutsRoute = OrgSlugPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
 const OrgSlugInvoicesRoute = OrgSlugInvoicesRouteImport.update({
   id: '/invoices',
   path: '/invoices',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/org/$slug/clients': typeof OrgSlugClientsRoute
   '/org/$slug/expenses': typeof OrgSlugExpensesRoute
   '/org/$slug/invoices': typeof OrgSlugInvoicesRouteWithChildren
+  '/org/$slug/payouts': typeof OrgSlugPayoutsRoute
   '/org/$slug/reports': typeof OrgSlugReportsRoute
   '/org/$slug/services': typeof OrgSlugServicesRoute
   '/org/$slug/settings': typeof OrgSlugSettingsRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/org/$slug/businesses': typeof OrgSlugBusinessesRoute
   '/org/$slug/clients': typeof OrgSlugClientsRoute
   '/org/$slug/expenses': typeof OrgSlugExpensesRoute
+  '/org/$slug/payouts': typeof OrgSlugPayoutsRoute
   '/org/$slug/reports': typeof OrgSlugReportsRoute
   '/org/$slug/services': typeof OrgSlugServicesRoute
   '/org/$slug/settings': typeof OrgSlugSettingsRoute
@@ -186,6 +194,7 @@ export interface FileRoutesById {
   '/org/$slug/clients': typeof OrgSlugClientsRoute
   '/org/$slug/expenses': typeof OrgSlugExpensesRoute
   '/org/$slug/invoices': typeof OrgSlugInvoicesRouteWithChildren
+  '/org/$slug/payouts': typeof OrgSlugPayoutsRoute
   '/org/$slug/reports': typeof OrgSlugReportsRoute
   '/org/$slug/services': typeof OrgSlugServicesRoute
   '/org/$slug/settings': typeof OrgSlugSettingsRoute
@@ -210,6 +219,7 @@ export interface FileRouteTypes {
     | '/org/$slug/clients'
     | '/org/$slug/expenses'
     | '/org/$slug/invoices'
+    | '/org/$slug/payouts'
     | '/org/$slug/reports'
     | '/org/$slug/services'
     | '/org/$slug/settings'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/org/$slug/businesses'
     | '/org/$slug/clients'
     | '/org/$slug/expenses'
+    | '/org/$slug/payouts'
     | '/org/$slug/reports'
     | '/org/$slug/services'
     | '/org/$slug/settings'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/org/$slug/clients'
     | '/org/$slug/expenses'
     | '/org/$slug/invoices'
+    | '/org/$slug/payouts'
     | '/org/$slug/reports'
     | '/org/$slug/services'
     | '/org/$slug/settings'
@@ -348,6 +360,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/org/$slug/reports'
       preLoaderRoute: typeof OrgSlugReportsRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/org/$slug/payouts': {
+      id: '/org/$slug/payouts'
+      path: '/payouts'
+      fullPath: '/org/$slug/payouts'
+      preLoaderRoute: typeof OrgSlugPayoutsRouteImport
       parentRoute: typeof OrgSlugRoute
     }
     '/org/$slug/invoices': {
@@ -453,6 +472,7 @@ interface OrgSlugRouteChildren {
   OrgSlugClientsRoute: typeof OrgSlugClientsRoute
   OrgSlugExpensesRoute: typeof OrgSlugExpensesRoute
   OrgSlugInvoicesRoute: typeof OrgSlugInvoicesRouteWithChildren
+  OrgSlugPayoutsRoute: typeof OrgSlugPayoutsRoute
   OrgSlugReportsRoute: typeof OrgSlugReportsRoute
   OrgSlugServicesRoute: typeof OrgSlugServicesRoute
   OrgSlugSettingsRoute: typeof OrgSlugSettingsRoute
@@ -465,6 +485,7 @@ const OrgSlugRouteChildren: OrgSlugRouteChildren = {
   OrgSlugClientsRoute: OrgSlugClientsRoute,
   OrgSlugExpensesRoute: OrgSlugExpensesRoute,
   OrgSlugInvoicesRoute: OrgSlugInvoicesRouteWithChildren,
+  OrgSlugPayoutsRoute: OrgSlugPayoutsRoute,
   OrgSlugReportsRoute: OrgSlugReportsRoute,
   OrgSlugServicesRoute: OrgSlugServicesRoute,
   OrgSlugSettingsRoute: OrgSlugSettingsRoute,

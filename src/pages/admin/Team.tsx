@@ -24,8 +24,6 @@ type AccessMode = 'assign' | 'edit';
 
 const Team: React.FC = () => {
     const { org, account, isOwner } = useAdminContext();
-    const accountId = account?.id || org.accountId;
-    const ownerId = account?.ownerUserId || org.ownerId;
     const translationStrings = useMemo(() => ([
         'Team & Access',
         'Manage your team across all businesses.',
@@ -70,6 +68,8 @@ const Team: React.FC = () => {
         'Current',
     ]), []);
     const { t } = useTranslation(translationStrings);
+    const accountId = account?.id || org?.accountId || '';
+    const ownerId = account?.ownerUserId || org?.ownerId || '';
     const [users, setUsers] = useState<User[]>([]);
     const [organizations, setOrganizations] = useState<Organization[]>([]);
     const [memberships, setMemberships] = useState<OrgMembership[]>([]);
@@ -302,6 +302,7 @@ const Team: React.FC = () => {
         ];
     }, [activeUser, accessMode, activeMembership, orgById, organizations, membershipsByUser, t]);
 
+    if (!org.id) return <div className="p-8">Loading...</div>;
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

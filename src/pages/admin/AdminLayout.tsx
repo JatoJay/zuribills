@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, createContext, useContext } from 'react';
 import { Outlet, useParams, Link, useNavigate } from '@tanstack/react-router';
-import { LayoutDashboard, FileText, Settings as SettingsIcon, Users, ShoppingBag, LogOut, ShieldCheck, ExternalLink, Wallet, BarChart3, Building2, Sparkles, CheckCircle, Lock } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings as SettingsIcon, Users, ShoppingBag, LogOut, ShieldCheck, ExternalLink, Wallet, BarChart3, Building2, Sparkles, CheckCircle, Lock, Landmark } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import BusinessChatWidget from '@/components/BusinessChatWidget';
 import { Button, Card } from '@/components/ui';
@@ -18,13 +18,29 @@ interface AdminContextType {
   formatMoney: (amount: number, currencyCode?: string) => string;
 }
 
-export const AdminContext = createContext<AdminContextType | null>(null);
-
-export const useAdminContext = () => {
-  const context = useContext(AdminContext);
-  if (!context) throw new Error('useAdminContext must be used within AdminLayout');
-  return context;
+const EMPTY_ORG: Organization = {
+  id: '',
+  accountId: '',
+  ownerId: '',
+  name: '',
+  slug: '',
+  primaryColor: '#0EA5A4',
+  currency: 'USD',
+  contactEmail: '',
+  createdAt: '',
 };
+
+const EMPTY_ADMIN_CONTEXT: AdminContextType = {
+  org: EMPTY_ORG,
+  account: undefined,
+  isOwner: false,
+  refreshOrg: () => {},
+  formatMoney: () => '',
+};
+
+export const AdminContext = createContext<AdminContextType>(EMPTY_ADMIN_CONTEXT);
+
+export const useAdminContext = () => useContext(AdminContext);
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -52,6 +68,7 @@ const AdminLayout: React.FC = () => {
     'Clients',
     'Reports',
     'Team',
+    'Payouts',
     'Settings',
     'Public Catalog',
     'Sign Out',
@@ -305,6 +322,7 @@ const AdminLayout: React.FC = () => {
     { label: t('Clients'), path: 'clients', icon: Users },
     { label: t('Reports'), path: 'reports', icon: BarChart3 },
     { label: t('Team'), path: 'team', icon: ShieldCheck },
+    { label: t('Payouts'), path: 'payouts', icon: Landmark },
     { label: t('Settings'), path: 'settings', icon: SettingsIcon },
   ];
 

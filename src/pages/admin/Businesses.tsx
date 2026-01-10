@@ -264,6 +264,7 @@ const Businesses: React.FC = () => {
     }
   };
 
+  if (!org.id) return <div className="p-8">Loading...</div>;
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

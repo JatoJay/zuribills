@@ -212,6 +212,7 @@ const InvoiceCreate: React.FC = () => {
         navigate({ to: '/org/$slug/invoices', params: { slug: org.slug } });
     };
 
+    if (!org.id) return <div className="p-8">Loading...</div>;
     return (
         <div className="max-w-4xl mx-auto space-y-6">
             <button onClick={() => navigate({ to: '..' })} className="flex items-center text-sm text-slate-500 hover:text-slate-900">

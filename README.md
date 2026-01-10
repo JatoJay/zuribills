@@ -14,7 +14,7 @@ Take full control of your business with Ogasir; share a beautiful catalog, get p
    - `VITE_FLUTTERWAVE_PUBLIC_KEY` for Flutterwave payments
    - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for Supabase storage (apply `supabase/schema.sql` in your project)
    - Note: the demo assumes public table access; enable RLS + policies for production.
-3. (Optional) If using Flutterwave payments + webhooks, set server env vars in `.env.local` and run the server:
+3. (Optional) If using Flutterwave payments + webhooks, set server env vars in `.env.local` and run the NestJS API (lives in `backend/`, serves `/api/*` on port 8787):
    - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
    - `FLUTTERWAVE_SECRET_KEY` and `FLUTTERWAVE_WEBHOOK_SECRET`
    - `PLATFORM_FEE_PERCENT` (defaults to 1.5)
