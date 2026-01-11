@@ -105,7 +105,20 @@ const PRICING_FEATURES = [
   'API Access',
 ];
 
-const LIGHT_THEME: React.CSSProperties = {
+type ThemeVars = React.CSSProperties &
+  Record<
+    | '--background'
+    | '--surface'
+    | '--primary'
+    | '--on-primary'
+    | '--secondary'
+    | '--text'
+    | '--text-muted'
+    | '--border',
+    string
+  >;
+
+const LIGHT_THEME: ThemeVars = {
   '--background': '#ffffff',
   '--surface': '#f6f6f3',
   '--primary': '#0EA5A4',

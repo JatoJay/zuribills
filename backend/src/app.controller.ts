@@ -66,7 +66,7 @@ const fetchAfnexProviders = async () => {
     try {
         const response = await fetch(`${afnexDemoBaseUrl}/providers`);
         if (response.ok) {
-            afnexProvidersCache = await response.json();
+            afnexProvidersCache = await response.json() as any[];
             afnexProvidersCacheTime = now;
             return afnexProvidersCache;
         }
@@ -189,7 +189,7 @@ const createFlutterwaveTransfer = async (payload: any) => {
         },
         body: JSON.stringify(payload),
     });
-    const data = await response.json().catch(() => ({}));
+    const data: any = await response.json().catch(() => ({}));
     return { response, data };
 };
 
@@ -497,11 +497,11 @@ const getMomoToken = async ({ userId, apiKey, subscriptionKey, product }: {
         },
     });
     if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
+        const data: any = await response.json().catch(() => ({}));
         console.error('MoMo token error', data);
         return null;
     }
-    const data = await response.json().catch(() => ({}));
+    const data: any = await response.json().catch(() => ({}));
     return data?.access_token || null;
 };
 
@@ -543,7 +543,7 @@ const fetchStripeRate = async (from: string, to: string) => {
             Authorization: `Bearer ${stripeSecretKey}`,
         },
     });
-    const data = await response.json().catch(() => ({}));
+    const data: any = await response.json().catch(() => ({}));
     if (!response.ok) {
         console.error('Stripe rate error', data);
         return null;
@@ -561,7 +561,7 @@ const fetchFlutterwaveRate = async (from: string, to: string, amount = 1) => {
             'Content-Type': 'application/json',
         },
     });
-    const data = await response.json().catch(() => ({}));
+    const data: any = await response.json().catch(() => ({}));
     if (!response.ok) {
         console.error('Flutterwave rate error', data);
         return null;
@@ -622,7 +622,7 @@ export class AppController {
                 subject: subject || defaultSubject,
                 text: textBody,
                 html: htmlBody || undefined,
-                reply_to: replyTo || undefined,
+                replyTo: replyTo || undefined,
             });
 
             return res.json({ id: result.data?.id });
@@ -652,7 +652,7 @@ export class AppController {
                     'Content-Type': 'application/json',
                 },
             });
-            const data = await response.json().catch(() => ({}));
+            const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 console.error('Flutterwave bank list failed', data);
                 return res.status(response.status).json({ error: data?.message || 'Failed to load banks.' });
@@ -821,7 +821,7 @@ export class AppController {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
-            const data = await response.json().catch(() => ({}));
+            const data: any = await response.json().catch(() => ({}));
             if (!response.ok || data?.success === false) {
                 console.error('Afnex charge failed', data);
                 return res.status(response.status || 500).json({ error: data?.error || 'Failed to initialize payment.' });
@@ -887,7 +887,7 @@ export class AppController {
                     reference: referenceValue,
                 }),
             });
-            verifyData = await response.json().catch(() => ({}));
+            verifyData = await response.json().catch(() => ({})) as Record<string, any>;
             if (!response.ok) {
                 console.error('Afnex verify failed', verifyData);
                 return res.json({
@@ -1064,7 +1064,7 @@ export class AppController {
                 },
                 body: JSON.stringify(payload),
             });
-            const data = await response.json().catch(() => ({}));
+            const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 console.error('Flutterwave subaccount failed', data);
                 return res.status(response.status).json({ error: data?.message || 'Failed to create payout account.' });
@@ -1189,7 +1189,7 @@ export class AppController {
                 },
                 body: JSON.stringify(payload),
             });
-            const data = await response.json().catch(() => ({}));
+            const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 console.error('Flutterwave subscription init failed', data);
                 return res.status(response.status).json({ error: data?.message || 'Flutterwave initialization failed.' });
@@ -1295,7 +1295,7 @@ export class AppController {
                 body: JSON.stringify(payload),
             });
 
-            const data = await response.json().catch(() => ({}));
+            const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 console.error('Flutterwave MoMo charge failed', data);
                 if (paymentOption) {
@@ -1324,7 +1324,7 @@ export class AppController {
                         },
                         body: JSON.stringify(linkPayload),
                     });
-                    const linkData = await linkResponse.json().catch(() => ({}));
+                    const linkData: any = await linkResponse.json().catch(() => ({}));
                     if (!linkResponse.ok) {
                         console.error('Flutterwave fallback payment failed', linkData);
                         return res.status(linkResponse.status).json({ error: linkData?.message || 'Failed to initialize MoMo payment.' });
@@ -1381,7 +1381,7 @@ export class AppController {
                     Authorization: `Bearer ${flutterwaveSecretKey}`,
                 },
             });
-            const data = await response.json().catch(() => ({}));
+            const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 const message = String(data?.message || '').toLowerCase();
                 if (response.status === 404 || message.includes('no transaction')) {
@@ -1394,7 +1394,7 @@ export class AppController {
                                 },
                             }
                         );
-                        const fallbackData = await fallbackResponse.json().catch(() => ({}));
+                        const fallbackData: any = await fallbackResponse.json().catch(() => ({}));
                         if (fallbackResponse.ok) {
                             return res.json({ status: String(fallbackData?.data?.status || 'PENDING').toUpperCase() });
                         }
@@ -1584,7 +1584,7 @@ export class AppController {
                 },
                 body: JSON.stringify(payload),
             });
-            const data = await response.json().catch(() => ({}));
+            const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 console.error('Flutterwave initialize failed', data);
                 return res.status(response.status).json({ error: data?.message || 'Flutterwave initialization failed.' });
@@ -1805,13 +1805,13 @@ export class AppController {
             });
 
             if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
+                const errData: any = await response.json().catch(() => ({}));
                 return res.status(response.status).json({
                     error: errData.error?.message || 'Gemini API request failed.',
                 });
             }
 
-            const data = await response.json();
+            const data: any = await response.json();
             const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!text) {
                 return res.status(500).json({ error: 'No content generated.' });
@@ -1855,13 +1855,13 @@ export class AppController {
             });
 
             if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
+                const errData: any = await response.json().catch(() => ({}));
                 return res.status(response.status).json({
                     error: errData.error?.message || 'Google Translate request failed.',
                 });
             }
 
-            const data = await response.json();
+            const data: any = await response.json();
             const translations = Array.isArray(data?.data?.translations)
                 ? data.data.translations.map((item: any) => item.translatedText || '')
                 : [];
@@ -1943,7 +1943,7 @@ export class AppController {
                 return res.redirect(buildAppRedirect(redirectPath, { oauthError: 'token_exchange_failed' }));
             }
 
-            const tokenData = await tokenResponse.json();
+            const tokenData: any = await tokenResponse.json();
             const profileResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                 headers: { Authorization: `Bearer ${tokenData.access_token}` },
             });
@@ -1954,7 +1954,7 @@ export class AppController {
                 return res.redirect(buildAppRedirect(redirectPath, { oauthError: 'profile_fetch_failed' }));
             }
 
-            const profile = await profileResponse.json();
+            const profile: any = await profileResponse.json();
             return res.redirect(buildAppRedirect(redirectPath, {
                 sso: 'google',
                 email: profile.email || '',

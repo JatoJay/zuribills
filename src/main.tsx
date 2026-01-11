@@ -10,12 +10,20 @@ seedDatabase().catch((error) => {
     console.error('Seed database failed', error);
 });
 
-registerSW({
-    immediate: true,
-    onOfflineReady() {
-        console.log('InvoiceFlow is ready to work offline.');
-    },
-});
+if ('serviceWorker' in navigator) {
+    if (import.meta.env.PROD) {
+        registerSW({
+            immediate: true,
+            onOfflineReady() {
+                console.log('InvoiceFlow is ready to work offline.');
+            },
+        });
+    } else {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+            registrations.forEach((registration) => registration.unregister());
+        });
+    }
+}
 
 const router = createRouter({ routeTree })
 

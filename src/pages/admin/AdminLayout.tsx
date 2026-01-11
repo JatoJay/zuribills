@@ -4,6 +4,7 @@ import { LayoutDashboard, FileText, Settings as SettingsIcon, Users, ShoppingBag
 import ThemeToggle from '@/components/ThemeToggle';
 import BusinessChatWidget from '@/components/BusinessChatWidget';
 import { Button, Card } from '@/components/ui';
+import { apiFetch } from '@/services/apiClient';
 import { getSupabaseClient } from '@/services/supabaseClient';
 import { clearCurrentAccountId, clearCurrentUserId, getAccountById, getCurrentUserId, getOrganizationBySlug, getUserByEmail, setCurrentAccountId, setCurrentUserId } from '@/services/storage';
 import { Account, Organization } from '@/types';
@@ -254,7 +255,7 @@ const AdminLayout: React.FC = () => {
         throw new Error(t('Authentication failed. Please try again.'));
       }
 
-      const response = await fetch('/api/billing/flutterwave/initialize', {
+      const response = await apiFetch('/api/billing/flutterwave/initialize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

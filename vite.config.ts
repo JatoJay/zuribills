@@ -93,6 +93,10 @@ export default defineConfig({
         alias: {
             '@': path.resolve(__dirname, './src'),
         },
+        dedupe: ['react', 'react-dom'],
+    },
+    optimizeDeps: {
+        include: ['react', 'react-dom', '@tanstack/react-router'],
     },
     server: {
         port: 3004,
@@ -102,5 +106,13 @@ export default defineConfig({
                 changeOrigin: true,
             },
         },
-    }
+    },
+    preview: {
+        proxy: {
+            '/api': {
+                target: 'http://localhost:8787',
+                changeOrigin: true,
+            },
+        },
+    },
 })
