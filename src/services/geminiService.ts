@@ -1,10 +1,11 @@
 import { Service } from "../types";
+import { apiFetch } from "./apiClient";
 
 export const AI_DISABLED_MESSAGE = 'AI generation disbaled';
 
 const generateContent = async (prompt: string, schema?: any) => {
     try {
-        const response = await fetch('/api/ai/generate', {
+        const response = await apiFetch('/api/ai/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, schema })
@@ -35,7 +36,7 @@ export const translateBatch = async (
 ): Promise<string[]> => {
     if (!texts.length) return [];
 
-    const response = await fetch('/api/translate', {
+    const response = await apiFetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texts, targetLanguage, sourceLanguage })

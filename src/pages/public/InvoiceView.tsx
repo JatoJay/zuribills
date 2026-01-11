@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams } from '@tanstack/react-router';
 import { Invoice, Organization, InvoiceStatus } from '@/types';
 import { getOrganizationBySlug, getInvoices } from '@/services/storage';
+import { apiFetch } from '@/services/apiClient';
 import { Button, formatCurrency, Badge, Card, Input } from '@/components/ui';
 import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw, Smartphone } from 'lucide-react';
 import { processPayment, resolveAfnexProvider, requiresAfnexPhone, AfnexProvider } from '@/services/paymentService';
@@ -176,7 +177,7 @@ const InvoiceView: React.FC = () => {
             if (cancelled) return;
             attempts += 1;
             try {
-                const response = await fetch('/api/payments/afnex/verify', {
+                const response = await apiFetch('/api/payments/afnex/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

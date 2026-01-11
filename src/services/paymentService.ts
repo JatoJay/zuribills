@@ -4,6 +4,7 @@
  */
 
 import { getSupabaseClient } from './supabaseClient';
+import { apiFetch } from './apiClient';
 
 // Types
 export interface PaymentConfig {
@@ -90,7 +91,7 @@ export const initAfnexPayment = async (
     provider: AfnexProvider
 ): Promise<PaymentResult> => {
     try {
-        const response = await fetch('/api/payments/afnex/charge', {
+        const response = await apiFetch('/api/payments/afnex/charge', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -130,7 +131,7 @@ export const fetchFlutterwaveBanks = async (country: string): Promise<Flutterwav
             throw new Error('Authentication required.');
         }
 
-        const response = await fetch(`/api/payments/flutterwave/banks?country=${encodeURIComponent(country)}`, {
+        const response = await apiFetch(`/api/payments/flutterwave/banks?country=${encodeURIComponent(country)}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -156,7 +157,7 @@ export const createFlutterwavePayoutAccount = async (
             return { success: false, error: 'Authentication required.' };
         }
 
-        const response = await fetch('/api/payments/flutterwave/payouts', {
+        const response = await apiFetch('/api/payments/flutterwave/payouts', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -213,7 +214,7 @@ export const fetchProviderRate = async (
     if (provider) {
         query.set('provider', provider);
     }
-    const response = await fetch(`/api/payments/rates?${query.toString()}`);
+    const response = await apiFetch(`/api/payments/rates?${query.toString()}`);
     if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         throw new Error(error?.error || 'Failed to load exchange rates.');

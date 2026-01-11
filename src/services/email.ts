@@ -1,4 +1,5 @@
 import { Invoice } from '../types';
+import { apiFetch } from './apiClient';
 
 type SendInvoiceEmailOptions = {
     body?: string;
@@ -9,7 +10,7 @@ export const sendInvoiceEmail = async (invoice: Invoice, options: SendInvoiceEma
     const subjectBase = `Invoice ${invoice.invoiceNumber}`;
     const subject = options.orgName ? `${subjectBase} from ${options.orgName}` : subjectBase;
 
-    const response = await fetch('/api/email/send-invoice', {
+    const response = await apiFetch('/api/email/send-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
