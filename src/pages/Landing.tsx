@@ -3,22 +3,26 @@ import { useNavigate } from '@tanstack/react-router';
 import { Button, Input } from '../components/ui';
 import { askBusinessAnalyst } from '@/services/geminiService';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useParallax } from '@/hooks/useParallax';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 import {
-  ArrowRight,
   CheckCircle,
-  Sparkles,
+  Zap,
+  Globe,
   Layers,
+  Play,
+  ArrowRight,
+  Twitter,
+  Instagram,
+  Linkedin,
+  Sparkles,
   MousePointer2,
   BarChart3,
   ShieldCheck,
-  Zap,
-  Play,
-  Bot,
   Wallet,
   ChevronDown,
-  Globe,
+  Bot
 } from 'lucide-react';
 
 const NAV_ITEMS = ['Product', 'How it works', 'AI insights', 'FAQ', 'Pricing'];
@@ -92,7 +96,7 @@ const LOCAL_LANGUAGES = [
   { code: 'rw', label: 'Kinyarwanda' },
   { code: 'sw', label: 'Swahili' },
   { code: 'tw', label: 'Twi' },
-  { code: 'yo', label: 'Yoruba, Hausa, Igbo'},
+  { code: 'yo', label: 'Yoruba, Hausa, Igbo' },
   { code: 'zu', label: 'Zulu' },
 ];
 
@@ -457,7 +461,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder={t('Ask about revenue, clients, invoices...')}
-        className="h-10 bg-white/70 border border-white/40 rounded-full flex-1 px-4 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none transition-colors"
+          className="h-10 bg-white/70 border border-white/40 rounded-full flex-1 px-4 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none transition-colors"
         />
         <button
           onClick={handleSend}
@@ -472,7 +476,15 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
 };
 
 const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
+  const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
+
+  const handleSelectPlan = (planId: string) => {
+    navigate({
+      to: '/onboarding',
+      search: { plan: planId } as any
+    });
+  };
 
   return (
     <div className="w-full max-w-5xl mx-auto">
@@ -516,9 +528,15 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
               </li>
             ))}
           </ul>
+          <div className="mb-4">
+            <span className={`text-xs ${billingCycle === 'monthly' ? 'text-white/60' : 'text-muted'}`}>
+              {t('14-day free trial included')}
+            </span>
+          </div>
           <Button
             variant={billingCycle === 'monthly' ? 'primary' : 'outline'}
             className="w-full"
+            onClick={() => handleSelectPlan('monthly')}
           >
             {t('Choose Monthly')}
           </Button>
@@ -544,9 +562,15 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
               </li>
             ))}
           </ul>
+          <div className="mb-4">
+            <span className={`text-xs ${billingCycle === 'yearly' ? 'text-white/60' : 'text-muted'}`}>
+              {t('14-day free trial included')}
+            </span>
+          </div>
           <Button
             variant={billingCycle === 'yearly' ? 'primary' : 'outline'}
             className="w-full"
+            onClick={() => handleSelectPlan('yearly')}
           >
             {t('Choose Yearly')}
           </Button>
@@ -556,27 +580,11 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   );
 };
 
-const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => (
-  <footer className="py-12 bg-[#0b0b0b] text-white">
-    <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
-      <div className="flex items-center gap-2">
-        <Zap className="w-5 h-5 text-primary" />
-        <span className="font-display font-semibold tracking-tight">InvoiceFlow</span>
-      </div>
-      <div className="flex gap-8 text-sm">
-        <a href="#" className="transition-colors hover:text-white">{t('Privacy')}</a>
-        <a href="#" className="transition-colors hover:text-white">{t('Terms')}</a>
-        <a href="#" className="transition-colors hover:text-white">{t('Docs')}</a>
-      </div>
-      <div className="text-xs">
-        &copy; {new Date().getFullYear()} InvoiceFlow. {t('All rights reserved.')}
-      </div>
-    </div>
-  </footer>
-);
-
 const Landing: React.FC = () => {
   const navigate = useNavigate();
+  const parallaxFast = useParallax(-0.2);
+  const parallaxSlow = useParallax(0.1);
+
   const translationStrings = useMemo(() => ([
     ...NAV_ITEMS,
     'Sign in',
@@ -716,8 +724,15 @@ const Landing: React.FC = () => {
 
       <section className="relative pt-36 pb-24 bg-background overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-40" />
-        <div className="absolute -top-24 right-0 w-[480px] h-[480px] bg-primary/30 blur-[140px]" />
-        <div className="absolute bottom-0 left-0 w-[320px] h-[320px] bg-foreground/10 blur-[120px]" />
+        {/* Parallax Elements */}
+        <div
+          className="absolute -top-24 right-0 w-[480px] h-[480px] bg-primary/30 blur-[140px]"
+          style={parallaxFast}
+        />
+        <div
+          className="absolute bottom-0 left-0 w-[320px] h-[320px] bg-foreground/10 blur-[120px]"
+          style={parallaxSlow}
+        />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-16 items-center relative z-10">
           <div>
@@ -1061,6 +1076,161 @@ const Landing: React.FC = () => {
 
       <Footer t={t} />
     </div>
+  );
+};
+
+const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
+  return (
+    <footer className="relative bg-[#050505] text-white pt-24 pb-10 overflow-hidden">
+      {/* Ambient Glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-blue-900/20 blur-[150px] rounded-full pointer-events-none" />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Top CTA Section */}
+        <div className="grid lg:grid-cols-2 gap-16 items-center mb-20">
+          <div className="max-w-xl">
+            <h2 className="text-5xl md:text-6xl font-display font-medium tracking-tight mb-8">
+              {t('Start building with InvoiceFlow today')}
+            </h2>
+            <div className="flex flex-wrap gap-4">
+              <Button
+                onClick={() => window.location.href = '/onboarding'}
+                className="h-12 px-8 rounded-full bg-white text-black font-semibold hover:bg-gray-200"
+              >
+                {t('Start for free')}
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12 px-8 rounded-full border-white/20 text-white hover:bg-white/10"
+              >
+                {t('See a demo')} <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+
+          {/* 3D Visual Cards */}
+          <div className="hidden lg:block relative h-[320px] w-full perspective-[1000px]">
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[220px] h-[280px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-white/10 transform rotate-y-[-25deg] rotate-x-[10deg] translate-z-[-100px] translate-x-[40px] opacity-40" />
+            <div className="absolute right-16 top-1/2 -translate-y-1/2 w-[220px] h-[280px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-white/10 transform rotate-y-[-25deg] rotate-x-[10deg] translate-z-[-50px] translate-x-[20px] opacity-70" />
+            <div className="absolute right-32 top-1/2 -translate-y-1/2 w-[220px] h-[280px] bg-gradient-to-br from-[#1a1a1a] via-black to-[#1a1a1a] rounded-3xl border border-white/10 shadow-2xl transform rotate-y-[-25deg] rotate-x-[10deg] hover:-translate-y-4 transition-transform duration-500">
+              {/* Decorative screen content */}
+              <div className="p-6 opacity-80">
+                <div className="w-8 h-8 rounded-full bg-blue-600 mb-6" />
+                <div className="space-y-3">
+                  <div className="h-2 w-24 bg-white/20 rounded-full" />
+                  <div className="h-2 w-16 bg-white/10 rounded-full" />
+                </div>
+                <div className="mt-8 grid grid-cols-2 gap-2">
+                  <div className="h-16 bg-white/5 rounded-xl border border-white/5" />
+                  <div className="h-16 bg-white/5 rounded-xl border border-white/5" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Glass Footer Container */}
+        <div className="relative rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-2xl p-8 md:p-12 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+
+          {/* Logo & Copyright Row */}
+          <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-12 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <Zap className="w-5 h-5 text-white fill-current" />
+              <span className="font-display font-bold text-lg tracking-tight">InvoiceFlow</span>
+              <span className="text-xs text-white/40 ml-2 pt-1">a Gemini company</span>
+            </div>
+            <div className="text-xs text-white/40 font-medium">
+              2026 © InvoiceFlow Technologies Nigeria Limited
+            </div>
+          </div>
+
+          {/* Links Grid */}
+          <div className="relative grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-12 pt-12">
+
+            {/* Brand Column */}
+            <div className="col-span-2 lg:col-span-1 flex flex-col justify-between h-full">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-teal-400 mb-8 shadow-lg shadow-blue-500/20" />
+
+                <div className="mb-8">
+                  <h4 className="text-xs uppercase tracking-widest text-white/40 font-semibold mb-4">Get Started</h4>
+                  <ul className="space-y-3 text-sm font-medium">
+                    <li><a href="#" className="hover:text-blue-400 transition-colors">Create an account</a></li>
+                    <li><a href="#" className="hover:text-blue-400 transition-colors">Sign in</a></li>
+                  </ul>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs uppercase tracking-widest text-white/40 font-semibold mb-4">Stay in touch</h4>
+                <div className="flex gap-4 opacity-60">
+                  <Twitter className="w-5 h-5 hover:text-white transition-colors cursor-pointer" />
+                  <Instagram className="w-5 h-5 hover:text-white transition-colors cursor-pointer" />
+                  <Linkedin className="w-5 h-5 hover:text-white transition-colors cursor-pointer" />
+                </div>
+              </div>
+            </div>
+
+            {/* Products */}
+            <div>
+              <h4 className="text-sm text-white/40 font-medium mb-6">Products</h4>
+              <ul className="space-y-3 text-sm text-white/80">
+                {['Connect', 'Statements', 'Direct Debit', 'Direct Pay', 'Lookup', 'Percept'].map(item => (
+                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Use Cases */}
+            <div>
+              <h4 className="text-sm text-white/40 font-medium mb-6">Use Cases</h4>
+              <ul className="space-y-3 text-sm text-white/80">
+                {['Lending', 'Personal Finance', 'Payments', 'Business Banking'].map(item => (
+                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="text-sm text-white/40 font-medium mb-6">Company</h4>
+              <ul className="space-y-3 text-sm text-white/80">
+                {['About Us', 'Careers', 'Blog', 'Contact'].map(item => (
+                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
+                ))}
+              </ul>
+              <h4 className="text-sm text-white/40 font-medium mt-10 mb-6">Developers</h4>
+              <ul className="space-y-3 text-sm text-white/80">
+                {['Overview', 'Documentation', 'API Reference'].map(item => (
+                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="text-sm text-white/40 font-medium mb-6">Legal</h4>
+              <ul className="space-y-3 text-sm text-white/80">
+                {['Terms of Use', 'Privacy Policy', 'Security'].map(item => (
+                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
+                ))}
+              </ul>
+
+              <h4 className="text-sm text-white/40 font-medium mt-10 mb-6">Resources</h4>
+              <ul className="space-y-3 text-sm text-white/80">
+                {['Media Kit', 'Support'].map(item => (
+                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
+                ))}
+              </ul>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </footer>
   );
 };
 

@@ -100,11 +100,28 @@ const SUBSCRIPTION_PRICING = {
 const SUBSCRIPTION_CURRENCY = 'USD';
 
 const GOOGLE_LANGUAGE_CODE_MAP: Record<string, string> = {
+    // Major languages
     english: 'en',
     french: 'fr',
     spanish: 'es',
     portuguese: 'pt',
     arabic: 'ar',
+    german: 'de',
+    hindi: 'hi',
+    bengali: 'bn',
+    'chinese (simplified)': 'zh-CN',
+    'chinese (traditional)': 'zh-TW',
+    chinese: 'zh-CN',
+    japanese: 'ja',
+    korean: 'ko',
+    italian: 'it',
+    dutch: 'nl',
+    russian: 'ru',
+    turkish: 'tr',
+    indonesian: 'id',
+    vietnamese: 'vi',
+
+    // African languages
     swahili: 'sw',
     kinyarwanda: 'rw',
     hausa: 'ha',
@@ -114,19 +131,56 @@ const GOOGLE_LANGUAGE_CODE_MAP: Record<string, string> = {
     zulu: 'zu',
     afrikaans: 'af',
     'nigerian pidgin': 'pcm',
-    german: 'de',
-    hindi: 'hi',
-    bengali: 'bn',
-    'chinese (simplified)': 'zh-CN',
-    'chinese (traditional)': 'zh-TW',
-    japanese: 'ja',
-    korean: 'ko',
-    italian: 'it',
-    dutch: 'nl',
-    russian: 'ru',
-    turkish: 'tr',
-    indonesian: 'id',
-    vietnamese: 'vi',
+    amharic: 'am',
+    somali: 'so',
+    xhosa: 'xh',
+    shona: 'sn',
+    sesotho: 'st',
+    setswana: 'tn',
+
+    // Additional aliases and common variations
+    pidgin: 'pcm',
+    'pidgin english': 'pcm',
+    'naija': 'pcm',
+    akan: 'ak',
+    'simplified chinese': 'zh-CN',
+    'traditional chinese': 'zh-TW',
+    mandarin: 'zh-CN',
+    cantonese: 'zh-TW',
+
+    // European languages
+    polish: 'pl',
+    ukrainian: 'uk',
+    czech: 'cs',
+    greek: 'el',
+    hungarian: 'hu',
+    romanian: 'ro',
+    swedish: 'sv',
+    norwegian: 'no',
+    danish: 'da',
+    finnish: 'fi',
+
+    // Middle Eastern / South Asian
+    urdu: 'ur',
+    persian: 'fa',
+    farsi: 'fa',
+    hebrew: 'he',
+    thai: 'th',
+    malayalam: 'ml',
+    tamil: 'ta',
+    telugu: 'te',
+    marathi: 'mr',
+    gujarati: 'gu',
+    punjabi: 'pa',
+    kannada: 'kn',
+
+    // Southeast Asian
+    malay: 'ms',
+    tagalog: 'tl',
+    filipino: 'tl',
+    burmese: 'my',
+    khmer: 'km',
+    lao: 'lo',
 };
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -226,7 +280,27 @@ const resolveAfnexProviderAsync = async (currency: string) => {
 const resolveGoogleLanguageCode = (language: string, fallback: string) => {
     if (!language) return fallback;
     const normalized = String(language).trim().toLowerCase();
-    return GOOGLE_LANGUAGE_CODE_MAP[normalized] || fallback;
+
+    // Exact match
+    if (GOOGLE_LANGUAGE_CODE_MAP[normalized]) {
+        return GOOGLE_LANGUAGE_CODE_MAP[normalized];
+    }
+
+    // Try partial match (e.g., "Chinese" should match "chinese (simplified)")
+    const keys = Object.keys(GOOGLE_LANGUAGE_CODE_MAP);
+    for (const key of keys) {
+        if (key.startsWith(normalized) || normalized.startsWith(key)) {
+            return GOOGLE_LANGUAGE_CODE_MAP[key];
+        }
+    }
+
+    // If it looks like a language code already (2-3 chars), use it directly
+    if (/^[a-z]{2,3}(-[a-z]{2})?$/i.test(normalized)) {
+        return normalized;
+    }
+
+    console.warn(`Unknown language: "${language}", falling back to: "${fallback || 'en'}"`);
+    return fallback || 'en';
 };
 
 const resolveSubscriptionPlan = (billingCycle: string) => {
@@ -1435,8 +1509,8 @@ export class AppController {
 
                     const feePercent = resolvePlatformFeePercent(
                         data?.data?.meta?.platform_fee_percent
-                            || data?.data?.meta?.platformFeePercent
-                            || org?.payment_config?.platformFeePercent
+                        || data?.data?.meta?.platformFeePercent
+                        || org?.payment_config?.platformFeePercent
                     );
                     const amount = Number.parseFloat(String(data?.data?.amount || invoice.total || '0'));
                     const platformFeeAmount = Number.isFinite(amount)
