@@ -19,16 +19,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY;
 const flutterwaveWebhookSecret = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const platformFeePercent = Number.parseFloat(process.env.PLATFORM_FEE_PERCENT || '1.5');
-const momoApiBaseUrl = process.env.MOMO_API_BASE_URL || 'https://sandbox.momodeveloper.mtn.com';
-const momoTargetEnvironment = process.env.MOMO_TARGET_ENVIRONMENT || 'sandbox';
-const momoCollectionSubscriptionKey = process.env.MOMO_COLLECTION_SUBSCRIPTION_KEY;
-const momoCollectionUserId = process.env.MOMO_COLLECTION_USER_ID;
-const momoCollectionApiKey = process.env.MOMO_COLLECTION_API_KEY;
-const momoDisbursementSubscriptionKey = process.env.MOMO_DISBURSEMENT_SUBSCRIPTION_KEY;
-const momoDisbursementUserId = process.env.MOMO_DISBURSEMENT_USER_ID;
-const momoDisbursementApiKey = process.env.MOMO_DISBURSEMENT_API_KEY;
-const afnexDemoBaseUrl = process.env.AFNEX_DEMO_BASE_URL || 'https://afnex.dev/api/demo';
+const platformFeePercent = 1.5;
 
 const FLUTTERWAVE_MOMO_TYPES = {
     RW: 'mobile_money_rwanda',
@@ -53,51 +44,13 @@ const MOMO_COUNTRY_BY_CURRENCY = {
     ZAR: 'ZA',
 };
 
-// Afnex providers cache - fetched dynamically from API
-let afnexProvidersCache: any[] | null = null;
-let afnexProvidersCacheTime = 0;
-const AFNEX_PROVIDERS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-const fetchAfnexProviders = async () => {
-    const now = Date.now();
-    if (afnexProvidersCache && now - afnexProvidersCacheTime < AFNEX_PROVIDERS_CACHE_TTL_MS) {
-        return afnexProvidersCache;
-    }
-    try {
-        const response = await fetch(`${afnexDemoBaseUrl}/providers`);
-        if (response.ok) {
-            afnexProvidersCache = await response.json() as any[];
-            afnexProvidersCacheTime = now;
-            return afnexProvidersCache;
-        }
-    } catch (error) {
-        console.error('Failed to fetch Afnex providers', error);
-    }
-    // Fallback to cached or default
-    return afnexProvidersCache || [];
-};
-
-const getProvidersForCurrency = async (currency: string) => {
-    const providers = await fetchAfnexProviders();
-    const normalized = String(currency || '').trim().toUpperCase();
-    return providers.filter((p) => p.currencies?.includes(normalized));
-};
-
-// Legacy fallback mapping (used if API is unavailable)
-const AFNEX_PROVIDER_BY_CURRENCY: Record<string, string> = {
-    NGN: 'paystack',
-    KES: 'pesapal',
-    RWF: 'mtn_momo',
-    GHS: 'mtn_momo',
-    ZAR: 'mtn_momo',
-};
-
 const SUBSCRIPTION_PRICING = {
     monthly: { amount: 4.99, label: 'Monthly' },
     yearly: { amount: 54, label: 'Yearly' },
 };
 
 const SUBSCRIPTION_CURRENCY = 'USD';
+
 
 const GOOGLE_LANGUAGE_CODE_MAP: Record<string, string> = {
     // Major languages
@@ -259,23 +212,6 @@ const resolveFlutterwaveMomoType = (countryCode: string) =>
 
 const resolveFlutterwaveMomoOption = (countryCode: string) =>
     FLUTTERWAVE_MOMO_OPTIONS[String(countryCode || '').trim().toUpperCase()] || null;
-
-const resolveAfnexProvider = (currency: string) => {
-    const normalized = String(currency || '').trim().toUpperCase();
-    return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
-};
-
-// Async version that uses dynamic providers from Afnex API
-const resolveAfnexProviderAsync = async (currency: string) => {
-    const normalized = String(currency || '').trim().toUpperCase();
-    const providers = await getProvidersForCurrency(normalized);
-    if (providers.length > 0) {
-        // Return first matching provider (Afnex returns them in priority order)
-        return providers[0].name;
-    }
-    // Fallback to static mapping
-    return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
-};
 
 const resolveGoogleLanguageCode = (language: string, fallback: string) => {
     if (!language) return fallback;
@@ -557,41 +493,12 @@ const getMomoToken = async ({ userId, apiKey, subscriptionKey, product }: {
     subscriptionKey?: string;
     product: string;
 }) => {
-    if (!userId || !apiKey || !subscriptionKey) {
-        return null;
-    }
-
-    const auth = Buffer.from(`${userId}:${apiKey}`).toString('base64');
-    const response = await fetch(`${momoApiBaseUrl}/${product}/token/`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Basic ${auth}`,
-            'Ocp-Apim-Subscription-Key': subscriptionKey,
-            'X-Target-Environment': momoTargetEnvironment,
-        },
-    });
-    if (!response.ok) {
-        const data: any = await response.json().catch(() => ({}));
-        console.error('MoMo token error', data);
-        return null;
-    }
-    const data: any = await response.json().catch(() => ({}));
-    return data?.access_token || null;
+    return null;
 };
 
-const getMomoCollectionToken = () => getMomoToken({
-    userId: momoCollectionUserId,
-    apiKey: momoCollectionApiKey,
-    subscriptionKey: momoCollectionSubscriptionKey,
-    product: 'collection',
-});
+const getMomoCollectionToken = () => null;
 
-const getMomoDisbursementToken = () => getMomoToken({
-    userId: momoDisbursementUserId,
-    apiKey: momoDisbursementApiKey,
-    subscriptionKey: momoDisbursementSubscriptionKey,
-    product: 'disbursement',
-});
+const getMomoDisbursementToken = () => null;
 
 const RATE_CACHE_TTL_MS = 5 * 60 * 1000;
 const rateCache = new Map<string, { rate: number; source: string; timestamp: number }>();
@@ -792,261 +699,17 @@ export class AppController {
 
     @Get('payments/afnex/providers')
     async getAfnexProviders(@Req() req: Request, @Res() res: Response) {
-        const currency = String(req.query.currency || '').trim().toUpperCase();
-
-        try {
-            const allProviders = await fetchAfnexProviders();
-
-            if (!currency) {
-                // Return all providers
-                return res.json({ providers: allProviders });
-            }
-
-            // Filter by currency
-            const matching = allProviders.filter((p) => p.currencies?.includes(currency));
-            return res.json({
-                currency,
-                providers: matching,
-            });
-        } catch (error) {
-            console.error('Failed to fetch Afnex providers', error);
-            return res.status(500).json({ error: 'Failed to fetch providers.' });
-        }
+        return res.json({ providers: [] });
     }
 
     @Post('payments/afnex/charge')
     async chargeAfnex(@Req() req: Request, @Res() res: Response) {
-        if (!supabaseAdmin) {
-            return res.status(500).json({ error: 'Supabase admin is not configured.' });
-        }
-
-        const { invoiceId, provider, payerPhone, customerEmail } = req.body || {};
-        const invoiceIdValue = String(invoiceId || '').trim();
-        if (!invoiceIdValue) {
-            return res.status(400).json({ error: 'invoiceId is required.' });
-        }
-
-        const { data: invoice, error: invoiceError } = await supabaseAdmin
-            .from('invoices')
-            .select('id, organization_id, total, client_name, client_email, invoice_number')
-            .eq('id', invoiceIdValue)
-            .maybeSingle();
-        if (invoiceError) {
-            console.error('Failed to load invoice', invoiceError);
-            return res.status(500).json({ error: 'Failed to load invoice.' });
-        }
-        if (!invoice) {
-            return res.status(404).json({ error: 'Invoice not found.' });
-        }
-
-        const { data: org, error: orgError } = await supabaseAdmin
-            .from('organizations')
-            .select('id, slug, currency, payment_config')
-            .eq('id', invoice.organization_id)
-            .maybeSingle();
-        if (orgError) {
-            console.error('Failed to load organization', orgError);
-            return res.status(500).json({ error: 'Failed to load organization.' });
-        }
-        if (!org) {
-            return res.status(404).json({ error: 'Organization not found.' });
-        }
-
-        const paymentConfig = org.payment_config || {};
-        if (paymentConfig.enabled !== true) {
-            return res.status(400).json({ error: 'Payments are not enabled for this organization.' });
-        }
-
-        const currency = String(org.currency || 'USD').toUpperCase();
-        const resolvedProvider = String(provider || '').trim().toLowerCase() || await resolveAfnexProviderAsync(currency);
-        const amount = parseAfnexAmount(invoice.total, 0);
-        if (!Number.isFinite(amount) || amount <= 0) {
-            return res.status(400).json({ error: 'Invalid invoice amount.' });
-        }
-
-        const payload: Record<string, any> = {
-            provider: resolvedProvider,
-            amount,
-            currency,
-            metadata: {
-                invoice_id: invoice.id,
-                organization_id: org.id,
-                invoice_number: invoice.invoice_number,
-            },
-        };
-
-        if (resolvedProvider === 'mtn_momo') {
-            const phone = String(payerPhone || '').trim();
-            if (!phone) {
-                return res.status(400).json({ error: 'payerPhone is required for mobile money payments.' });
-            }
-            payload.phone = phone;
-        } else {
-            const email = String(customerEmail || invoice.client_email || '').trim();
-            if (!email) {
-                return res.status(400).json({ error: 'customerEmail is required for card payments.' });
-            }
-            payload.email = email;
-        }
-
-        try {
-            const response = await fetch(`${afnexDemoBaseUrl}/charge`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            const data: any = await response.json().catch(() => ({}));
-            if (!response.ok || data?.success === false) {
-                console.error('Afnex charge failed', data);
-                return res.status(response.status || 500).json({ error: data?.error || 'Failed to initialize payment.' });
-            }
-
-            return res.json({
-                reference: data?.reference,
-                provider: data?.provider || resolvedProvider,
-                paymentUrl: data?.payment_url || data?.paymentUrl || data?.link,
-                status: data?.status,
-            });
-        } catch (error) {
-            console.error('Afnex charge error', error);
-            return res.status(500).json({ error: 'Failed to initialize payment.' });
-        }
+        return res.status(400).json({ error: 'Afnex is disabled. Use Flutterwave instead.' });
     }
 
     @Post('payments/afnex/verify')
     async verifyAfnex(@Req() req: Request, @Res() res: Response) {
-        if (!supabaseAdmin) {
-            return res.status(500).json({ error: 'Supabase admin is not configured.' });
-        }
-
-        const { reference, provider, invoiceId } = req.body || {};
-        const referenceValue = String(reference || '').trim();
-        const providerValue = String(provider || '').trim().toLowerCase();
-        const invoiceIdValue = String(invoiceId || '').trim();
-
-        if (!referenceValue || !providerValue || !invoiceIdValue) {
-            return res.status(400).json({ error: 'reference, provider, and invoiceId are required.' });
-        }
-
-        const { data: invoice, error: invoiceError } = await supabaseAdmin
-            .from('invoices')
-            .select('id, organization_id, total, invoice_number, status')
-            .eq('id', invoiceIdValue)
-            .maybeSingle();
-        if (invoiceError) {
-            console.error('Failed to load invoice', invoiceError);
-            return res.status(500).json({ error: 'Failed to load invoice.' });
-        }
-        if (!invoice) {
-            return res.status(404).json({ error: 'Invoice not found.' });
-        }
-
-        const { data: org, error: orgError } = await supabaseAdmin
-            .from('organizations')
-            .select('id, payment_config, currency, name')
-            .eq('id', invoice.organization_id)
-            .maybeSingle();
-        if (orgError) {
-            console.error('Failed to load organization', orgError);
-            return res.status(500).json({ error: 'Failed to load organization.' });
-        }
-
-        let verifyData: Record<string, any> = {};
-        try {
-            const response = await fetch(`${afnexDemoBaseUrl}/verify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    provider: providerValue,
-                    reference: referenceValue,
-                }),
-            });
-            verifyData = await response.json().catch(() => ({})) as Record<string, any>;
-            if (!response.ok) {
-                console.error('Afnex verify failed', verifyData);
-                return res.json({
-                    status: 'FAILED',
-                    reference: referenceValue,
-                    provider: providerValue,
-                    error: verifyData?.error || 'Verification failed.',
-                });
-            }
-        } catch (error) {
-            console.error('Afnex verify error', error);
-            return res.json({
-                status: 'FAILED',
-                reference: referenceValue,
-                provider: providerValue,
-                error: 'Verification failed.',
-            });
-        }
-
-        const normalizedStatus = normalizeAfnexStatus(verifyData?.status as string);
-        const resolvedStatus = verifyData?.success === false && normalizedStatus !== 'PENDING'
-            ? 'FAILED'
-            : (normalizedStatus || 'PENDING');
-
-        if (resolvedStatus === 'SUCCESS' && invoice.status !== 'PAID') {
-            const feePercent = resolvePlatformFeePercent(org?.payment_config?.platformFeePercent);
-            const amount = parseAfnexAmount(verifyData?.amount, invoice.total);
-            const platformFeeAmount = Number.isFinite(amount)
-                ? Math.round((amount * (feePercent / 100)) * 100) / 100
-                : 0;
-            const netAmount = Number.isFinite(amount) ? amount - platformFeeAmount : 0;
-            const currency = String(verifyData?.currency || org?.currency || 'USD').toUpperCase();
-            const paymentId = `afnex_${referenceValue}`;
-
-            const paymentRecord = {
-                id: paymentId,
-                invoice_id: invoice.id,
-                amount: Number.isFinite(amount) ? amount : 0,
-                currency,
-                status: resolvedStatus,
-                provider: verifyData?.provider || providerValue,
-                provider_reference: referenceValue,
-                platform_fee_percent: feePercent,
-                platform_fee_amount: platformFeeAmount,
-                net_amount: netAmount,
-                date: new Date().toISOString(),
-                method: providerValue,
-            };
-
-            const { error: paymentError } = await supabaseAdmin
-                .from('payments')
-                .upsert(paymentRecord, { onConflict: 'id' });
-            if (paymentError) {
-                console.error('Failed to record Afnex payment', paymentError);
-            }
-
-            const { error: invoiceUpdateError } = await supabaseAdmin
-                .from('invoices')
-                .update({ status: 'PAID' })
-                .eq('id', invoice.id);
-            if (invoiceUpdateError) {
-                console.error('Failed to update invoice status for Afnex', invoiceUpdateError);
-            }
-
-            await createAgentLog({
-                organizationId: org?.id,
-                action: 'PAYMENT_CONFIRMED',
-                details: JSON.stringify({
-                    provider: verifyData?.provider || providerValue,
-                    reference: referenceValue,
-                    amount,
-                    currency,
-                }),
-                relatedId: invoice.id,
-                type: 'INFO',
-            });
-        }
-
-        return res.json({
-            status: resolvedStatus,
-            reference: referenceValue,
-            provider: verifyData?.provider || providerValue,
-            amount: verifyData?.amount,
-            currency: verifyData?.currency || org?.currency,
-        });
+        return res.status(400).json({ error: 'Afnex is disabled.' });
     }
 
     @Post('payments/flutterwave/payouts')
