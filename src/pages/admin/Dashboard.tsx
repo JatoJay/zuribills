@@ -152,8 +152,8 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Key Metrics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                <Card className="p-6 relative overflow-hidden bg-surface border-border">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6">
+                <Card className="p-4 md:p-6 relative overflow-hidden bg-surface border-border">
                     <div className="flex items-center justify-between z-10 relative">
                         <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Total Revenue')}</p>
@@ -166,7 +166,7 @@ const Dashboard: React.FC = () => {
                     <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-green-500/5 rounded-full z-0 pointer-events-none" />
                 </Card>
 
-                <Card className="p-6 relative overflow-hidden bg-surface border-border">
+                <Card className="p-4 md:p-6 relative overflow-hidden bg-surface border-border">
                     <div className="flex items-center justify-between z-10 relative">
                         <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Outstanding')}</p>
@@ -179,7 +179,7 @@ const Dashboard: React.FC = () => {
                     <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-orange-500/5 rounded-full z-0 pointer-events-none" />
                 </Card>
 
-                <Card className="p-6 relative overflow-hidden bg-surface border-border">
+                <Card className="p-4 md:p-6 relative overflow-hidden bg-surface border-border">
                     <div className="flex items-center justify-between z-10 relative">
                         <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Payment Rate')}</p>
@@ -194,7 +194,7 @@ const Dashboard: React.FC = () => {
                     </div>
                 </Card>
 
-                <Card className="p-6 relative overflow-hidden bg-surface border-border">
+                <Card className="p-4 md:p-6 relative overflow-hidden bg-surface border-border">
                     <div className="flex items-center justify-between z-10 relative">
                         <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Avg. Invoice')}</p>
@@ -207,7 +207,7 @@ const Dashboard: React.FC = () => {
                     <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-purple-500/5 rounded-full z-0 pointer-events-none" />
                 </Card>
 
-                <Card className="p-6 relative overflow-hidden bg-surface border-border">
+                <Card className="p-4 md:p-6 relative overflow-hidden bg-surface border-border">
                     <div className="flex items-center justify-between z-10 relative">
                         <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Expenses (Paid)')}</p>

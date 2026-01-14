@@ -613,6 +613,158 @@ export class AppController {
         }
     }
 
+    @Post('team/provision')
+    async provisionTeamMember(@Req() req: Request, @Res() res: Response) {
+        if (!supabaseAdmin) {
+            return res.status(500).json({ error: 'Supabase admin is not configured.' });
+        }
+
+        const { user: authUser, error: authError } = await getAuthenticatedUser(req);
+        if (authError || !authUser) {
+            return res.status(401).json({ error: authError || 'Unauthorized.' });
+        }
+
+        const { email, name, role, organizationId, permissions, pin } = req.body || {};
+        if (!email || !name || !organizationId) {
+            return res.status(400).json({ error: 'Email, name, and organizationId are required.' });
+        }
+
+        // 1. Verify inviter has access to the org
+        const { data: org, error: orgError } = await supabaseAdmin
+            .from('organizations')
+            .select('id, name, account_id')
+            .eq('id', organizationId)
+            .maybeSingle();
+
+        if (orgError || !org) {
+            return res.status(404).json({ error: 'Organization not found.' });
+        }
+
+        // 2. Create Auth User
+        const defaultPassword = `IF-${Math.random().toString(36).slice(-8)}!`;
+        const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
+            email,
+            password: defaultPassword,
+            email_confirm: true,
+            user_metadata: { name },
+        });
+
+        if (createAuthError) {
+            // If user already exists, we might just want to link them, but for "provisioning" we expect new users
+            if (createAuthError.message.includes('already registered')) {
+                // Handle existing user logic if needed
+            } else {
+                console.error('Failed to create auth user', createAuthError);
+                return res.status(500).json({ error: createAuthError.message });
+            }
+        }
+
+        let targetUserId = newAuthUser?.user?.id;
+        if (!targetUserId) {
+            const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+            for (const u of (userList?.users || [])) {
+                if (u.email?.toLowerCase() === email.toLowerCase()) {
+                    targetUserId = u.id;
+                    break;
+                }
+            }
+        }
+
+        if (!targetUserId) {
+            return res.status(500).json({ error: 'Could not resolve User ID' });
+        }
+
+        const { error: userTableError } = await supabaseAdmin
+            .from('users')
+            .upsert({
+                id: targetUserId,
+                account_id: org.account_id,
+                email: email.toLowerCase(),
+                name,
+                role: role || 'ASSISTANT',
+                permissions: permissions || [],
+                pin: pin || null,
+            });
+
+        if (userTableError) {
+            console.error('Failed to update users table', userTableError);
+        }
+
+        // 4. Create Org Membership
+        await supabaseAdmin.from('org_memberships').upsert({
+            organization_id: organizationId,
+            user_id: targetUserId,
+            role: role || 'ASSISTANT',
+            permissions: permissions || [],
+        });
+
+        // 5. Send Welcome Email
+        if (resend && fromEmail) {
+            await resend.emails.send({
+                from: fromEmail,
+                to: email,
+                subject: `Welcome to ${org.name} on InvoiceFlow`,
+                text: `Hi ${name},\n\nYou've been added to ${org.name}. Log in with:\nEmail: ${email}\nPassword: ${defaultPassword}\n\n${appBaseUrl}/login`,
+                html: buildHtmlBody(`Hi ${name},\n\nYou've been added to ${org.name} on InvoiceFlow. \n\nYou can log in using the details below:\n\nEmail: ${email}\nPassword: <strong>${defaultPassword}</strong>\n\n<a href="${appBaseUrl}/login">Log in here</a>\n\nFor security, please change your password after your first login.`),
+            });
+        }
+
+        return res.json({ success: true, userId: targetUserId });
+    }
+
+    @Post('email/auth')
+    async sendAuthEmail(@Req() req: Request, @Res() res: Response) {
+        if (!resend || !resendApiKey) {
+            return res.status(500).json({ error: 'RESEND_API_KEY is not configured.' });
+        }
+        if (!fromEmail) {
+            return res.status(500).json({ error: 'RESEND_FROM_EMAIL is not configured.' });
+        }
+
+        const { to, type, data } = req.body || {};
+        if (!to || !type) {
+            return res.status(400).json({ error: 'to and type are required.' });
+        }
+
+        let subject = '';
+        let body = '';
+
+        switch (type) {
+            case 'welcome':
+                subject = 'Welcome to InvoiceFlow!';
+                body = `Hi ${data?.name || 'there'},\n\nWelcome to InvoiceFlow! Your account has been created successfully. You can now start managing your invoices and expenses.\n\nBest,\nThe InvoiceFlow Team`;
+                break;
+            case 'login_alert':
+                subject = 'New Login to Your Account';
+                body = `Hello,\n\nWe detected a new login to your InvoiceFlow account on ${new Date().toLocaleString()}.\n\nIf this wasn't you, please reset your password immediately.\n\nBest,\nThe InvoiceFlow Team`;
+                break;
+            case 'password_reset':
+                subject = 'Password Reset Request';
+                body = `Hello,\n\nYou requested a password reset for your InvoiceFlow account. Click the link below to set a new password:\n\n${appBaseUrl}/login?reset_token=${data?.token}\n\nIf you didn't request this, you can safely ignore this email.\n\nBest,\nThe InvoiceFlow Team`;
+                break;
+            case 'team_invite':
+                subject = `You've been added to ${data?.orgName || 'a workspace'} on InvoiceFlow`;
+                body = `Hi ${data?.name || 'there'},\n\n${data?.inviterName || 'An administrator'} has added you to the ${data?.orgName || 'workspace'} on InvoiceFlow.\n\nYou can log in using the details below:\n\nEmail: ${to}\nPassword: ${data?.password}\n\nLog in here: ${appBaseUrl}/login\n\nFor security, please change your password after your first login.\n\nBest,\nThe InvoiceFlow Team`;
+                break;
+            default:
+                return res.status(400).json({ error: 'Invalid email type.' });
+        }
+
+        try {
+            const result = await resend.emails.send({
+                from: fromEmail,
+                to,
+                subject,
+                text: body,
+                html: buildHtmlBody(body),
+            });
+            return res.json({ id: result.data?.id });
+        } catch (error) {
+            console.error('Resend auth email failed:', error);
+            return res.status(500).json({ error: 'Failed to send auth email.' });
+        }
+    }
+
     @Get('payments/flutterwave/banks')
     async getFlutterwaveBanks(@Req() req: Request, @Res() res: Response) {
         if (!flutterwaveSecretKey) {
@@ -1307,7 +1459,7 @@ export class AppController {
                 {
                     id: payoutAccountId,
                     transaction_charge_type: 'percentage',
-                    transaction_charge: feePercent,
+                    transaction_charge: feePercent / 100,
                 },
             ],
         };

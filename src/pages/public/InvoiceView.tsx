@@ -313,7 +313,7 @@ const InvoiceView: React.FC = () => {
     const AfnexIcon = afnexDetails.icon;
 
     return (
-        <div className="min-h-screen bg-slate-100 p-8 print:p-0 print:bg-white">
+        <div className="min-h-screen bg-slate-100 p-4 sm:p-8 print:p-0 print:bg-white">
             <div className="max-w-3xl mx-auto print:max-w-none">
                 {paymentNotice && (
                     <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
@@ -322,8 +322,8 @@ const InvoiceView: React.FC = () => {
                 )}
 
                 {/* Action Buttons */}
-                <div className="mb-6 flex justify-between items-center print:hidden">
-                    <div className="flex gap-3">
+                <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
+                    <div className="flex flex-wrap gap-3">
                         {!isPaid && paymentsEnabled && (
                             <Button onClick={() => setShowPaymentModal(true)} className="shadow-neon">
                                 <CreditCard className="w-4 h-4 mr-2" /> {t('Pay Now')}
@@ -346,7 +346,7 @@ const InvoiceView: React.FC = () => {
                     </Button>
                 </div>
 
-                <div className="bg-white p-12 shadow-sm rounded-lg print:shadow-none">
+                <div className="bg-white p-6 sm:p-12 shadow-sm rounded-lg print:shadow-none">
                     {/* Header */}
                     <div className="flex justify-between items-start border-b border-slate-100 pb-8 mb-8">
                         <div>
@@ -403,7 +403,8 @@ const InvoiceView: React.FC = () => {
                     </div>
 
                     {/* Line Items */}
-                    <table className="w-full mb-12">
+                    <div className="overflow-x-auto -mx-12 px-12 md:mx-0 md:px-0 custom-scrollbar">
+                        <table className="w-full mb-12 min-w-[600px]">
                         <thead>
                             <tr className="border-b border-black text-sm">
                                 <th className="text-left py-2 font-bold">{t('Description')}</th>
@@ -423,6 +424,7 @@ const InvoiceView: React.FC = () => {
                             ))}
                         </tbody>
                     </table>
+                </div>
 
                     {/* Totals */}
                     <div className="flex justify-end">

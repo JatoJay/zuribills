@@ -19,9 +19,10 @@ import { ArrowRight, Building2, ShieldCheck, Sparkles, Eye, EyeOff } from 'lucid
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [slug, setSlug] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -30,10 +31,22 @@ const Login: React.FC = () => {
   const translationStrings = useMemo(() => ([
     'Welcome back',
     'Create your account',
+    'Forgot password',
+    'Reset your password',
+    'Enter your email to receive a password reset link.',
+    'Send reset link',
+    'Back to sign in',
     'Sign in to continue managing your workspace.',
     'Set up login credentials to secure your workspace.',
     'Sign in',
     'Create account',
+    'Update password',
+    'Choose a new secure password for your account.',
+    'New Password',
+    'Confirm New Password',
+    'Passwords do not match',
+    'Password updated successfully. Please sign in.',
+    'Cancel and sign in',
     'Email address',
     'Password',
     'Workspace slug (optional)',
@@ -63,8 +76,16 @@ const Login: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const slugParam = params.get('slug');
     const emailParam = params.get('email');
+    const modeParam = params.get('mode');
+    
     if (slugParam) setSlug(slugParam);
     if (emailParam) setEmail(emailParam);
+    if (modeParam === 'reset') setMode('reset');
+
+    // Check if we arrived from a recovery link (Supabase puts this in the fragment)
+    if (window.location.hash.includes('type=recovery')) {
+      setMode('reset');
+    }
   }, []);
 
   const resetState = () => {
@@ -90,6 +111,13 @@ const Login: React.FC = () => {
         setMessage({ type: 'error', text: error.message || t('Authentication failed. Please try again.') });
         return;
       }
+
+      // Notify backend about login
+      fetch('/api/email/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: normalizedEmail, type: 'login_alert' }),
+      }).catch(console.error);
 
       const userRecord = await getUserByEmail(normalizedEmail);
       if (!userRecord) {
@@ -166,8 +194,9 @@ const Login: React.FC = () => {
     setLoading(true);
     try {
       const supabase = getSupabaseClient();
+      const normalizedEmail = email.trim();
       const { error } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: normalizedEmail,
         password,
       });
       if (error) {
@@ -175,8 +204,72 @@ const Login: React.FC = () => {
         return;
       }
 
+      // Notify backend about signup
+      fetch('/api/email/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: normalizedEmail, type: 'welcome' }),
+      }).catch(console.error);
+
       setMessage({ type: 'success', text: t('Check your inbox to confirm your email.') });
-      navigate({ to: '/onboarding', search: { email: email.trim() } as any });
+      navigate({ to: '/onboarding', search: { email: normalizedEmail } as any });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error?.message || t('Authentication failed. Please try again.') });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    resetState();
+    if (!email.trim()) {
+      setMessage({ type: 'error', text: t('Email address is required') });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/#/login?mode=reset`,
+      });
+
+      if (error) {
+        setMessage({ type: 'error', text: error.message });
+        return;
+      }
+
+      setMessage({ type: 'success', text: t('Check your inbox to confirm your email.') });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error?.message || t('Authentication failed. Please try again.') });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    resetState();
+    if (!password || password !== confirmPassword) {
+      setMessage({ type: 'error', text: t('Passwords do not match') });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.auth.updateUser({
+        password: password,
+      });
+
+      if (error) {
+        setMessage({ type: 'error', text: error.message });
+        return;
+      }
+
+      setMessage({ type: 'success', text: t('Password updated successfully. Please sign in.') });
+      setMode('signin');
+      setPassword('');
+      setConfirmPassword('');
     } catch (error: any) {
       setMessage({ type: 'error', text: error?.message || t('Authentication failed. Please try again.') });
     } finally {
@@ -188,8 +281,12 @@ const Login: React.FC = () => {
     e.preventDefault();
     if (mode === 'signin') {
       handleSignIn();
-    } else {
+    } else if (mode === 'signup') {
       handleSignUp();
+    } else if (mode === 'forgot') {
+      handleForgotPassword();
+    } else {
+      handleResetPassword();
     }
   };
 
@@ -251,16 +348,21 @@ const Login: React.FC = () => {
           <Card className="p-8 bg-background border-border shadow-soft">
             <div className="flex flex-col gap-4">
               <div className="flex items-start justify-between gap-6">
-                <div>
-                  <h1 className="text-3xl font-display font-semibold text-foreground">
-                    {mode === 'signin' ? t('Welcome back') : t('Create your account')}
-                  </h1>
-                  <p className="text-sm text-muted mt-2">
-                    {mode === 'signin'
-                      ? t('Sign in to continue managing your workspace.')
-                      : t('Set up login credentials to secure your workspace.')}
-                  </p>
-                </div>
+                  <div>
+                    <h1 className="text-3xl font-display font-semibold text-foreground">
+                      {mode === 'signin' ? t('Welcome back') : mode === 'signup' ? t('Create your account') : mode === 'forgot' ? t('Forgot password') : t('Update password')}
+                    </h1>
+                    <p className="text-sm text-muted mt-2">
+                      {mode === 'signin'
+                        ? t('Sign in to continue managing your workspace.')
+                        : mode === 'signup'
+                          ? t('Set up login credentials to secure your workspace.')
+                          : mode === 'forgot'
+                            ? t('Enter your email to receive a password reset link.')
+                            : t('Choose a new secure password for your account.')}
+                    </p>
+                  </div>
+
                 <div className="flex items-center flex-nowrap rounded-full border border-border bg-surface p-1">
                   <button
                     type="button"
@@ -286,45 +388,71 @@ const Login: React.FC = () => {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
-                <Input
-                  label={t('Email address')}
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <div className="relative">
+                {mode !== 'reset' && (
                   <Input
-                    label={t('Password')}
-                    type={showPassword ? 'text' : 'password'}
+                    label={t('Email address')}
+                    type="email"
                     required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-4 top-[38px] text-muted hover:text-foreground transition-colors"
-                    aria-label={showPassword ? t('Hide password') : t('Show password')}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-
-                {mode === 'signin' && (
-                  <div>
+                )}
+                
+                {mode !== 'forgot' && (
+                  <div className="relative">
                     <Input
-                      label={t('Workspace slug (optional)')}
-                      type="text"
-                      value={slug}
-                      onChange={(e) => setSlug(e.target.value)}
+                      label={mode === 'reset' ? t('New Password') : t('Password')}
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                     />
-                    <p className="text-xs text-muted mt-2">{t('Use a workspace slug to jump straight into a dashboard.')}</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-4 top-[38px] text-muted hover:text-foreground transition-colors"
+                      aria-label={showPassword ? t('Hide password') : t('Show password')}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 )}
 
+                {mode === 'reset' && (
+                  <Input
+                    label={t('Confirm New Password')}
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                )}
+
+                {mode === 'signin' && (
+                  <>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setMode('forgot')}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        {t('Forgot password')}?
+                      </button>
+                    </div>
+                    <div>
+                      <Input
+                        label={t('Workspace slug (optional)')}
+                        type="text"
+                        value={slug}
+                        onChange={(e) => setSlug(e.target.value)}
+                      />
+                      <p className="text-xs text-muted mt-2">{t('Use a workspace slug to jump straight into a dashboard.')}</p>
+                    </div>
+                  </>
+                )}
+
                 <Button type="submit" className="w-full h-12 text-base" isLoading={loading}>
-                  {mode === 'signin' ? t('Sign in') : t('Create account')}
+                  {mode === 'signin' ? t('Sign in') : mode === 'signup' ? t('Create account') : mode === 'forgot' ? t('Send reset link') : t('Update password')}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </form>
@@ -341,7 +469,7 @@ const Login: React.FC = () => {
                       {t('Create account')}
                     </button>
                   </span>
-                ) : (
+                ) : mode === 'signup' ? (
                   <span>
                     {t('Already have an account?')}{' '}
                     <button
@@ -352,6 +480,22 @@ const Login: React.FC = () => {
                       {t('Sign in')}
                     </button>
                   </span>
+                ) : mode === 'forgot' ? (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('signin'); resetState(); }}
+                    className="text-foreground underline decoration-primary/60 underline-offset-4"
+                  >
+                    {t('Back to sign in')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('signin'); resetState(); }}
+                    className="text-foreground underline decoration-primary/60 underline-offset-4"
+                  >
+                    {t('Cancel and sign in')}
+                  </button>
                 )}
               </div>
             </div>

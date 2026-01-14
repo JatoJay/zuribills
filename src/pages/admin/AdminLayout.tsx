@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, createContext, useContext } from 'react';
 import { Outlet, useParams, Link, useNavigate } from '@tanstack/react-router';
-import { LayoutDashboard, FileText, Settings as SettingsIcon, Users, ShoppingBag, LogOut, ShieldCheck, ExternalLink, Wallet, BarChart3, Building2, Sparkles, CheckCircle, Lock, Landmark } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings as SettingsIcon, Users, ShoppingBag, LogOut, ShieldCheck, ExternalLink, Wallet, BarChart3, Building2, Sparkles, CheckCircle, Lock, Landmark, Menu, X as CloseIcon } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import BusinessChatWidget from '@/components/BusinessChatWidget';
 import { Button, Card } from '@/components/ui';
@@ -56,6 +56,7 @@ const AdminLayout: React.FC = () => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [authReady, setAuthReady] = useState(false);
   const translationStrings = useMemo(() => ([
@@ -429,9 +430,29 @@ const AdminLayout: React.FC = () => {
         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] mix-blend-screen opacity-50" />
       </div>
 
-      {/* Sidebar */}
-      <aside className="w-64 bg-surface/50 backdrop-blur-xl border-r border-border fixed h-full hidden md:flex flex-col z-20">
-        <div className="p-6 border-b border-border">
+      {/* Mobile Navbar */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-4 z-40 md:hidden">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center border border-primary/30">
+            <span className="text-primary text-xs font-bold">IF</span>
+          </div>
+          <span className="font-bold truncate max-w-[150px]">{org.name}</span>
+        </div>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 text-muted hover:text-foreground transition-colors"
+        >
+          {isMobileMenuOpen ? <CloseIcon className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+      </header>
+
+      {/* Sidebar (Mobile Overlay & Desktop Fixed) */}
+      <aside className={`
+        fixed inset-y-0 left-0 w-64 bg-surface/95 backdrop-blur-xl border-r border-border z-50 transform transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:translate-x-0 md:static md:h-screen md:flex md:flex-col
+      `}>
+        <div className="p-6 border-b border-border hidden md:block">
           <h1 className="font-bold text-lg truncate text-foreground flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-primary/20 flex items-center justify-center border border-primary/30">
               <span className="text-primary text-xs">IF</span>
@@ -441,12 +462,20 @@ const AdminLayout: React.FC = () => {
           <p className="text-xs text-muted mt-1 px-8">{t('Admin Dashboard')}</p>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
+        {/* Mobile Sidebar Header */}
+        <div className="p-6 border-b border-border flex items-center justify-between md:hidden">
+          <span className="font-bold">{t('Menu')}</span>
+          <button onClick={() => setIsMobileMenuOpen(false)}>
+            <CloseIcon className="w-5 h-5 text-muted" />
+          </button>
+        </div>
 
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
           <Link
             to="/org/$slug"
             params={{ slug }}
             activeOptions={{ exact: true }}
+            onClick={() => setIsMobileMenuOpen(false)}
             className={`${baseNavItemClass} ${inactiveClass}`}
             activeProps={{ className: `${baseNavItemClass} ${activeClass}` }}
           >
@@ -458,6 +487,7 @@ const AdminLayout: React.FC = () => {
               key={item.path}
               to={`/org/$slug/${item.path}` as any}
               params={{ slug } as any}
+              onClick={() => setIsMobileMenuOpen(false)}
               className={`${baseNavItemClass} ${inactiveClass}`}
               activeProps={{ className: `${baseNavItemClass} ${activeClass}` }}
             >
@@ -488,8 +518,16 @@ const AdminLayout: React.FC = () => {
         </div>
       </aside>
 
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-8 relative z-10 overflow-auto">
+      <main className="flex-1 p-4 md:p-8 pt-20 md:pt-8 relative z-10 overflow-auto h-screen custom-scrollbar">
         <AdminContext.Provider value={{ org, account, isOwner, refreshOrg, formatMoney }}>
           <div className="space-y-6">
             {showTrialBanner && (
