@@ -58,23 +58,16 @@ export interface ProviderRateResult {
     source?: string;
 }
 
-export type AfnexProvider = 'paystack' | 'flutterwave' | 'pesapal' | 'mtn_momo';
-export type PaymentGateway = AfnexProvider;
+export type PaymentGateway = 'flutterwave';
 
-const AFNEX_PROVIDER_BY_CURRENCY: Record<string, AfnexProvider> = {
-    NGN: 'paystack',
-    KES: 'pesapal',
-    RWF: 'mtn_momo',
-    GHS: 'mtn_momo',
-    ZAR: 'mtn_momo',
+export const resolveAfnexProvider = (_currency: string): PaymentGateway => {
+    return 'flutterwave';
 };
 
-export const resolveAfnexProvider = (currency: string): AfnexProvider => {
+export const requiresAfnexPhone = (currency: string) => {
     const normalized = String(currency || '').trim().toUpperCase();
-    return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
+    return ['RWF', 'GHS', 'KES', 'ZAR'].includes(normalized);
 };
-
-export const requiresAfnexPhone = (provider: AfnexProvider) => provider === 'mtn_momo';
 
 const getAccessToken = async (): Promise<string | null> => {
     const supabase = getSupabaseClient();
@@ -87,16 +80,17 @@ const getAccessToken = async (): Promise<string | null> => {
 // ============================================
 
 export const initAfnexPayment = async (
-    config: PaymentConfig,
-    provider: AfnexProvider
+    config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
-        const response = await apiFetch('/api/payments/afnex/charge', {
+        const isMomo = requiresAfnexPhone(config.currency);
+        const endpoint = isMomo ? '/api/payments/momo/initialize' : '/api/payments/flutterwave/initialize';
+
+        const response = await apiFetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 invoiceId: config.invoiceId,
-                provider,
                 payerPhone: config.payerPhone,
                 customerEmail: config.customerEmail,
                 customerName: config.customerName,
@@ -192,9 +186,9 @@ export const createFlutterwavePayoutAccount = async (
 // ============================================
 
 export const processPayment = async (
-    gateway: PaymentGateway,
+    _gateway: PaymentGateway,
     config: PaymentConfig
-): Promise<PaymentResult> => initAfnexPayment(config, gateway);
+): Promise<PaymentResult> => initAfnexPayment(config);
 
 export const getRecommendedGateway = (currency: string): PaymentGateway => resolveAfnexProvider(currency);
 

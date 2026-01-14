@@ -4,39 +4,21 @@ import { Invoice, Organization, InvoiceStatus } from '@/types';
 import { getOrganizationBySlug, getInvoices } from '@/services/storage';
 import { apiFetch } from '@/services/apiClient';
 import { Button, formatCurrency, Badge, Card, Input } from '@/components/ui';
-import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw, Smartphone } from 'lucide-react';
-import { processPayment, resolveAfnexProvider, requiresAfnexPhone, AfnexProvider } from '@/services/paymentService';
+import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { processPayment, requiresAfnexPhone } from '@/services/paymentService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { resolvePayoutProvider } from '@/services/paymentRouting';
 
-const AFNEX_PROVIDER_DETAILS: Record<AfnexProvider, { name: string; icon: React.ElementType; description: string; color: string }> = {
-    paystack: {
-        name: 'Card or Bank Transfer',
-        icon: CreditCard,
-        description: 'Processed by Afnex (Paystack)',
-        color: 'bg-slate-900',
-    },
+const AFNEX_PROVIDER_DETAILS: Record<string, { name: string; icon: React.ElementType; description: string; color: string }> = {
     flutterwave: {
-        name: 'Card or Bank',
+        name: 'Secure Payment',
         icon: CreditCard,
-        description: 'Processed by Afnex (Flutterwave)',
+        description: 'Pay via Card, Bank or Mobile Money',
         color: 'bg-orange-500',
-    },
-    pesapal: {
-        name: 'Card or Mobile Money',
-        icon: CreditCard,
-        description: 'Processed by Afnex (Pesapal)',
-        color: 'bg-indigo-600',
-    },
-    mtn_momo: {
-        name: 'Mobile Money',
-        icon: Smartphone,
-        description: 'Pay with mobile money via Afnex',
-        color: 'bg-emerald-500',
     },
 };
 
-const PENDING_PAYMENT_KEY = 'invoiceflow_afnex_pending_payment';
+const PENDING_PAYMENT_KEY = 'invoiceflow_pending_payment';
 
 const InvoiceView: React.FC = () => {
     const params = useParams({ strict: false });
@@ -159,16 +141,16 @@ const InvoiceView: React.FC = () => {
         localStorage.removeItem(PENDING_PAYMENT_KEY);
     };
 
-    const persistPendingPayment = (reference: string, provider: AfnexProvider) => {
+    const persistPendingPayment = (reference: string) => {
         if (!data) return;
         localStorage.setItem(PENDING_PAYMENT_KEY, JSON.stringify({
             invoiceId: data.invoice.id,
             reference,
-            provider,
+            provider: 'flutterwave',
         }));
     };
 
-    const pollAfnexStatus = (reference: string, provider: AfnexProvider) => {
+    const pollAfnexStatus = (reference: string) => {
         if (!data) return () => {};
         let cancelled = false;
         let attempts = 0;
@@ -177,14 +159,9 @@ const InvoiceView: React.FC = () => {
             if (cancelled) return;
             attempts += 1;
             try {
-                const response = await apiFetch('/api/payments/afnex/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        reference,
-                        provider,
-                        invoiceId: data.invoice.id,
-                    }),
+                // Use the MoMo status endpoint since it covers Flutterwave verification
+                const response = await apiFetch(`/api/payments/momo/status?reference=${reference}&invoiceId=${data.invoice.id}`, {
+                    method: 'GET',
                 });
                 const statusData = await response.json().catch(() => ({}));
                 const normalizedStatus = String(statusData?.status || '').toUpperCase();
@@ -247,13 +224,13 @@ const InvoiceView: React.FC = () => {
             resumedPendingRef.current = true;
             setPaymentStatus('pending');
             setPaymentNotice(t('Waiting for payment confirmation...'));
-            pollAfnexStatus(pending.reference, pending.provider);
+            pollAfnexStatus(pending.reference);
         } catch (error) {
             console.error('Failed to resume pending payment', error);
         }
     }, [data, t]);
 
-    const handlePayment = async (provider: AfnexProvider, requiresPhone: boolean) => {
+    const handlePayment = async (requiresPhone: boolean) => {
         if (!data) return;
         if (!paymentsEnabled) {
             setPaymentStatus('error');
@@ -269,7 +246,7 @@ const InvoiceView: React.FC = () => {
         setErrorMessage('');
         setPaymentStatus('redirecting');
 
-        const result = await processPayment(provider, {
+        const result = await processPayment('flutterwave', {
             invoiceId: data.invoice.id,
             amount: data.invoice.total,
             currency: data.org.currency,
@@ -280,7 +257,7 @@ const InvoiceView: React.FC = () => {
         });
 
         if (result.reference) {
-            persistPendingPayment(result.reference, provider);
+            persistPendingPayment(result.reference);
         }
 
         if (result.redirectUrl) {
@@ -291,7 +268,7 @@ const InvoiceView: React.FC = () => {
         if (result.success && result.reference && requiresPhone) {
             setPaymentStatus('pending');
             setPaymentNotice(t('Payment prompt sent. Please approve on your phone.'));
-            pollAfnexStatus(result.reference, provider);
+            pollAfnexStatus(result.reference);
             setIsProcessing(false);
             return;
         }
@@ -326,9 +303,9 @@ const InvoiceView: React.FC = () => {
             || (paymentProvider === 'stripe' && paymentConfig?.accountId)
         )
     );
-    const afnexProvider = resolveAfnexProvider(org.currency);
+    const afnexProvider = 'flutterwave';
     const afnexDetails = AFNEX_PROVIDER_DETAILS[afnexProvider];
-    const requiresPhone = requiresAfnexPhone(afnexProvider);
+    const requiresPhone = requiresAfnexPhone(org.currency);
     const isPaid = invoice.status === InvoiceStatus.PAID;
     const vatRate = Number.isFinite(invoice.taxRate) ? Math.max(0, invoice.taxRate) : 0;
     const vatAmount = Number.isFinite(invoice.taxAmount) ? invoice.taxAmount : 0;
@@ -542,7 +519,7 @@ const InvoiceView: React.FC = () => {
                                 )}
 
                                 <button
-                                    onClick={() => handlePayment(afnexProvider, requiresPhone)}
+                                    onClick={() => handlePayment(requiresPhone)}
                                     disabled={isProcessing}
                                     className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${isProcessing
                                         ? 'border-primary bg-primary/5'
