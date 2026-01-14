@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { OrgMembership, Organization, User, UserRole } from '@/types';
 import {
-    createUser,
     deleteUser,
     getAccountMemberships,
     getOrganizationsByAccount,
@@ -13,6 +12,7 @@ import { Badge, Button, Card, Input, Select } from '@/components/ui';
 import { Lock, Plus, Shield, Trash2 } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
+import { apiFetch } from '@/services/apiClient';
 
 const PERMISSIONS_LIST = [
     { id: 'MANAGE_INVOICES', label: 'Manage Invoices' },
@@ -162,28 +162,34 @@ const Team: React.FC = () => {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         setCreateLoading(true);
-        const createdUser = await createUser({
-            accountId,
-            name: newUser.name,
-            email: newUser.email,
-            role: newUser.role,
-            permissions: newUser.role === UserRole.ADMIN ? ['ALL'] : newUser.permissions,
-            pin: newUser.pin,
-            avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(newUser.name)}&background=random`
-        });
-        if (newUser.orgIds.length) {
-            await Promise.all(
-                newUser.orgIds.map((orgId) => upsertOrgMembership({
-                    organizationId: orgId,
-                    userId: createdUser.id,
+        try {
+            // Provision user via backend to handle Auth and Welcome Email
+            const response = await apiFetch('/api/team/provision', {
+                method: 'POST',
+                body: JSON.stringify({
+                    accountId,
+                    name: newUser.name,
+                    email: newUser.email,
                     role: newUser.role,
+                    organizationId: org.id,
                     permissions: newUser.role === UserRole.ADMIN ? ['ALL'] : newUser.permissions,
-                }))
-            );
+                    pin: newUser.pin,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                alert(errorData.error || t('Failed to add team member.'));
+            } else {
+                setIsCreateModalOpen(false);
+                await loadTeam();
+            }
+        } catch (error) {
+            console.error('Failed to provision user', error);
+            alert(t('Failed to add team member.'));
+        } finally {
+            setCreateLoading(false);
         }
-        setCreateLoading(false);
-        setIsCreateModalOpen(false);
-        await loadTeam();
     };
 
     const handleDelete = async (id: string) => {

@@ -704,6 +704,16 @@ export const createService = async (service: Omit<Service, 'id'>): Promise<Servi
   return newService;
 };
 
+export const updateService = async (updatedService: Service): Promise<Service> => {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from('services')
+    .update(mapServiceToDb(updatedService))
+    .eq('id', updatedService.id);
+  if (error) throw error;
+  return updatedService;
+};
+
 export const deleteService = async (id: string): Promise<void> => {
   const supabase = getSupabaseClient();
   const { error } = await supabase.from('services').delete().eq('id', id);

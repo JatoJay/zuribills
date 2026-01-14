@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Service } from '@/types';
-import { getServices, createService, deleteService } from '@/services/storage';
+import { getServices, createService, updateService, deleteService } from '@/services/storage';
 import { Button, Input, Card, formatCurrency } from '@/components/ui';
 import { generateServiceDescription } from '@/services/geminiService';
-import { Plus, Trash2, Wand2, Search } from 'lucide-react';
+import { Plus, Trash2, Wand2, Search, Edit2 } from 'lucide-react';
 
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -26,17 +26,20 @@ const Services: React.FC = () => {
         'Image URL',
         'Cancel',
         'Save Service',
+        'Update Service',
+        'Edit Service',
         'Please enter a Name and Category first.',
         'Are you sure?',
     ]), []);
     const { t } = useTranslation(translationStrings);
     const [services, setServices] = useState<Service[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const loadRequestId = useRef(0);
 
     // Form State
-    const [newService, setNewService] = useState<Partial<Service>>({
+    const [serviceForm, setServiceForm] = useState<Partial<Service>>({
         name: '',
         price: 0,
         category: '',
@@ -48,7 +51,6 @@ const Services: React.FC = () => {
 
     const loadServices = async (orgId: string) => {
         const requestId = ++loadRequestId.current;
-        setServices([]);
         const data = await getServices(orgId);
         if (requestId !== loadRequestId.current) return;
         setServices(data.filter(service => service.organizationId === orgId));
@@ -63,34 +65,65 @@ const Services: React.FC = () => {
     }, [org?.id]);
 
     const handleGenerateDescription = async () => {
-        if (!newService.name || !newService.category) {
+        if (!serviceForm.name || !serviceForm.category) {
             alert(t('Please enter a Name and Category first.'));
             return;
         }
         setAiLoading(true);
-        const generated = await generateServiceDescription(newService.name, newService.category);
-        setNewService(prev => ({ ...prev, description: generated }));
+        const generated = await generateServiceDescription(serviceForm.name, serviceForm.category);
+        setServiceForm(prev => ({ ...prev, description: generated }));
         setAiLoading(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        if (org && newService.name) {
-            await createService({
-                organizationId: org.id,
-                name: newService.name!,
-                price: Number(newService.price),
-                category: newService.category || 'General',
-                description: newService.description || '',
-                imageUrl: newService.imageUrl || '',
-                isActive: true
-            });
-            setNewService({ name: '', price: 0, category: '', description: '', imageUrl: '' });
-            setIsModalOpen(false);
+        if (org && serviceForm.name) {
+            if (editingId) {
+                await updateService({
+                    ...serviceForm,
+                    id: editingId,
+                    organizationId: org.id,
+                    name: serviceForm.name!,
+                    price: Number(serviceForm.price),
+                    category: serviceForm.category || 'General',
+                    description: serviceForm.description || '',
+                    imageUrl: serviceForm.imageUrl || '',
+                    isActive: true
+                } as Service);
+            } else {
+                await createService({
+                    organizationId: org.id,
+                    name: serviceForm.name!,
+                    price: Number(serviceForm.price),
+                    category: serviceForm.category || 'General',
+                    description: serviceForm.description || '',
+                    imageUrl: serviceForm.imageUrl || '',
+                    isActive: true
+                });
+            }
+            handleCloseModal();
             loadServices(org.id);
         }
         setLoading(false);
+    };
+
+    const handleEdit = (service: Service) => {
+        setEditingId(service.id);
+        setServiceForm({
+            name: service.name,
+            price: service.price,
+            category: service.category,
+            description: service.description,
+            imageUrl: service.imageUrl
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingId(null);
+        setServiceForm({ name: '', price: 0, category: '', description: '', imageUrl: '' });
     };
 
     const handleDelete = async (id: string) => {
@@ -152,7 +185,10 @@ const Services: React.FC = () => {
                                 <h4 className="font-semibold mb-2 text-foreground">{service.name}</h4>
                                 <p className="text-sm text-muted line-clamp-2">{service.description}</p>
                             </div>
-                            <div className="mt-4 pt-4 border-t border-border flex justify-end">
+                            <div className="mt-4 pt-4 border-t border-border flex justify-end gap-2">
+                                <button onClick={() => handleEdit(service)} className="text-muted hover:text-primary p-1 transition-colors">
+                                    <Edit2 className="w-4 h-4" />
+                                </button>
                                 <button onClick={() => handleDelete(service.id)} className="text-red-500 hover:text-red-400 p-1 transition-colors">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -174,18 +210,18 @@ const Services: React.FC = () => {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
                     <Card className="w-full max-w-md p-6">
-                        <h3 className="text-lg font-bold mb-4 text-foreground">{t('Add New Service')}</h3>
+                        <h3 className="text-lg font-bold mb-4 text-foreground">{editingId ? t('Edit Service') : t('Add New Service')}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <Input
                                 label={t('Service Name')}
-                                value={newService.name}
-                                onChange={e => setNewService({ ...newService, name: e.target.value })}
+                                value={serviceForm.name}
+                                onChange={e => setServiceForm({ ...serviceForm, name: e.target.value })}
                                 required
                             />
                             <Input
                                 label={t('Category')}
-                                value={newService.category}
-                                onChange={e => setNewService({ ...newService, category: e.target.value })}
+                                value={serviceForm.category}
+                                onChange={e => setServiceForm({ ...serviceForm, category: e.target.value })}
                                 required
                             />
                             <div className="flex items-end gap-2">
@@ -194,8 +230,8 @@ const Services: React.FC = () => {
                                     <textarea
                                         className="w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
                                         rows={3}
-                                        value={newService.description}
-                                        onChange={e => setNewService({ ...newService, description: e.target.value })}
+                                        value={serviceForm.description}
+                                        onChange={e => setServiceForm({ ...serviceForm, description: e.target.value })}
                                     />
                                 </div>
                                 <Button
@@ -214,21 +250,21 @@ const Services: React.FC = () => {
                                 label={t('Price')}
                                 type="number"
                                 min="0"
-                                value={newService.price}
-                                onChange={e => setNewService({ ...newService, price: Number(e.target.value) })}
+                                value={serviceForm.price}
+                                onChange={e => setServiceForm({ ...serviceForm, price: Number(e.target.value) })}
                                 required
                             />
 
                             <Input
                                 label={t('Image URL')}
                                 placeholder="https://example.com/image.jpg"
-                                value={newService.imageUrl}
-                                onChange={e => setNewService({ ...newService, imageUrl: e.target.value })}
+                                value={serviceForm.imageUrl}
+                                onChange={e => setServiceForm({ ...serviceForm, imageUrl: e.target.value })}
                             />
 
                             <div className="flex gap-3 mt-6">
-                                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="flex-1">{t('Cancel')}</Button>
-                                <Button type="submit" isLoading={loading} className="flex-1">{t('Save Service')}</Button>
+                                <Button type="button" variant="outline" onClick={handleCloseModal} className="flex-1">{t('Cancel')}</Button>
+                                <Button type="submit" isLoading={loading} className="flex-1">{editingId ? t('Update Service') : t('Save Service')}</Button>
                             </div>
                         </form>
                     </Card>
