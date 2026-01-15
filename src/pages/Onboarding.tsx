@@ -184,27 +184,37 @@ const Onboarding: React.FC = () => {
     }, [countryCode, countries]);
 
     useEffect(() => {
+        const checkAuth = async () => {
+            const supabase = getSupabaseClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            if (user) {
+                const metadata = user.user_metadata || {};
+                const email = user.email || '';
+                const name = metadata.full_name || metadata.name || deriveOwnerName(email);
+                const picture = metadata.avatar_url || metadata.picture || '';
+
+                setGoogleProfile({
+                    name,
+                    email,
+                    picture: picture || undefined,
+                });
+                setFormData(prev => ({
+                    ...prev,
+                    contactEmail: prev.contactEmail || email,
+                }));
+            }
+        };
+
+        checkAuth();
+
         const params = new URLSearchParams(window.location.search);
         const sso = params.get('sso');
         const email = params.get('email') || '';
-        const name = params.get('name') || '';
-        const picture = params.get('picture') || '';
         const error = params.get('oauthError');
 
         if (error) {
             setOauthError(error);
-        }
-
-        if (sso === 'google' && email) {
-            setGoogleProfile({
-                name: name || deriveOwnerName(email),
-                email,
-                picture: picture || undefined,
-            });
-            setFormData(prev => ({
-                ...prev,
-                contactEmail: prev.contactEmail || email,
-            }));
         }
 
         if (!sso && email) {
