@@ -36,6 +36,25 @@ const TRIAL_DAYS = (() => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
 })();
 
+const OFFLINE_CACHE_PREFIX = 'invoiceflow_offline_cache_';
+
+const saveToOfflineCache = (key: string, data: any) => {
+  try {
+    localStorage.setItem(OFFLINE_CACHE_PREFIX + key, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Failed to save to offline cache', e);
+  }
+};
+
+const getFromOfflineCache = <T>(key: string): T | null => {
+  try {
+    const data = localStorage.getItem(OFFLINE_CACHE_PREFIX + key);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 const buildTrial = (startDate = new Date()): TrialInfo => {
   const endDate = new Date(startDate);
   endDate.setDate(startDate.getDate() + TRIAL_DAYS);
@@ -680,18 +699,26 @@ export const removeOrgMembership = async (orgId: string, userId: string): Promis
 // --- Services ---
 
 export const getServices = async (orgId: string): Promise<Service[]> => {
-  if (!orgId) return [];
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('services')
-    .select('*')
-    .eq('organization_id', orgId);
-  if (error) {
-    console.error('Failed to load services', error);
-    return [];
+  const cacheKey = `services_${orgId}`;
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('name', { ascending: true });
+    if (error) throw error;
+    const results = (data || []).map(mapServiceFromDb);
+    saveToOfflineCache(cacheKey, results);
+    return results;
+  } catch (error) {
+    console.warn('Network request failed, attempting to load from offline cache');
+    const cached = getFromOfflineCache<Service[]>(cacheKey);
+    if (cached) return cached;
+    throw error;
   }
-  return (data || []).map(mapServiceFromDb).filter((service) => service.organizationId === orgId);
 };
+
 
 export const createService = async (service: Omit<Service, 'id'>): Promise<Service> => {
   const supabase = getSupabaseClient();
@@ -723,15 +750,26 @@ export const deleteService = async (id: string): Promise<void> => {
 // --- Clients ---
 
 export const getClients = async (orgId: string): Promise<Client[]> => {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('clients')
-    .select('*')
-    .eq('organization_id', orgId)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(mapClientFromDb);
+  const cacheKey = `clients_${orgId}`;
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('name', { ascending: true });
+    if (error) throw error;
+    const results = (data || []).map(mapClientFromDb);
+    saveToOfflineCache(cacheKey, results);
+    return results;
+  } catch (error) {
+    console.warn('Network request failed, attempting to load from offline cache');
+    const cached = getFromOfflineCache<Client[]>(cacheKey);
+    if (cached) return cached;
+    throw error;
+  }
 };
+
 
 export const createClient = async (client: Omit<Client, 'id' | 'createdAt'>): Promise<Client> => {
   const supabase = getSupabaseClient();
@@ -764,14 +802,24 @@ export const deleteClient = async (id: string): Promise<void> => {
 // --- Invoices ---
 
 export const getInvoices = async (orgId: string): Promise<Invoice[]> => {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('invoices')
-    .select('*')
-    .eq('organization_id', orgId)
-    .order('date', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(mapInvoiceFromDb);
+  const cacheKey = `invoices_${orgId}`;
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('date', { ascending: false });
+    if (error) throw error;
+    const results = (data || []).map(mapInvoiceFromDb);
+    saveToOfflineCache(cacheKey, results);
+    return results;
+  } catch (error) {
+    console.warn('Network request failed, attempting to load from offline cache');
+    const cached = getFromOfflineCache<Invoice[]>(cacheKey);
+    if (cached) return cached;
+    throw error;
+  }
 };
 
 export const createInvoice = async (invoice: Omit<Invoice, 'id' | 'invoiceNumber'>): Promise<Invoice> => {
@@ -803,14 +851,24 @@ export const updateInvoiceStatus = async (id: string, status: InvoiceStatus): Pr
 // --- Expenses ---
 
 export const getExpenses = async (orgId: string): Promise<Expense[]> => {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('expenses')
-    .select('*')
-    .eq('organization_id', orgId)
-    .order('date', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(mapExpenseFromDb);
+  const cacheKey = `expenses_${orgId}`;
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('date', { ascending: false });
+    if (error) throw error;
+    const results = (data || []).map(mapExpenseFromDb);
+    saveToOfflineCache(cacheKey, results);
+    return results;
+  } catch (error) {
+    console.warn('Network request failed, attempting to load from offline cache');
+    const cached = getFromOfflineCache<Expense[]>(cacheKey);
+    if (cached) return cached;
+    throw error;
+  }
 };
 
 export const createExpense = async (expense: Omit<Expense, 'id' | 'expenseNumber'>): Promise<Expense> => {
