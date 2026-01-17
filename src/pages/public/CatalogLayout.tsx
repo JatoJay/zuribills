@@ -103,17 +103,6 @@ const CatalogLayout: React.FC = () => {
                             <div className="font-bold text-xl text-foreground">{org.name}</div>
                             <div className="flex items-center gap-3">
                                 <ThemeToggle />
-                                {showCart && (
-                                    <Button variant="outline" onClick={() => setIsCartOpen(!isCartOpen)} className={`relative ${isCartOpen ? 'bg-primary/10 border-primary/20 text-primary' : ''}`}>
-                                        <ShoppingCart className="w-4 h-4 mr-2" />
-                                        {isCartOpen ? t('Close') : t('Cart')}
-                                        {cart.length > 0 && (
-                                            <span className="absolute -top-2 -right-2 bg-primary text-background text-xs w-5 h-5 rounded-full flex items-center justify-center animate-bounce">
-                                                {cart.reduce((acc, i) => acc + i.quantity, 0)}
-                                            </span>
-                                        )}
-                                    </Button>
-                                )}
                             </div>
                         </div>
                     </header>

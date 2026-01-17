@@ -58,75 +58,16 @@ export interface ProviderRateResult {
     source?: string;
 }
 
-export type AfnexProvider = 'paystack' | 'flutterwave' | 'pesapal' | 'mtn_momo';
-export type PaymentGateway = AfnexProvider;
+export type PaymentGateway = 'flutterwave';
 
-// Provider info from Afnex API
-export interface AfnexProviderInfo {
-    name: string;
-    display_name: string;
-    currencies: string[];
-    features: string[];
-}
-
-// Cache for providers from Afnex API
-let afnexProvidersCache: AfnexProviderInfo[] | null = null;
-let afnexProvidersCacheTime = 0;
-const AFNEX_PROVIDERS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-// Fallback mapping (used if API is unavailable)
-const AFNEX_PROVIDER_BY_CURRENCY: Record<string, AfnexProvider> = {
-    NGN: 'paystack',
-    KES: 'pesapal',
-    RWF: 'mtn_momo',
-    GHS: 'mtn_momo',
-    ZAR: 'mtn_momo',
+export const resolveAfnexProvider = (_currency: string): PaymentGateway => {
+    return 'flutterwave';
 };
 
-// Fetch providers from Afnex API
-export const fetchAfnexProviders = async (): Promise<AfnexProviderInfo[]> => {
-    const now = Date.now();
-    if (afnexProvidersCache && now - afnexProvidersCacheTime < AFNEX_PROVIDERS_CACHE_TTL_MS) {
-        return afnexProvidersCache;
-    }
-    try {
-        const response = await fetch('https://afnex.dev/api/demo/providers');
-        if (response.ok) {
-            afnexProvidersCache = await response.json();
-            afnexProvidersCacheTime = now;
-            return afnexProvidersCache || [];
-        }
-    } catch (error) {
-        console.error('Failed to fetch Afnex providers', error);
-    }
-    return afnexProvidersCache || [];
-};
-
-// Get all providers that support a given currency
-export const getProvidersForCurrency = async (currency: string): Promise<AfnexProviderInfo[]> => {
-    const providers = await fetchAfnexProviders();
+export const requiresAfnexPhone = (currency: string) => {
     const normalized = String(currency || '').trim().toUpperCase();
-    return providers.filter((p) => p.currencies?.includes(normalized));
+    return ['RWF', 'GHS', 'KES', 'ZAR'].includes(normalized);
 };
-
-// Resolve provider - now async to use dynamic providers
-export const resolveAfnexProviderAsync = async (currency: string): Promise<AfnexProvider> => {
-    const normalized = String(currency || '').trim().toUpperCase();
-    const providers = await getProvidersForCurrency(normalized);
-    if (providers.length > 0) {
-        return providers[0].name as AfnexProvider;
-    }
-    // Fallback to static mapping
-    return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
-};
-
-// Sync version for backwards compatibility (uses fallback mapping)
-export const resolveAfnexProvider = (currency: string): AfnexProvider => {
-    const normalized = String(currency || '').trim().toUpperCase();
-    return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
-};
-
-export const requiresAfnexPhone = (provider: AfnexProvider) => provider === 'mtn_momo';
 
 const getAccessToken = async (): Promise<string | null> => {
     const supabase = getSupabaseClient();
@@ -139,17 +80,19 @@ const getAccessToken = async (): Promise<string | null> => {
 // ============================================
 
 export const initAfnexPayment = async (
-    config: PaymentConfig,
-    provider: AfnexProvider
+    config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
-        const response = await apiFetch('/api/payments/afnex/charge', {
+        const isMomo = requiresAfnexPhone(config.currency);
+        const endpoint = isMomo ? '/api/payments/momo/initialize' : '/api/payments/flutterwave/initialize';
+
+        const response = await apiFetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 invoiceId: config.invoiceId,
-                provider,
                 payerPhone: config.payerPhone,
+                payerNetwork: config.payerNetwork,
                 customerEmail: config.customerEmail,
                 customerName: config.customerName,
             }),
@@ -244,9 +187,9 @@ export const createFlutterwavePayoutAccount = async (
 // ============================================
 
 export const processPayment = async (
-    gateway: PaymentGateway,
+    _gateway: PaymentGateway,
     config: PaymentConfig
-): Promise<PaymentResult> => initAfnexPayment(config, gateway);
+): Promise<PaymentResult> => initAfnexPayment(config);
 
 export const getRecommendedGateway = (currency: string): PaymentGateway => resolveAfnexProvider(currency);
 
