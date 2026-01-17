@@ -16,10 +16,23 @@ const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_K
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const flutterwaveClientId = process.env.FLUTTERWAVE_CLIENT_ID;
 const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY;
+const flutterwaveEncryptionKey = process.env.FLUTTERWAVE_ENCRYPTION_KEY;
 const flutterwaveWebhookSecret = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const platformFeePercent = 1.5;
+
+const getFlutterwaveHeaders = () => {
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${flutterwaveSecretKey}`,
+        'Content-Type': 'application/json',
+    };
+    if (flutterwaveClientId) {
+        headers['client-id'] = flutterwaveClientId;
+    }
+    return headers;
+};
 
 const FLUTTERWAVE_MOMO_TYPES = {
     RW: 'mobile_money_rwanda',
@@ -190,10 +203,7 @@ const hasPayoutLog = async (organizationId: string, relatedId: string) => {
 const createFlutterwaveTransfer = async (payload: any) => {
     const response = await fetch('https://api.flutterwave.com/v3/transfers', {
         method: 'POST',
-        headers: {
-            Authorization: `Bearer ${flutterwaveSecretKey}`,
-            'Content-Type': 'application/json',
-        },
+        headers: getFlutterwaveHeaders(),
         body: JSON.stringify(payload),
     });
     const data: any = await response.json().catch(() => ({}));
@@ -562,10 +572,7 @@ const fetchStripeRate = async (from: string, to: string) => {
 const fetchFlutterwaveRate = async (from: string, to: string, amount = 1) => {
     if (!flutterwaveSecretKey) return null;
     const response = await fetch(`https://api.flutterwave.com/v3/rates?from=${from}&to=${to}&amount=${amount}`, {
-        headers: {
-            Authorization: `Bearer ${flutterwaveSecretKey}`,
-            'Content-Type': 'application/json',
-        },
+        headers: getFlutterwaveHeaders(),
     });
     const data: any = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -792,23 +799,10 @@ export class AppController {
 
     @Get('payments/flutterwave/banks')
     async getFlutterwaveBanks(@Req() req: Request, @Res() res: Response) {
-        if (!flutterwaveSecretKey) {
-            return res.status(500).json({ error: 'FLUTTERWAVE_SECRET_KEY is not configured.' });
-        }
-
-        const { error: authError } = await getAuthenticatedUser(req);
-        if (authError) {
-            return res.status(401).json({ error: authError });
-        }
-
         const country = String(req.query.country || 'NG').toUpperCase();
-
         try {
             const response = await fetch(`https://api.flutterwave.com/v3/banks/${country}`, {
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getFlutterwaveHeaders(),
             });
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -972,10 +966,7 @@ export class AppController {
         try {
             const response = await fetch('https://api.flutterwave.com/v3/subaccounts', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
             const data: any = await response.json().catch(() => ({}));
@@ -989,7 +980,7 @@ export class AppController {
                 if (errorMsg.toLowerCase().includes('already exists')) {
                     try {
                         const listResponse = await fetch('https://api.flutterwave.com/v3/subaccounts', {
-                            headers: { Authorization: `Bearer ${flutterwaveSecretKey}` },
+                            headers: getFlutterwaveHeaders(),
                         });
                         const listData: any = await listResponse.json();
                         const existing = listData?.data?.find(
@@ -1125,12 +1116,10 @@ export class AppController {
         try {
             const response = await fetch('https://api.flutterwave.com/v3/payments', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
+
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 console.error('Flutterwave subscription init failed', data);
@@ -1234,10 +1223,7 @@ export class AppController {
             console.log(`Initializing MoMo charge for ${momoCountry} (${chargeType}) with network: ${payload.network || 'none'}`);
             const response = await fetch(`https://api.flutterwave.com/v3/charges?type=${encodeURIComponent(chargeType)}`, {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
 
@@ -1265,10 +1251,7 @@ export class AppController {
                     };
                     const linkResponse = await fetch('https://api.flutterwave.com/v3/payments', {
                         method: 'POST',
-                        headers: {
-                            Authorization: `Bearer ${flutterwaveSecretKey}`,
-                            'Content-Type': 'application/json',
-                        },
+                        headers: getFlutterwaveHeaders(),
                         body: JSON.stringify(linkPayload),
                     });
                     const linkData: any = await linkResponse.json().catch(() => ({}));
@@ -1324,9 +1307,7 @@ export class AppController {
                 ? `https://api.flutterwave.com/v3/transactions/${encodeURIComponent(reference)}/verify`
                 : `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`;
             const response = await fetch(endpoint, {
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                },
+                headers: getFlutterwaveHeaders(),
             });
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -1335,12 +1316,9 @@ export class AppController {
                     if (isIdReference && txRef) {
                         const fallbackResponse = await fetch(
                             `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(txRef)}`,
-                            {
-                                headers: {
-                                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                                },
-                            }
+                            { headers: getFlutterwaveHeaders() }
                         );
+
                         const fallbackData: any = await fallbackResponse.json().catch(() => ({}));
                         if (fallbackResponse.ok) {
                             return res.json({ status: String(fallbackData?.data?.status || 'PENDING').toUpperCase() });
@@ -1521,12 +1499,10 @@ export class AppController {
         try {
             const response = await fetch('https://api.flutterwave.com/v3/payments', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
+
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 console.error('Flutterwave initialize failed', data);
