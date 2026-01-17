@@ -359,7 +359,7 @@ const parseAfnexAmount = (value: any, fallback: any) => {
     return Number.isFinite(fallbackValue) ? fallbackValue : 0;
 };
 
-const maybeTriggerFlutterwaveMomoPayout = async ({
+const triggerInstantPayout = async ({
     org,
     invoice,
     amount,
@@ -374,46 +374,71 @@ const maybeTriggerFlutterwaveMomoPayout = async ({
 }) => {
     if (!flutterwaveSecretKey || !supabaseAdmin || !org || !invoice) return;
     const paymentConfig = org.payment_config || {};
-    if (paymentConfig.provider !== 'momo') return;
-    const momoMsisdn = String(paymentConfig.momoMsisdn || '').trim();
-    const momoBankCode = String(paymentConfig.bankCode || '').trim();
-    if (!momoMsisdn || !momoBankCode) return;
+    
+    // Support both bank and momo for instant payouts
+    const isMomo = paymentConfig.provider === 'momo' || !!paymentConfig.momoMsisdn;
+    const accountBank = isMomo ? (paymentConfig.bankCode || 'MTN') : paymentConfig.bankCode;
+    let accountNumber = isMomo ? paymentConfig.momoMsisdn : (paymentConfig.accountNumber || paymentConfig.account_number);
+    
+    // Fallback for legacy organizations: Use subaccount ID if the full account number is missing
+    if (!accountNumber && !isMomo && paymentConfig.accountId) {
+        accountNumber = paymentConfig.accountId;
+    }
 
-    const payoutAmount = Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0;
+    if (!accountBank || !accountNumber) {
+        console.error(`Instant payout skipped for Org ${org.id}: missing bank details. Bank: ${accountBank}, Acc: ${!!accountNumber}`);
+        return;
+    }
+
+    // Use net amount (1.5% fee already considered or to be deducted here)
+    const feePercent = platformFeePercent;
+    const netAmount = Number.isFinite(amount) ? (amount * (1 - (feePercent / 100))) : 0;
+    const payoutAmount = Math.round(netAmount * 100) / 100;
+    
     if (payoutAmount <= 0) return;
 
-    const alreadyInitiated = await hasPayoutLog(org.id, invoice.id);
-    if (alreadyInitiated) return;
+    // Check if payout was already successful
+    const { count: existingSuccess } = await supabaseAdmin
+        .from('agent_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', org.id)
+        .eq('related_id', invoice.id)
+        .eq('action', 'PAYOUT_SENT');
 
-    const transferReference = reference || `payout_${invoice.id}`;
-    const payload = {
-        account_bank: momoBankCode,
-        account_number: momoMsisdn,
+    if ((existingSuccess || 0) > 0) return;
+
+    const transferReference = reference || `payout_${invoice.id}_${Date.now()}`;
+    const payload: any = {
+        account_bank: accountBank,
+        account_number: accountNumber,
         amount: payoutAmount,
         currency,
-        narration: `Invoice ${invoice.invoice_number} payout`,
+        narration: `Invoice ${invoice.invoice_number} instant payout`,
         reference: transferReference,
-        beneficiary_name: paymentConfig.momoAccountName || org.name,
+        beneficiary_name: paymentConfig.accountName || paymentConfig.momoAccountName || org.name,
         meta: {
             invoice_id: invoice.id,
             invoice_number: invoice.invoice_number,
             organization_id: org.id,
-            payout_method: 'momo',
+            payout_type: 'instant',
         },
     };
 
     try {
         const { response, data } = await createFlutterwaveTransfer(payload);
         if (!response.ok) {
-            console.error('Flutterwave MoMo payout failed', data);
+            const errorMsg = data?.message || 'Transfer failed';
+            console.error('Flutterwave instant payout failed', data);
+            
+            // Log the specific failure reason
             await createAgentLog({
                 organizationId: org.id,
                 action: 'PAYOUT_FAILED',
                 details: JSON.stringify({
                     provider: 'flutterwave',
-                    method: 'momo',
                     reference: transferReference,
-                    error: data?.message || 'Transfer failed',
+                    error: errorMsg,
+                    code: data?.code,
                 }),
                 relatedId: invoice.id,
                 type: 'WARNING',
@@ -423,20 +448,20 @@ const maybeTriggerFlutterwaveMomoPayout = async ({
 
         await createAgentLog({
             organizationId: org.id,
-            action: 'PAYOUT_INITIATED',
+            action: 'PAYOUT_SENT',
             details: JSON.stringify({
                 provider: 'flutterwave',
-                method: 'momo',
+                amount: payoutAmount,
+                currency,
                 reference: transferReference,
                 status: data?.data?.status || 'pending',
                 transferId: data?.data?.id,
-                invoiceNumber: invoice.invoice_number,
             }),
             relatedId: invoice.id,
             type: 'INFO',
         });
     } catch (error) {
-        console.error('Flutterwave MoMo payout error', error);
+        console.error('Flutterwave instant payout error', error);
     }
 };
 
@@ -975,6 +1000,7 @@ export class AppController {
                 bankCode: bankCodeValue,
                 bankCountry: country,
                 accountName: accountNameValue || subaccount.account_name || null,
+                accountNumber: accountNumberValue, // Storing full number for Instant Payouts
                 accountNumberLast4,
                 platformFeePercent: feePercent,
             };
@@ -1366,13 +1392,14 @@ export class AppController {
                     }
 
                     const payoutCurrency = data?.data?.currency || org?.currency || 'USD';
-                    await maybeTriggerFlutterwaveMomoPayout({
+                    await triggerInstantPayout({
                         org,
                         invoice,
-                        amount: netAmount,
-                        currency: payoutCurrency,
-                        reference: data?.data?.tx_ref || reference,
+                        amount: data.data.amount,
+                        currency: data.data.currency,
+                        reference: `payout_${data.data.id}`,
                     });
+
                 }
             }
 
@@ -1455,13 +1482,8 @@ export class AppController {
                 title: `${org.name} Invoice`,
                 description: `Invoice ${invoice.invoice_number}`,
             },
-            subaccounts: [
-                {
-                    id: payoutAccountId,
-                    transaction_charge_type: 'percentage',
-                    transaction_charge: feePercent / 100,
-                },
-            ],
+            // We removed the 'subaccounts' split to enable "Instant Payouts" via the Transfer API.
+            // This allows us to push funds immediately after confirmation instead of waiting for T+1 settlement.
         };
 
         try {
@@ -1595,10 +1617,10 @@ export class AppController {
                         console.error('Failed to load org for payout', orgRowError);
                     } else if (orgRow) {
                         const payoutCurrency = data.currency || orgRow.currency || 'USD';
-                        await maybeTriggerFlutterwaveMomoPayout({
+                        await triggerInstantPayout({
                             org: orgRow,
                             invoice: invoiceRow,
-                            amount: netAmount,
+                            amount: data.amount,
                             currency: payoutCurrency,
                             reference: data.tx_ref || data.flw_ref,
                         });
