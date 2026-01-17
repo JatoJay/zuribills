@@ -528,7 +528,7 @@ const InvoiceView: React.FC = () => {
                                             inputMode="tel"
                                             placeholder="7XXXXXXXX"
                                             onChange={(e) => setMomoPhone(e.target.value)}
-                                            className="bg-surface border-border focus:ring-primary/20"
+                                            className="bg-surface border-2 border-border focus:border-primary focus:ring-primary/20"
                                         />
                                         {networks.length > 0 && (
                                             <div>
