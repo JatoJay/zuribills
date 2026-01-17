@@ -83,16 +83,21 @@ export const initAfnexPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
-        const isMomo = requiresAfnexPhone(config.currency);
-        const endpoint = isMomo ? '/api/payments/momo/initialize' : '/api/payments/flutterwave/initialize';
+        const currency = String(config.currency || '').toUpperCase();
+        
+        // Resolve provider based on currency for Afnex
+        let provider = 'flutterwave';
+        if (currency === 'NGN') provider = 'paystack';
+        else if (currency === 'KES') provider = 'pesapal';
+        else if (currency === 'RWF' || currency === 'GHS' || currency === 'ZAR') provider = 'mtn_momo';
 
-        const response = await apiFetch(endpoint, {
+        const response = await apiFetch('/api/payments/afnex/charge', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 invoiceId: config.invoiceId,
+                provider: provider,
                 payerPhone: config.payerPhone,
-                payerNetwork: config.payerNetwork,
                 customerEmail: config.customerEmail,
                 customerName: config.customerName,
             }),
