@@ -290,7 +290,20 @@ const InvoiceView: React.FC = () => {
         setIsProcessing(false);
     };
 
-    if (!data) return <div className="p-8 text-center">{t('Loading Invoice...')}</div>;
+    const networks = useMemo(() => {
+        if (!data?.org?.currency) return [];
+        if (data.org.currency === 'RWF') return [{ label: 'MTN', value: 'MTN' }, { label: 'Airtel', value: 'AIRTEL' }];
+        if (data.org.currency === 'GHS') return [{ label: 'MTN', value: 'MTN' }, { label: 'Vodafone', value: 'VODAFONE' }, { label: 'AirtelTigo', value: 'AIRTEL' }];
+        return [];
+    }, [data?.org?.currency]);
+
+    useEffect(() => {
+        if (networks.length > 0 && !momoNetwork) {
+            setMomoNetwork(networks[0].value);
+        }
+    }, [networks, momoNetwork]);
+
+    if (!data) return <div className="p-8 text-center text-foreground">{t('Loading Invoice...')}</div>;
 
     const { invoice, org } = data;
     const paymentConfig = org.paymentConfig;
@@ -313,18 +326,6 @@ const InvoiceView: React.FC = () => {
     const vatAmount = Number.isFinite(invoice.taxAmount) ? invoice.taxAmount : 0;
     const vatLabel = `${t('VAT')} (${vatRate}%)`;
     const AfnexIcon = afnexDetails.icon;
-
-    const networks = useMemo(() => {
-        if (org.currency === 'RWF') return [{ label: 'MTN', value: 'MTN' }, { label: 'Airtel', value: 'AIRTEL' }];
-        if (org.currency === 'GHS') return [{ label: 'MTN', value: 'MTN' }, { label: 'Vodafone', value: 'VODAFONE' }, { label: 'AirtelTigo', value: 'AIRTEL' }];
-        return [];
-    }, [org.currency]);
-
-    useEffect(() => {
-        if (networks.length > 0 && !momoNetwork) {
-            setMomoNetwork(networks[0].value);
-        }
-    }, [networks, momoNetwork]);
 
     return (
         <div className="min-h-screen bg-slate-100 p-4 sm:p-8 dark:bg-background transition-colors duration-300 print:p-0 print:bg-white flex justify-center">
