@@ -979,13 +979,40 @@ export class AppController {
                 body: JSON.stringify(payload),
             });
             const data: any = await response.json().catch(() => ({}));
+            let subaccount = data?.data;
+
             if (!response.ok) {
+                const errorMsg = data?.message || '';
                 console.error('Flutterwave subaccount failed', data);
-                return res.status(response.status).json({ error: data?.message || 'Failed to create payout account.' });
+
+                // Rescue Logic: If subaccount exists, fetch it and link it
+                if (errorMsg.toLowerCase().includes('already exists')) {
+                    try {
+                        const listResponse = await fetch('https://api.flutterwave.com/v3/subaccounts', {
+                            headers: { Authorization: `Bearer ${flutterwaveSecretKey}` },
+                        });
+                        const listData: any = await listResponse.json();
+                        const existing = listData?.data?.find(
+                            (s: any) =>
+                                String(s.account_number) === String(accountNumberValue) &&
+                                String(s.account_bank) === String(bankCodeValue)
+                        );
+                        if (existing) {
+                            subaccount = existing;
+                            console.log(`Rescued existing subaccount: ${existing.id}`);
+                        } else {
+                            return res.status(response.status).json({ error: 'Subaccount already exists on Flutterwave but could not be retrieved. Please contact support.' });
+                        }
+                    } catch (rescueError) {
+                        console.error('Failed to rescue existing subaccount', rescueError);
+                        return res.status(response.status).json({ error: 'Subaccount exists but retrieval failed.' });
+                    }
+                } else {
+                    return res.status(response.status).json({ error: data?.message || 'Failed to create payout account.' });
+                }
             }
 
-            const subaccount = data?.data || {};
-            const subaccountId = subaccount.id || subaccount.subaccount_id || subaccount.account_id;
+            const subaccountId = subaccount?.id || subaccount?.subaccount_id || subaccount?.account_id;
             if (!subaccountId) {
                 return res.status(500).json({ error: 'Flutterwave did not return a subaccount ID.' });
             }
