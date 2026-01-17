@@ -4,7 +4,7 @@ import { Invoice, Organization, InvoiceStatus } from '@/types';
 import { getOrganizationBySlug, getInvoices } from '@/services/storage';
 import { apiFetch } from '@/services/apiClient';
 import { Button, formatCurrency, Badge, Card, Input } from '@/components/ui';
-import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
 import { processPayment, requiresAfnexPhone } from '@/services/paymentService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { resolvePayoutProvider } from '@/services/paymentRouting';
@@ -316,7 +316,7 @@ const InvoiceView: React.FC = () => {
         <div className="min-h-screen bg-slate-100 p-4 sm:p-8 dark:bg-background transition-colors duration-300 print:p-0 print:bg-white flex justify-center">
             <div className="w-full max-w-5xl print:max-w-none">
                 {paymentNotice && (
-                    <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                    <div className="mb-4 rounded-lg border border-slate-200 bg-surface px-4 py-3 text-sm text-foreground shadow-sm animate-in slide-in-from-top duration-300">
                         {paymentNotice}
                     </div>
                 )}
@@ -461,19 +461,19 @@ const InvoiceView: React.FC = () => {
 
             {/* Payment Gateway Modal */}
             {showPaymentModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm print:hidden">
-                    <Card className="w-full max-w-md p-6 bg-white relative animate-fade-in-up">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm print:hidden" onClick={() => setShowPaymentModal(false)}>
+                    <Card className="w-full max-w-md p-6 bg-surface relative animate-fade-in-up shadow-2xl border-border" onClick={e => e.stopPropagation()}>
                         <button
                             onClick={() => setShowPaymentModal(false)}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+                            className="absolute top-4 right-4 text-muted hover:text-foreground transition-colors"
                         >
                             <X className="w-5 h-5" />
                         </button>
 
-                        <div className="text-center mb-6">
+                        <div className="text-center mb-8">
                             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                                 {paymentStatus === 'success' ? (
-                                    <CheckCircle2 className="w-8 h-8 text-green-500 animate-in zoom-in duration-300" />
+                                    <CheckCircle2 className="w-8 h-8 text-emerald-500 animate-in zoom-in duration-300" />
                                 ) : paymentStatus === 'redirecting' || paymentStatus === 'pending' ? (
                                     <RefreshCw className="w-8 h-8 text-primary animate-spin" />
                                 ) : paymentStatus === 'error' ? (
@@ -482,39 +482,40 @@ const InvoiceView: React.FC = () => {
                                     <DollarSign className="w-8 h-8 text-primary" />
                                 )}
                             </div>
-                            <h3 className="text-xl font-bold">
+                            <h3 className="text-xl font-bold text-foreground">
                                 {paymentStatus === 'success' ? t('Payment Successful!') :
                                     paymentStatus === 'redirecting' ? t('Redirecting to secure checkout...') :
                                         paymentStatus === 'pending' ? t('Waiting for payment confirmation...') :
                                         paymentStatus === 'error' ? t('Payment Failed') : t('Pay Invoice')}
                             </h3>
-                            <p className="text-slate-500 text-sm mt-1">
+                            <p className="text-muted text-sm mt-1">
                                 {paymentStatus === 'success' ? t('Your invoice has been marked as paid.') :
                                     paymentStatus === 'redirecting' ? `${t('Invoice:')} ${invoice.invoiceNumber}` :
                                         paymentStatus === 'pending' ? t('Payment prompt sent. Please approve on your phone.') :
                                         paymentStatus === 'error' ? errorMessage : `${t('Invoice:')} ${invoice.invoiceNumber}`}
                             </p>
                             {paymentStatus === 'idle' && (
-                                <p className="text-2xl font-bold text-primary mt-2">
+                                <p className="text-3xl font-display font-bold text-primary mt-4">
                                     {formatCurrency(invoice.total, org.currency)}
                                 </p>
                             )}
                         </div>
 
                         {paymentStatus === 'idle' ? (
-                            <div className="space-y-3">
-                                <p className="text-sm font-medium text-slate-600 mb-2">{t('Select Payment Method:')}</p>
+                            <div className="space-y-4">
+                                <p className="text-sm font-semibold text-foreground uppercase tracking-wider opacity-70">{t('Select Payment Method:')}</p>
 
                                 {requiresPhone && (
-                                    <div className="mb-2">
+                                    <div className="mb-4">
                                         <Input
                                             label={t('Mobile money number')}
                                             value={momoPhone}
                                             inputMode="tel"
+                                            placeholder="7XXXXXXXX"
                                             onChange={(e) => setMomoPhone(e.target.value)}
-                                            className="bg-white border-slate-200 focus:border-primary"
+                                            className="bg-surface border-border focus:ring-primary/20"
                                         />
-                                        <p className="text-xs text-slate-500 mt-1">
+                                        <p className="text-[10px] text-muted mt-1.5 leading-tight">
                                             {t('Enter your mobile money number to receive the payment prompt.')}
                                         </p>
                                     </div>
@@ -523,20 +524,24 @@ const InvoiceView: React.FC = () => {
                                 <button
                                     onClick={() => handlePayment(requiresPhone)}
                                     disabled={isProcessing}
-                                    className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${isProcessing
-                                        ? 'border-primary bg-primary/5'
-                                        : 'border-slate-200 hover:border-primary/50 hover:bg-slate-50'
+                                    className={`w-full p-5 rounded-2xl border-2 transition-all flex items-center gap-4 group ${isProcessing
+                                        ? 'border-primary bg-primary/5 cursor-wait'
+                                        : 'border-border hover:border-primary/50 hover:bg-primary/5'
                                         }`}
                                 >
-                                    <div className={`w-12 h-12 ${afnexDetails.color} rounded-lg flex items-center justify-center text-white`}>
+                                    <div className={`w-12 h-12 ${afnexDetails.color} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
                                         <AfnexIcon className="w-6 h-6" />
                                     </div>
                                     <div className="flex-1 text-left">
-                                        <p className="font-bold">{afnexDetails.name}</p>
-                                        <p className="text-sm text-slate-500">{t(afnexDetails.description)}</p>
+                                        <p className="font-bold text-foreground">{afnexDetails.name}</p>
+                                        <p className="text-xs text-muted leading-relaxed">{t(afnexDetails.description)}</p>
                                     </div>
-                                    {isProcessing && (
+                                    {isProcessing ? (
                                         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <div className="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center border border-border group-hover:bg-primary group-hover:text-background transition-colors">
+                                            <ArrowRight className="w-3.5 h-3.5" />
+                                        </div>
                                     )}
                                 </button>
                             </div>
