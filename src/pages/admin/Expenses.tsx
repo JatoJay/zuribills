@@ -5,6 +5,7 @@ import { Expense, ExpenseItem, ExpenseStatus } from '@/types';
 import { useAdminContext } from './AdminLayout';
 import { Plus, Trash2, CheckCircle2, X } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { usePrompt } from '@/context/PromptContext';
 
 const statusStyles: Record<ExpenseStatus, string> = {
     [ExpenseStatus.DRAFT]: 'bg-slate-100 text-slate-600 border-slate-200',
@@ -25,6 +26,7 @@ const createEmptyItem = (): ExpenseItem => ({
 
 const Expenses: React.FC = () => {
     const { org, formatMoney } = useAdminContext();
+    const prompt = usePrompt();
     const translationStrings = useMemo(() => ([
         'Expenses',
         'Track business expenses and generate expense invoices.',
@@ -153,11 +155,11 @@ const Expenses: React.FC = () => {
     const handleCreateExpense = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.vendorName.trim()) {
-            alert(t('Vendor name is required.'));
+            prompt.alert(t('Vendor name is required.'));
             return;
         }
         if (items.length === 0 || items.some(item => !item.description.trim())) {
-            alert(t('Add at least one line item with a description.'));
+            prompt.alert(t('Add at least one line item with a description.'));
             return;
         }
 
@@ -184,20 +186,26 @@ const Expenses: React.FC = () => {
             loadExpenses();
         } catch (error) {
             console.error(error);
-            alert(t('Failed to create expense.'));
+            prompt.alert({ message: t('Failed to create expense.'), type: 'error' });
         } finally {
             setLoading(false);
         }
     };
 
     const handleMarkPaid = async (expense: Expense) => {
-        if (!confirm(`${t('Mark as paid?')} (${expense.expenseNumber})`)) return;
+        const confirmed = await prompt.confirm(`${t('Mark as paid?')} (${expense.expenseNumber})`);
+        if (!confirmed) return;
         await updateExpenseStatus(expense.id, ExpenseStatus.PAID);
         loadExpenses();
     };
 
     const handleDelete = async (expense: Expense) => {
-        if (!confirm(`${t('Delete expense?')} (${expense.expenseNumber})`)) return;
+        const confirmed = await prompt.confirm({
+            message: `${t('Delete expense?')} (${expense.expenseNumber})`,
+            type: 'warning',
+            confirmText: t('Delete')
+        });
+        if (!confirmed) return;
         await deleteExpense(expense.id);
         loadExpenses();
     };

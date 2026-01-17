@@ -16,19 +16,24 @@ const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_K
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const flutterwaveClientId = process.env.FLUTTERWAVE_CLIENT_ID;
 const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY;
+const flutterwaveEncryptionKey = process.env.FLUTTERWAVE_ENCRYPTION_KEY;
 const flutterwaveWebhookSecret = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const platformFeePercent = Number.parseFloat(process.env.PLATFORM_FEE_PERCENT || '1.5');
-const momoApiBaseUrl = process.env.MOMO_API_BASE_URL || 'https://sandbox.momodeveloper.mtn.com';
-const momoTargetEnvironment = process.env.MOMO_TARGET_ENVIRONMENT || 'sandbox';
-const momoCollectionSubscriptionKey = process.env.MOMO_COLLECTION_SUBSCRIPTION_KEY;
-const momoCollectionUserId = process.env.MOMO_COLLECTION_USER_ID;
-const momoCollectionApiKey = process.env.MOMO_COLLECTION_API_KEY;
-const momoDisbursementSubscriptionKey = process.env.MOMO_DISBURSEMENT_SUBSCRIPTION_KEY;
-const momoDisbursementUserId = process.env.MOMO_DISBURSEMENT_USER_ID;
-const momoDisbursementApiKey = process.env.MOMO_DISBURSEMENT_API_KEY;
-const afnexDemoBaseUrl = process.env.AFNEX_DEMO_BASE_URL || 'https://afnex.dev/api/demo';
+const platformFeePercent = 1.5;
+
+const getFlutterwaveHeaders = () => {
+    // For V4 APIs, use the Secret Key directly in the Authorization header
+    const headers: Record<string, string> = {
+        Authorization: `${flutterwaveSecretKey}`,
+        'Content-Type': 'application/json',
+    };
+    if (flutterwaveClientId) {
+        headers['client-id'] = flutterwaveClientId;
+    }
+    return headers;
+};
 
 const FLUTTERWAVE_MOMO_TYPES = {
     RW: 'mobile_money_rwanda',
@@ -44,52 +49,13 @@ const FLUTTERWAVE_MOMO_OPTIONS = {
     ZA: 'mobilemoneysa',
 };
 
-const MOMO_NETWORK_REQUIRED = new Set(['GH']);
+const MOMO_NETWORK_REQUIRED = new Set(['GH', 'RW']);
 
 const MOMO_COUNTRY_BY_CURRENCY = {
     RWF: 'RW',
     GHS: 'GH',
     KES: 'KE',
     ZAR: 'ZA',
-};
-
-// Afnex providers cache - fetched dynamically from API
-let afnexProvidersCache: any[] | null = null;
-let afnexProvidersCacheTime = 0;
-const AFNEX_PROVIDERS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-const fetchAfnexProviders = async () => {
-    const now = Date.now();
-    if (afnexProvidersCache && now - afnexProvidersCacheTime < AFNEX_PROVIDERS_CACHE_TTL_MS) {
-        return afnexProvidersCache;
-    }
-    try {
-        const response = await fetch(`${afnexDemoBaseUrl}/providers`);
-        if (response.ok) {
-            afnexProvidersCache = await response.json() as any[];
-            afnexProvidersCacheTime = now;
-            return afnexProvidersCache;
-        }
-    } catch (error) {
-        console.error('Failed to fetch Afnex providers', error);
-    }
-    // Fallback to cached or default
-    return afnexProvidersCache || [];
-};
-
-const getProvidersForCurrency = async (currency: string) => {
-    const providers = await fetchAfnexProviders();
-    const normalized = String(currency || '').trim().toUpperCase();
-    return providers.filter((p) => p.currencies?.includes(normalized));
-};
-
-// Legacy fallback mapping (used if API is unavailable)
-const AFNEX_PROVIDER_BY_CURRENCY: Record<string, string> = {
-    NGN: 'paystack',
-    KES: 'pesapal',
-    RWF: 'mtn_momo',
-    GHS: 'mtn_momo',
-    ZAR: 'mtn_momo',
 };
 
 const SUBSCRIPTION_PRICING = {
@@ -99,12 +65,30 @@ const SUBSCRIPTION_PRICING = {
 
 const SUBSCRIPTION_CURRENCY = 'USD';
 
+
 const GOOGLE_LANGUAGE_CODE_MAP: Record<string, string> = {
+    // Major languages
     english: 'en',
     french: 'fr',
     spanish: 'es',
     portuguese: 'pt',
     arabic: 'ar',
+    german: 'de',
+    hindi: 'hi',
+    bengali: 'bn',
+    'chinese (simplified)': 'zh-CN',
+    'chinese (traditional)': 'zh-TW',
+    chinese: 'zh-CN',
+    japanese: 'ja',
+    korean: 'ko',
+    italian: 'it',
+    dutch: 'nl',
+    russian: 'ru',
+    turkish: 'tr',
+    indonesian: 'id',
+    vietnamese: 'vi',
+
+    // African languages
     swahili: 'sw',
     kinyarwanda: 'rw',
     hausa: 'ha',
@@ -114,19 +98,56 @@ const GOOGLE_LANGUAGE_CODE_MAP: Record<string, string> = {
     zulu: 'zu',
     afrikaans: 'af',
     'nigerian pidgin': 'pcm',
-    german: 'de',
-    hindi: 'hi',
-    bengali: 'bn',
-    'chinese (simplified)': 'zh-CN',
-    'chinese (traditional)': 'zh-TW',
-    japanese: 'ja',
-    korean: 'ko',
-    italian: 'it',
-    dutch: 'nl',
-    russian: 'ru',
-    turkish: 'tr',
-    indonesian: 'id',
-    vietnamese: 'vi',
+    amharic: 'am',
+    somali: 'so',
+    xhosa: 'xh',
+    shona: 'sn',
+    sesotho: 'st',
+    setswana: 'tn',
+
+    // Additional aliases and common variations
+    pidgin: 'pcm',
+    'pidgin english': 'pcm',
+    'naija': 'pcm',
+    akan: 'ak',
+    'simplified chinese': 'zh-CN',
+    'traditional chinese': 'zh-TW',
+    mandarin: 'zh-CN',
+    cantonese: 'zh-TW',
+
+    // European languages
+    polish: 'pl',
+    ukrainian: 'uk',
+    czech: 'cs',
+    greek: 'el',
+    hungarian: 'hu',
+    romanian: 'ro',
+    swedish: 'sv',
+    norwegian: 'no',
+    danish: 'da',
+    finnish: 'fi',
+
+    // Middle Eastern / South Asian
+    urdu: 'ur',
+    persian: 'fa',
+    farsi: 'fa',
+    hebrew: 'he',
+    thai: 'th',
+    malayalam: 'ml',
+    tamil: 'ta',
+    telugu: 'te',
+    marathi: 'mr',
+    gujarati: 'gu',
+    punjabi: 'pa',
+    kannada: 'kn',
+
+    // Southeast Asian
+    malay: 'ms',
+    tagalog: 'tl',
+    filipino: 'tl',
+    burmese: 'my',
+    khmer: 'km',
+    lao: 'lo',
 };
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -181,12 +202,9 @@ const hasPayoutLog = async (organizationId: string, relatedId: string) => {
 };
 
 const createFlutterwaveTransfer = async (payload: any) => {
-    const response = await fetch('https://api.flutterwave.com/v3/transfers', {
+    const response = await fetch('https://api.flutterwave.com/v4/transfers', {
         method: 'POST',
-        headers: {
-            Authorization: `Bearer ${flutterwaveSecretKey}`,
-            'Content-Type': 'application/json',
-        },
+        headers: getFlutterwaveHeaders(),
         body: JSON.stringify(payload),
     });
     const data: any = await response.json().catch(() => ({}));
@@ -206,27 +224,30 @@ const resolveFlutterwaveMomoType = (countryCode: string) =>
 const resolveFlutterwaveMomoOption = (countryCode: string) =>
     FLUTTERWAVE_MOMO_OPTIONS[String(countryCode || '').trim().toUpperCase()] || null;
 
-const resolveAfnexProvider = (currency: string) => {
-    const normalized = String(currency || '').trim().toUpperCase();
-    return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
-};
-
-// Async version that uses dynamic providers from Afnex API
-const resolveAfnexProviderAsync = async (currency: string) => {
-    const normalized = String(currency || '').trim().toUpperCase();
-    const providers = await getProvidersForCurrency(normalized);
-    if (providers.length > 0) {
-        // Return first matching provider (Afnex returns them in priority order)
-        return providers[0].name;
-    }
-    // Fallback to static mapping
-    return AFNEX_PROVIDER_BY_CURRENCY[normalized] || 'flutterwave';
-};
-
 const resolveGoogleLanguageCode = (language: string, fallback: string) => {
     if (!language) return fallback;
     const normalized = String(language).trim().toLowerCase();
-    return GOOGLE_LANGUAGE_CODE_MAP[normalized] || fallback;
+
+    // Exact match
+    if (GOOGLE_LANGUAGE_CODE_MAP[normalized]) {
+        return GOOGLE_LANGUAGE_CODE_MAP[normalized];
+    }
+
+    // Try partial match (e.g., "Chinese" should match "chinese (simplified)")
+    const keys = Object.keys(GOOGLE_LANGUAGE_CODE_MAP);
+    for (const key of keys) {
+        if (key.startsWith(normalized) || normalized.startsWith(key)) {
+            return GOOGLE_LANGUAGE_CODE_MAP[key];
+        }
+    }
+
+    // If it looks like a language code already (2-3 chars), use it directly
+    if (/^[a-z]{2,3}(-[a-z]{2})?$/i.test(normalized)) {
+        return normalized;
+    }
+
+    console.warn(`Unknown language: "${language}", falling back to: "${fallback || 'en'}"`);
+    return fallback || 'en';
 };
 
 const resolveSubscriptionPlan = (billingCycle: string) => {
@@ -349,7 +370,7 @@ const parseAfnexAmount = (value: any, fallback: any) => {
     return Number.isFinite(fallbackValue) ? fallbackValue : 0;
 };
 
-const maybeTriggerFlutterwaveMomoPayout = async ({
+const triggerInstantPayout = async ({
     org,
     invoice,
     amount,
@@ -364,46 +385,71 @@ const maybeTriggerFlutterwaveMomoPayout = async ({
 }) => {
     if (!flutterwaveSecretKey || !supabaseAdmin || !org || !invoice) return;
     const paymentConfig = org.payment_config || {};
-    if (paymentConfig.provider !== 'momo') return;
-    const momoMsisdn = String(paymentConfig.momoMsisdn || '').trim();
-    const momoBankCode = String(paymentConfig.bankCode || '').trim();
-    if (!momoMsisdn || !momoBankCode) return;
+    
+    // Support both bank and momo for instant payouts
+    const isMomo = paymentConfig.provider === 'momo' || !!paymentConfig.momoMsisdn;
+    const accountBank = isMomo ? (paymentConfig.bankCode || 'MTN') : paymentConfig.bankCode;
+    let accountNumber = isMomo ? paymentConfig.momoMsisdn : (paymentConfig.accountNumber || paymentConfig.account_number);
+    
+    // Fallback for legacy organizations: Use subaccount ID if the full account number is missing
+    if (!accountNumber && !isMomo && paymentConfig.accountId) {
+        accountNumber = paymentConfig.accountId;
+    }
 
-    const payoutAmount = Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0;
+    if (!accountBank || !accountNumber) {
+        console.error(`Instant payout skipped for Org ${org.id}: missing bank details. Bank: ${accountBank}, Acc: ${!!accountNumber}`);
+        return;
+    }
+
+    // Use net amount (1.5% fee already considered or to be deducted here)
+    const feePercent = platformFeePercent;
+    const netAmount = Number.isFinite(amount) ? (amount * (1 - (feePercent / 100))) : 0;
+    const payoutAmount = Math.round(netAmount * 100) / 100;
+    
     if (payoutAmount <= 0) return;
 
-    const alreadyInitiated = await hasPayoutLog(org.id, invoice.id);
-    if (alreadyInitiated) return;
+    // Check if payout was already successful
+    const { count: existingSuccess } = await supabaseAdmin
+        .from('agent_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', org.id)
+        .eq('related_id', invoice.id)
+        .eq('action', 'PAYOUT_SENT');
 
-    const transferReference = reference || `payout_${invoice.id}`;
-    const payload = {
-        account_bank: momoBankCode,
-        account_number: momoMsisdn,
+    if ((existingSuccess || 0) > 0) return;
+
+    const transferReference = reference || `payout_${invoice.id}_${Date.now()}`;
+    const payload: any = {
+        account_bank: accountBank,
+        account_number: accountNumber,
         amount: payoutAmount,
         currency,
-        narration: `Invoice ${invoice.invoice_number} payout`,
+        narration: `Invoice ${invoice.invoice_number} instant payout`,
         reference: transferReference,
-        beneficiary_name: paymentConfig.momoAccountName || org.name,
+        beneficiary_name: paymentConfig.accountName || paymentConfig.momoAccountName || org.name,
         meta: {
             invoice_id: invoice.id,
             invoice_number: invoice.invoice_number,
             organization_id: org.id,
-            payout_method: 'momo',
+            payout_type: 'instant',
         },
     };
 
     try {
         const { response, data } = await createFlutterwaveTransfer(payload);
         if (!response.ok) {
-            console.error('Flutterwave MoMo payout failed', data);
+            const errorMsg = data?.message || 'Transfer failed';
+            console.error('Flutterwave instant payout failed', data);
+            
+            // Log the specific failure reason
             await createAgentLog({
                 organizationId: org.id,
                 action: 'PAYOUT_FAILED',
                 details: JSON.stringify({
                     provider: 'flutterwave',
-                    method: 'momo',
                     reference: transferReference,
-                    error: data?.message || 'Transfer failed',
+                    error: errorMsg,
+                    code: data?.code,
                 }),
                 relatedId: invoice.id,
                 type: 'WARNING',
@@ -413,20 +459,20 @@ const maybeTriggerFlutterwaveMomoPayout = async ({
 
         await createAgentLog({
             organizationId: org.id,
-            action: 'PAYOUT_INITIATED',
+            action: 'PAYOUT_SENT',
             details: JSON.stringify({
                 provider: 'flutterwave',
-                method: 'momo',
+                amount: payoutAmount,
+                currency,
                 reference: transferReference,
                 status: data?.data?.status || 'pending',
                 transferId: data?.data?.id,
-                invoiceNumber: invoice.invoice_number,
             }),
             relatedId: invoice.id,
             type: 'INFO',
         });
     } catch (error) {
-        console.error('Flutterwave MoMo payout error', error);
+        console.error('Flutterwave instant payout error', error);
     }
 };
 
@@ -483,41 +529,12 @@ const getMomoToken = async ({ userId, apiKey, subscriptionKey, product }: {
     subscriptionKey?: string;
     product: string;
 }) => {
-    if (!userId || !apiKey || !subscriptionKey) {
-        return null;
-    }
-
-    const auth = Buffer.from(`${userId}:${apiKey}`).toString('base64');
-    const response = await fetch(`${momoApiBaseUrl}/${product}/token/`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Basic ${auth}`,
-            'Ocp-Apim-Subscription-Key': subscriptionKey,
-            'X-Target-Environment': momoTargetEnvironment,
-        },
-    });
-    if (!response.ok) {
-        const data: any = await response.json().catch(() => ({}));
-        console.error('MoMo token error', data);
-        return null;
-    }
-    const data: any = await response.json().catch(() => ({}));
-    return data?.access_token || null;
+    return null;
 };
 
-const getMomoCollectionToken = () => getMomoToken({
-    userId: momoCollectionUserId,
-    apiKey: momoCollectionApiKey,
-    subscriptionKey: momoCollectionSubscriptionKey,
-    product: 'collection',
-});
+const getMomoCollectionToken = () => null;
 
-const getMomoDisbursementToken = () => getMomoToken({
-    userId: momoDisbursementUserId,
-    apiKey: momoDisbursementApiKey,
-    subscriptionKey: momoDisbursementSubscriptionKey,
-    product: 'disbursement',
-});
+const getMomoDisbursementToken = () => null;
 
 const RATE_CACHE_TTL_MS = 5 * 60 * 1000;
 const rateCache = new Map<string, { rate: number; source: string; timestamp: number }>();
@@ -555,11 +572,8 @@ const fetchStripeRate = async (from: string, to: string) => {
 
 const fetchFlutterwaveRate = async (from: string, to: string, amount = 1) => {
     if (!flutterwaveSecretKey) return null;
-    const response = await fetch(`https://api.flutterwave.com/v3/rates?from=${from}&to=${to}&amount=${amount}`, {
-        headers: {
-            Authorization: `Bearer ${flutterwaveSecretKey}`,
-            'Content-Type': 'application/json',
-        },
+    const response = await fetch(`https://api.flutterwave.com/v4/rates?from=${from}&to=${to}&amount=${amount}`, {
+        headers: getFlutterwaveHeaders(),
     });
     const data: any = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -632,25 +646,164 @@ export class AppController {
         }
     }
 
-    @Get('payments/flutterwave/banks')
-    async getFlutterwaveBanks(@Req() req: Request, @Res() res: Response) {
-        if (!flutterwaveSecretKey) {
-            return res.status(500).json({ error: 'FLUTTERWAVE_SECRET_KEY is not configured.' });
+    @Post('team/provision')
+    async provisionTeamMember(@Req() req: Request, @Res() res: Response) {
+        if (!supabaseAdmin) {
+            return res.status(500).json({ error: 'Supabase admin is not configured.' });
         }
 
-        const { error: authError } = await getAuthenticatedUser(req);
-        if (authError) {
-            return res.status(401).json({ error: authError });
+        const { user: authUser, error: authError } = await getAuthenticatedUser(req);
+        if (authError || !authUser) {
+            return res.status(401).json({ error: authError || 'Unauthorized.' });
         }
 
-        const country = String(req.query.country || 'NG').toUpperCase();
+        const { email, name, role, organizationId, permissions, pin } = req.body || {};
+        if (!email || !name || !organizationId) {
+            return res.status(400).json({ error: 'Email, name, and organizationId are required.' });
+        }
+
+        // 1. Verify inviter has access to the org
+        const { data: org, error: orgError } = await supabaseAdmin
+            .from('organizations')
+            .select('id, name, account_id')
+            .eq('id', organizationId)
+            .maybeSingle();
+
+        if (orgError || !org) {
+            return res.status(404).json({ error: 'Organization not found.' });
+        }
+
+        // 2. Create Auth User
+        const defaultPassword = `IF-${Math.random().toString(36).slice(-8)}!`;
+        const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
+            email,
+            password: defaultPassword,
+            email_confirm: true,
+            user_metadata: { name },
+        });
+
+        if (createAuthError) {
+            // If user already exists, we might just want to link them, but for "provisioning" we expect new users
+            if (createAuthError.message.includes('already registered')) {
+                // Handle existing user logic if needed
+            } else {
+                console.error('Failed to create auth user', createAuthError);
+                return res.status(500).json({ error: createAuthError.message });
+            }
+        }
+
+        let targetUserId = newAuthUser?.user?.id;
+        if (!targetUserId) {
+            const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+            for (const u of (userList?.users || [])) {
+                if (u.email?.toLowerCase() === email.toLowerCase()) {
+                    targetUserId = u.id;
+                    break;
+                }
+            }
+        }
+
+        if (!targetUserId) {
+            return res.status(500).json({ error: 'Could not resolve User ID' });
+        }
+
+        const { error: userTableError } = await supabaseAdmin
+            .from('users')
+            .upsert({
+                id: targetUserId,
+                account_id: org.account_id,
+                email: email.toLowerCase(),
+                name,
+                role: role || 'ASSISTANT',
+                permissions: permissions || [],
+                pin: pin || null,
+            });
+
+        if (userTableError) {
+            console.error('Failed to update users table', userTableError);
+        }
+
+        // 4. Create Org Membership
+        await supabaseAdmin.from('org_memberships').upsert({
+            organization_id: organizationId,
+            user_id: targetUserId,
+            role: role || 'ASSISTANT',
+            permissions: permissions || [],
+        });
+
+        // 5. Send Welcome Email
+        if (resend && fromEmail) {
+            await resend.emails.send({
+                from: fromEmail,
+                to: email,
+                subject: `Welcome to ${org.name} on InvoiceFlow`,
+                text: `Hi ${name},\n\nYou've been added to ${org.name}. Log in with:\nEmail: ${email}\nPassword: ${defaultPassword}\n\n${appBaseUrl}/login`,
+                html: buildHtmlBody(`Hi ${name},\n\nYou've been added to ${org.name} on InvoiceFlow. \n\nYou can log in using the details below:\n\nEmail: ${email}\nPassword: <strong>${defaultPassword}</strong>\n\n<a href="${appBaseUrl}/login">Log in here</a>\n\nFor security, please change your password after your first login.`),
+            });
+        }
+
+        return res.json({ success: true, userId: targetUserId });
+    }
+
+    @Post('email/auth')
+    async sendAuthEmail(@Req() req: Request, @Res() res: Response) {
+        if (!resend || !resendApiKey) {
+            return res.status(500).json({ error: 'RESEND_API_KEY is not configured.' });
+        }
+        if (!fromEmail) {
+            return res.status(500).json({ error: 'RESEND_FROM_EMAIL is not configured.' });
+        }
+
+        const { to, type, data } = req.body || {};
+        if (!to || !type) {
+            return res.status(400).json({ error: 'to and type are required.' });
+        }
+
+        let subject = '';
+        let body = '';
+
+        switch (type) {
+            case 'welcome':
+                subject = 'Welcome to InvoiceFlow!';
+                body = `Hi ${data?.name || 'there'},\n\nWelcome to InvoiceFlow! Your account has been created successfully. You can now start managing your invoices and expenses.\n\nBest,\nThe InvoiceFlow Team`;
+                break;
+            case 'login_alert':
+                subject = 'New Login to Your Account';
+                body = `Hello,\n\nWe detected a new login to your InvoiceFlow account on ${new Date().toLocaleString()}.\n\nIf this wasn't you, please reset your password immediately.\n\nBest,\nThe InvoiceFlow Team`;
+                break;
+            case 'password_reset':
+                subject = 'Password Reset Request';
+                body = `Hello,\n\nYou requested a password reset for your InvoiceFlow account. Click the link below to set a new password:\n\n${appBaseUrl}/login?reset_token=${data?.token}\n\nIf you didn't request this, you can safely ignore this email.\n\nBest,\nThe InvoiceFlow Team`;
+                break;
+            case 'team_invite':
+                subject = `You've been added to ${data?.orgName || 'a workspace'} on InvoiceFlow`;
+                body = `Hi ${data?.name || 'there'},\n\n${data?.inviterName || 'An administrator'} has added you to the ${data?.orgName || 'workspace'} on InvoiceFlow.\n\nYou can log in using the details below:\n\nEmail: ${to}\nPassword: ${data?.password}\n\nLog in here: ${appBaseUrl}/login\n\nFor security, please change your password after your first login.\n\nBest,\nThe InvoiceFlow Team`;
+                break;
+            default:
+                return res.status(400).json({ error: 'Invalid email type.' });
+        }
 
         try {
-            const response = await fetch(`https://api.flutterwave.com/v3/banks/${country}`, {
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                    'Content-Type': 'application/json',
-                },
+            const result = await resend.emails.send({
+                from: fromEmail,
+                to,
+                subject,
+                text: body,
+                html: buildHtmlBody(body),
+            });
+            return res.json({ id: result.data?.id });
+        } catch (error) {
+            console.error('Resend auth email failed:', error);
+            return res.status(500).json({ error: 'Failed to send auth email.' });
+        }
+    }
+
+    @Get('payments/flutterwave/banks')
+    async getFlutterwaveBanks(@Req() req: Request, @Res() res: Response) {
+        const country = String(req.query.country || 'NG').toUpperCase();
+        try {
+            const response = await fetch(`https://api.flutterwave.com/v4/banks/${country}`, {
+                headers: getFlutterwaveHeaders(),
             });
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -718,261 +871,17 @@ export class AppController {
 
     @Get('payments/afnex/providers')
     async getAfnexProviders(@Req() req: Request, @Res() res: Response) {
-        const currency = String(req.query.currency || '').trim().toUpperCase();
-
-        try {
-            const allProviders = await fetchAfnexProviders();
-
-            if (!currency) {
-                // Return all providers
-                return res.json({ providers: allProviders });
-            }
-
-            // Filter by currency
-            const matching = allProviders.filter((p) => p.currencies?.includes(currency));
-            return res.json({
-                currency,
-                providers: matching,
-            });
-        } catch (error) {
-            console.error('Failed to fetch Afnex providers', error);
-            return res.status(500).json({ error: 'Failed to fetch providers.' });
-        }
+        return res.json({ providers: [] });
     }
 
     @Post('payments/afnex/charge')
     async chargeAfnex(@Req() req: Request, @Res() res: Response) {
-        if (!supabaseAdmin) {
-            return res.status(500).json({ error: 'Supabase admin is not configured.' });
-        }
-
-        const { invoiceId, provider, payerPhone, customerEmail } = req.body || {};
-        const invoiceIdValue = String(invoiceId || '').trim();
-        if (!invoiceIdValue) {
-            return res.status(400).json({ error: 'invoiceId is required.' });
-        }
-
-        const { data: invoice, error: invoiceError } = await supabaseAdmin
-            .from('invoices')
-            .select('id, organization_id, total, client_name, client_email, invoice_number')
-            .eq('id', invoiceIdValue)
-            .maybeSingle();
-        if (invoiceError) {
-            console.error('Failed to load invoice', invoiceError);
-            return res.status(500).json({ error: 'Failed to load invoice.' });
-        }
-        if (!invoice) {
-            return res.status(404).json({ error: 'Invoice not found.' });
-        }
-
-        const { data: org, error: orgError } = await supabaseAdmin
-            .from('organizations')
-            .select('id, slug, currency, payment_config')
-            .eq('id', invoice.organization_id)
-            .maybeSingle();
-        if (orgError) {
-            console.error('Failed to load organization', orgError);
-            return res.status(500).json({ error: 'Failed to load organization.' });
-        }
-        if (!org) {
-            return res.status(404).json({ error: 'Organization not found.' });
-        }
-
-        const paymentConfig = org.payment_config || {};
-        if (paymentConfig.enabled !== true) {
-            return res.status(400).json({ error: 'Payments are not enabled for this organization.' });
-        }
-
-        const currency = String(org.currency || 'USD').toUpperCase();
-        const resolvedProvider = String(provider || '').trim().toLowerCase() || await resolveAfnexProviderAsync(currency);
-        const amount = parseAfnexAmount(invoice.total, 0);
-        if (!Number.isFinite(amount) || amount <= 0) {
-            return res.status(400).json({ error: 'Invalid invoice amount.' });
-        }
-
-        const payload: Record<string, any> = {
-            provider: resolvedProvider,
-            amount,
-            currency,
-            metadata: {
-                invoice_id: invoice.id,
-                organization_id: org.id,
-                invoice_number: invoice.invoice_number,
-            },
-        };
-
-        if (resolvedProvider === 'mtn_momo') {
-            const phone = String(payerPhone || '').trim();
-            if (!phone) {
-                return res.status(400).json({ error: 'payerPhone is required for mobile money payments.' });
-            }
-            payload.phone = phone;
-        } else {
-            const email = String(customerEmail || invoice.client_email || '').trim();
-            if (!email) {
-                return res.status(400).json({ error: 'customerEmail is required for card payments.' });
-            }
-            payload.email = email;
-        }
-
-        try {
-            const response = await fetch(`${afnexDemoBaseUrl}/charge`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            const data: any = await response.json().catch(() => ({}));
-            if (!response.ok || data?.success === false) {
-                console.error('Afnex charge failed', data);
-                return res.status(response.status || 500).json({ error: data?.error || 'Failed to initialize payment.' });
-            }
-
-            return res.json({
-                reference: data?.reference,
-                provider: data?.provider || resolvedProvider,
-                paymentUrl: data?.payment_url || data?.paymentUrl || data?.link,
-                status: data?.status,
-            });
-        } catch (error) {
-            console.error('Afnex charge error', error);
-            return res.status(500).json({ error: 'Failed to initialize payment.' });
-        }
+        return res.status(400).json({ error: 'Afnex is disabled. Use Flutterwave instead.' });
     }
 
     @Post('payments/afnex/verify')
     async verifyAfnex(@Req() req: Request, @Res() res: Response) {
-        if (!supabaseAdmin) {
-            return res.status(500).json({ error: 'Supabase admin is not configured.' });
-        }
-
-        const { reference, provider, invoiceId } = req.body || {};
-        const referenceValue = String(reference || '').trim();
-        const providerValue = String(provider || '').trim().toLowerCase();
-        const invoiceIdValue = String(invoiceId || '').trim();
-
-        if (!referenceValue || !providerValue || !invoiceIdValue) {
-            return res.status(400).json({ error: 'reference, provider, and invoiceId are required.' });
-        }
-
-        const { data: invoice, error: invoiceError } = await supabaseAdmin
-            .from('invoices')
-            .select('id, organization_id, total, invoice_number, status')
-            .eq('id', invoiceIdValue)
-            .maybeSingle();
-        if (invoiceError) {
-            console.error('Failed to load invoice', invoiceError);
-            return res.status(500).json({ error: 'Failed to load invoice.' });
-        }
-        if (!invoice) {
-            return res.status(404).json({ error: 'Invoice not found.' });
-        }
-
-        const { data: org, error: orgError } = await supabaseAdmin
-            .from('organizations')
-            .select('id, payment_config, currency, name')
-            .eq('id', invoice.organization_id)
-            .maybeSingle();
-        if (orgError) {
-            console.error('Failed to load organization', orgError);
-            return res.status(500).json({ error: 'Failed to load organization.' });
-        }
-
-        let verifyData: Record<string, any> = {};
-        try {
-            const response = await fetch(`${afnexDemoBaseUrl}/verify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    provider: providerValue,
-                    reference: referenceValue,
-                }),
-            });
-            verifyData = await response.json().catch(() => ({})) as Record<string, any>;
-            if (!response.ok) {
-                console.error('Afnex verify failed', verifyData);
-                return res.json({
-                    status: 'FAILED',
-                    reference: referenceValue,
-                    provider: providerValue,
-                    error: verifyData?.error || 'Verification failed.',
-                });
-            }
-        } catch (error) {
-            console.error('Afnex verify error', error);
-            return res.json({
-                status: 'FAILED',
-                reference: referenceValue,
-                provider: providerValue,
-                error: 'Verification failed.',
-            });
-        }
-
-        const normalizedStatus = normalizeAfnexStatus(verifyData?.status as string);
-        const resolvedStatus = verifyData?.success === false && normalizedStatus !== 'PENDING'
-            ? 'FAILED'
-            : (normalizedStatus || 'PENDING');
-
-        if (resolvedStatus === 'SUCCESS' && invoice.status !== 'PAID') {
-            const feePercent = resolvePlatformFeePercent(org?.payment_config?.platformFeePercent);
-            const amount = parseAfnexAmount(verifyData?.amount, invoice.total);
-            const platformFeeAmount = Number.isFinite(amount)
-                ? Math.round((amount * (feePercent / 100)) * 100) / 100
-                : 0;
-            const netAmount = Number.isFinite(amount) ? amount - platformFeeAmount : 0;
-            const currency = String(verifyData?.currency || org?.currency || 'USD').toUpperCase();
-            const paymentId = `afnex_${referenceValue}`;
-
-            const paymentRecord = {
-                id: paymentId,
-                invoice_id: invoice.id,
-                amount: Number.isFinite(amount) ? amount : 0,
-                currency,
-                status: resolvedStatus,
-                provider: verifyData?.provider || providerValue,
-                provider_reference: referenceValue,
-                platform_fee_percent: feePercent,
-                platform_fee_amount: platformFeeAmount,
-                net_amount: netAmount,
-                date: new Date().toISOString(),
-                method: providerValue,
-            };
-
-            const { error: paymentError } = await supabaseAdmin
-                .from('payments')
-                .upsert(paymentRecord, { onConflict: 'id' });
-            if (paymentError) {
-                console.error('Failed to record Afnex payment', paymentError);
-            }
-
-            const { error: invoiceUpdateError } = await supabaseAdmin
-                .from('invoices')
-                .update({ status: 'PAID' })
-                .eq('id', invoice.id);
-            if (invoiceUpdateError) {
-                console.error('Failed to update invoice status for Afnex', invoiceUpdateError);
-            }
-
-            await createAgentLog({
-                organizationId: org?.id,
-                action: 'PAYMENT_CONFIRMED',
-                details: JSON.stringify({
-                    provider: verifyData?.provider || providerValue,
-                    reference: referenceValue,
-                    amount,
-                    currency,
-                }),
-                relatedId: invoice.id,
-                type: 'INFO',
-            });
-        }
-
-        return res.json({
-            status: resolvedStatus,
-            reference: referenceValue,
-            provider: verifyData?.provider || providerValue,
-            amount: verifyData?.amount,
-            currency: verifyData?.currency || org?.currency,
-        });
+        return res.status(400).json({ error: 'Afnex is disabled.' });
     }
 
     @Post('payments/flutterwave/payouts')
@@ -1056,22 +965,46 @@ export class AppController {
         };
 
         try {
-            const response = await fetch('https://api.flutterwave.com/v3/subaccounts', {
+            const response = await fetch('https://api.flutterwave.com/v4/subaccounts', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
             const data: any = await response.json().catch(() => ({}));
+            let subaccount = data?.data;
+
             if (!response.ok) {
+                const errorMsg = data?.message || '';
                 console.error('Flutterwave subaccount failed', data);
-                return res.status(response.status).json({ error: data?.message || 'Failed to create payout account.' });
+
+                // Rescue Logic: If subaccount exists, fetch it and link it
+                if (errorMsg.toLowerCase().includes('already exists')) {
+                    try {
+                        const listResponse = await fetch('https://api.flutterwave.com/v4/subaccounts', {
+                            headers: getFlutterwaveHeaders(),
+                        });
+                        const listData: any = await listResponse.json();
+                        const existing = listData?.data?.find(
+                            (s: any) =>
+                                String(s.account_number) === String(accountNumberValue) &&
+                                String(s.account_bank) === String(bankCodeValue)
+                        );
+                        if (existing) {
+                            subaccount = existing;
+                            console.log(`Rescued existing subaccount: ${existing.id}`);
+                        } else {
+                            return res.status(response.status).json({ error: 'Subaccount already exists on Flutterwave but could not be retrieved. Please contact support.' });
+                        }
+                    } catch (rescueError) {
+                        console.error('Failed to rescue existing subaccount', rescueError);
+                        return res.status(response.status).json({ error: 'Subaccount exists but retrieval failed.' });
+                    }
+                } else {
+                    return res.status(response.status).json({ error: data?.message || 'Failed to create payout account.' });
+                }
             }
 
-            const subaccount = data?.data || {};
-            const subaccountId = subaccount.id || subaccount.subaccount_id || subaccount.account_id;
+            const subaccountId = subaccount?.id || subaccount?.subaccount_id || subaccount?.account_id;
             if (!subaccountId) {
                 return res.status(500).json({ error: 'Flutterwave did not return a subaccount ID.' });
             }
@@ -1086,6 +1019,7 @@ export class AppController {
                 bankCode: bankCodeValue,
                 bankCountry: country,
                 accountName: accountNameValue || subaccount.account_name || null,
+                accountNumber: accountNumberValue, // Storing full number for Instant Payouts
                 accountNumberLast4,
                 platformFeePercent: feePercent,
             };
@@ -1181,14 +1115,12 @@ export class AppController {
         };
 
         try {
-            const response = await fetch('https://api.flutterwave.com/v3/payments', {
+            const response = await fetch('https://api.flutterwave.com/v4/payments', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
+
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 console.error('Flutterwave subscription init failed', data);
@@ -1215,7 +1147,7 @@ export class AppController {
         }
 
         const { invoiceId, payerPhone, payerNetwork } = req.body || {};
-        const trimmedPhone = String(payerPhone || '').trim();
+        const trimmedPhone = String(payerPhone || '').replace(/\s+/g, '').trim();
         const trimmedNetwork = String(payerNetwork || '').trim().toUpperCase();
         if (!invoiceId || !trimmedPhone) {
             return res.status(400).json({ error: 'invoiceId and payerPhone are required.' });
@@ -1271,6 +1203,7 @@ export class AppController {
             tx_ref: txRef,
             amount: Number.parseFloat(String(invoice.total || '0')),
             currency,
+            country: momoCountry,
             email: invoice.client_email,
             phone_number: trimmedPhone,
             fullname: invoice.client_name,
@@ -1283,15 +1216,15 @@ export class AppController {
         };
         if (trimmedNetwork) {
             payload.network = trimmedNetwork;
+        } else if (momoCountry === 'RW') {
+            payload.network = 'MTN'; // Default to MTN for Rwanda if not specified
         }
 
         try {
-            const response = await fetch(`https://api.flutterwave.com/v3/charges?type=${encodeURIComponent(chargeType)}`, {
+            console.log(`Initializing MoMo charge for ${momoCountry} (${chargeType}) with network: ${payload.network || 'none'}`);
+            const response = await fetch(`https://api.flutterwave.com/v4/charges?type=${encodeURIComponent(chargeType)}`, {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
 
@@ -1303,6 +1236,7 @@ export class AppController {
                         tx_ref: txRef,
                         amount: Number.parseFloat(String(invoice.total || '0')),
                         currency,
+                        country: momoCountry,
                         redirect_url: redirectUrl,
                         payment_options: paymentOption,
                         customer: {
@@ -1316,12 +1250,9 @@ export class AppController {
                             description: `Invoice ${invoice.invoice_number}`,
                         },
                     };
-                    const linkResponse = await fetch('https://api.flutterwave.com/v3/payments', {
+                    const linkResponse = await fetch('https://api.flutterwave.com/v4/payments', {
                         method: 'POST',
-                        headers: {
-                            Authorization: `Bearer ${flutterwaveSecretKey}`,
-                            'Content-Type': 'application/json',
-                        },
+                        headers: getFlutterwaveHeaders(),
                         body: JSON.stringify(linkPayload),
                     });
                     const linkData: any = await linkResponse.json().catch(() => ({}));
@@ -1374,12 +1305,10 @@ export class AppController {
         try {
             const isIdReference = referenceType === 'id';
             const endpoint = isIdReference
-                ? `https://api.flutterwave.com/v3/transactions/${encodeURIComponent(reference)}/verify`
-                : `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`;
+                ? `https://api.flutterwave.com/v4/transactions/${encodeURIComponent(reference)}/verify`
+                : `https://api.flutterwave.com/v4/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`;
             const response = await fetch(endpoint, {
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                },
+                headers: getFlutterwaveHeaders(),
             });
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -1387,13 +1316,10 @@ export class AppController {
                 if (response.status === 404 || message.includes('no transaction')) {
                     if (isIdReference && txRef) {
                         const fallbackResponse = await fetch(
-                            `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(txRef)}`,
-                            {
-                                headers: {
-                                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                                },
-                            }
+                            `https://api.flutterwave.com/v4/transactions/verify_by_reference?tx_ref=${encodeURIComponent(txRef)}`,
+                            { headers: getFlutterwaveHeaders() }
                         );
+
                         const fallbackData: any = await fallbackResponse.json().catch(() => ({}));
                         if (fallbackResponse.ok) {
                             return res.json({ status: String(fallbackData?.data?.status || 'PENDING').toUpperCase() });
@@ -1435,8 +1361,8 @@ export class AppController {
 
                     const feePercent = resolvePlatformFeePercent(
                         data?.data?.meta?.platform_fee_percent
-                            || data?.data?.meta?.platformFeePercent
-                            || org?.payment_config?.platformFeePercent
+                        || data?.data?.meta?.platformFeePercent
+                        || org?.payment_config?.platformFeePercent
                     );
                     const amount = Number.parseFloat(String(data?.data?.amount || invoice.total || '0'));
                     const platformFeeAmount = Number.isFinite(amount)
@@ -1477,13 +1403,14 @@ export class AppController {
                     }
 
                     const payoutCurrency = data?.data?.currency || org?.currency || 'USD';
-                    await maybeTriggerFlutterwaveMomoPayout({
+                    await triggerInstantPayout({
                         org,
                         invoice,
-                        amount: netAmount,
-                        currency: payoutCurrency,
-                        reference: data?.data?.tx_ref || reference,
+                        amount: data.data.amount,
+                        currency: data.data.currency,
+                        reference: `payout_${data.data.id}`,
                     });
+
                 }
             }
 
@@ -1566,24 +1493,17 @@ export class AppController {
                 title: `${org.name} Invoice`,
                 description: `Invoice ${invoice.invoice_number}`,
             },
-            subaccounts: [
-                {
-                    id: payoutAccountId,
-                    transaction_charge_type: 'percentage',
-                    transaction_charge: feePercent,
-                },
-            ],
+            // We removed the 'subaccounts' split to enable "Instant Payouts" via the Transfer API.
+            // This allows us to push funds immediately after confirmation instead of waiting for T+1 settlement.
         };
 
         try {
-            const response = await fetch('https://api.flutterwave.com/v3/payments', {
+            const response = await fetch('https://api.flutterwave.com/v4/payments', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${flutterwaveSecretKey}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
+
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 console.error('Flutterwave initialize failed', data);
@@ -1706,10 +1626,10 @@ export class AppController {
                         console.error('Failed to load org for payout', orgRowError);
                     } else if (orgRow) {
                         const payoutCurrency = data.currency || orgRow.currency || 'USD';
-                        await maybeTriggerFlutterwaveMomoPayout({
+                        await triggerInstantPayout({
                             org: orgRow,
                             invoice: invoiceRow,
-                            amount: netAmount,
+                            amount: data.amount,
                             currency: payoutCurrency,
                             reference: data.tx_ref || data.flw_ref,
                         });

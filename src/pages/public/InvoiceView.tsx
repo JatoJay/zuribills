@@ -4,39 +4,21 @@ import { Invoice, Organization, InvoiceStatus } from '@/types';
 import { getOrganizationBySlug, getInvoices } from '@/services/storage';
 import { apiFetch } from '@/services/apiClient';
 import { Button, formatCurrency, Badge, Card, Input } from '@/components/ui';
-import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw, Smartphone } from 'lucide-react';
-import { processPayment, resolveAfnexProvider, requiresAfnexPhone, AfnexProvider } from '@/services/paymentService';
+import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { processPayment, requiresAfnexPhone } from '@/services/paymentService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { resolvePayoutProvider } from '@/services/paymentRouting';
 
-const AFNEX_PROVIDER_DETAILS: Record<AfnexProvider, { name: string; icon: React.ElementType; description: string; color: string }> = {
-    paystack: {
-        name: 'Card or Bank Transfer',
-        icon: CreditCard,
-        description: 'Processed by Afnex (Paystack)',
-        color: 'bg-slate-900',
-    },
+const AFNEX_PROVIDER_DETAILS: Record<string, { name: string; icon: React.ElementType; description: string; color: string }> = {
     flutterwave: {
-        name: 'Card or Bank',
+        name: 'Secure Payment',
         icon: CreditCard,
-        description: 'Processed by Afnex (Flutterwave)',
+        description: 'Pay via Card, Bank or Mobile Money',
         color: 'bg-orange-500',
-    },
-    pesapal: {
-        name: 'Card or Mobile Money',
-        icon: CreditCard,
-        description: 'Processed by Afnex (Pesapal)',
-        color: 'bg-indigo-600',
-    },
-    mtn_momo: {
-        name: 'Mobile Money',
-        icon: Smartphone,
-        description: 'Pay with mobile money via Afnex',
-        color: 'bg-emerald-500',
     },
 };
 
-const PENDING_PAYMENT_KEY = 'invoiceflow_afnex_pending_payment';
+const PENDING_PAYMENT_KEY = 'invoiceflow_pending_payment';
 
 const InvoiceView: React.FC = () => {
     const params = useParams({ strict: false });
@@ -94,6 +76,7 @@ const InvoiceView: React.FC = () => {
     const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
     const [paymentReturnStatus, setPaymentReturnStatus] = useState<'success' | 'failed' | null>(null);
     const [momoPhone, setMomoPhone] = useState('');
+    const [momoNetwork, setMomoNetwork] = useState('');
     const resumedPendingRef = useRef(false);
 
     useEffect(() => {
@@ -159,16 +142,16 @@ const InvoiceView: React.FC = () => {
         localStorage.removeItem(PENDING_PAYMENT_KEY);
     };
 
-    const persistPendingPayment = (reference: string, provider: AfnexProvider) => {
+    const persistPendingPayment = (reference: string) => {
         if (!data) return;
         localStorage.setItem(PENDING_PAYMENT_KEY, JSON.stringify({
             invoiceId: data.invoice.id,
             reference,
-            provider,
+            provider: 'flutterwave',
         }));
     };
 
-    const pollAfnexStatus = (reference: string, provider: AfnexProvider) => {
+    const pollAfnexStatus = (reference: string) => {
         if (!data) return () => {};
         let cancelled = false;
         let attempts = 0;
@@ -177,14 +160,9 @@ const InvoiceView: React.FC = () => {
             if (cancelled) return;
             attempts += 1;
             try {
-                const response = await apiFetch('/api/payments/afnex/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        reference,
-                        provider,
-                        invoiceId: data.invoice.id,
-                    }),
+                // Use the MoMo status endpoint since it covers Flutterwave verification
+                const response = await apiFetch(`/api/payments/momo/status?reference=${reference}&invoiceId=${data.invoice.id}`, {
+                    method: 'GET',
                 });
                 const statusData = await response.json().catch(() => ({}));
                 const normalizedStatus = String(statusData?.status || '').toUpperCase();
@@ -247,13 +225,13 @@ const InvoiceView: React.FC = () => {
             resumedPendingRef.current = true;
             setPaymentStatus('pending');
             setPaymentNotice(t('Waiting for payment confirmation...'));
-            pollAfnexStatus(pending.reference, pending.provider);
+            pollAfnexStatus(pending.reference);
         } catch (error) {
             console.error('Failed to resume pending payment', error);
         }
     }, [data, t]);
 
-    const handlePayment = async (provider: AfnexProvider, requiresPhone: boolean) => {
+    const handlePayment = async (requiresPhone: boolean) => {
         if (!data) return;
         if (!paymentsEnabled) {
             setPaymentStatus('error');
@@ -269,7 +247,7 @@ const InvoiceView: React.FC = () => {
         setErrorMessage('');
         setPaymentStatus('redirecting');
 
-        const result = await processPayment(provider, {
+        const result = await processPayment('flutterwave', {
             invoiceId: data.invoice.id,
             amount: data.invoice.total,
             currency: data.org.currency,
@@ -277,13 +255,14 @@ const InvoiceView: React.FC = () => {
             customerName: data.invoice.clientName,
             description: `Payment for Invoice ${data.invoice.invoiceNumber}`,
             payerPhone: momoPhone.trim(),
-        });
+            payerNetwork: momoNetwork,
+        } as any);
 
         if (result.reference) {
-            persistPendingPayment(result.reference, provider);
+            persistPendingPayment(result.reference);
         }
 
-        if (result.redirectUrl) {
+        if (result.redirectUrl && !requiresPhone) {
             window.location.href = result.redirectUrl;
             return;
         }
@@ -291,7 +270,7 @@ const InvoiceView: React.FC = () => {
         if (result.success && result.reference && requiresPhone) {
             setPaymentStatus('pending');
             setPaymentNotice(t('Payment prompt sent. Please approve on your phone.'));
-            pollAfnexStatus(result.reference, provider);
+            pollAfnexStatus(result.reference);
             setIsProcessing(false);
             return;
         }
@@ -311,7 +290,20 @@ const InvoiceView: React.FC = () => {
         setIsProcessing(false);
     };
 
-    if (!data) return <div className="p-8 text-center">{t('Loading Invoice...')}</div>;
+    const networks = useMemo(() => {
+        if (!data?.org?.currency) return [];
+        if (data.org.currency === 'RWF') return [{ label: 'MTN', value: 'MTN' }, { label: 'Airtel', value: 'AIRTEL' }];
+        if (data.org.currency === 'GHS') return [{ label: 'MTN', value: 'MTN' }, { label: 'Vodafone', value: 'VODAFONE' }, { label: 'AirtelTigo', value: 'AIRTEL' }];
+        return [];
+    }, [data?.org?.currency]);
+
+    useEffect(() => {
+        if (networks.length > 0 && !momoNetwork) {
+            setMomoNetwork(networks[0].value);
+        }
+    }, [networks, momoNetwork]);
+
+    if (!data) return <div className="p-8 text-center text-foreground">{t('Loading Invoice...')}</div>;
 
     const { invoice, org } = data;
     const paymentConfig = org.paymentConfig;
@@ -326,9 +318,9 @@ const InvoiceView: React.FC = () => {
             || (paymentProvider === 'stripe' && paymentConfig?.accountId)
         )
     );
-    const afnexProvider = resolveAfnexProvider(org.currency);
+    const afnexProvider = 'flutterwave';
     const afnexDetails = AFNEX_PROVIDER_DETAILS[afnexProvider];
-    const requiresPhone = requiresAfnexPhone(afnexProvider);
+    const requiresPhone = requiresAfnexPhone(org.currency);
     const isPaid = invoice.status === InvoiceStatus.PAID;
     const vatRate = Number.isFinite(invoice.taxRate) ? Math.max(0, invoice.taxRate) : 0;
     const vatAmount = Number.isFinite(invoice.taxAmount) ? invoice.taxAmount : 0;
@@ -336,17 +328,17 @@ const InvoiceView: React.FC = () => {
     const AfnexIcon = afnexDetails.icon;
 
     return (
-        <div className="min-h-screen bg-slate-100 p-8 print:p-0 print:bg-white">
-            <div className="max-w-3xl mx-auto print:max-w-none">
+        <div className="min-h-screen bg-slate-100 p-4 sm:p-8 dark:bg-background transition-colors duration-300 print:p-0 print:bg-white flex justify-center">
+            <div className="w-full max-w-5xl print:max-w-none">
                 {paymentNotice && (
-                    <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                    <div className="mb-4 rounded-lg border border-slate-200 bg-surface px-4 py-3 text-sm text-foreground shadow-sm animate-in slide-in-from-top duration-300">
                         {paymentNotice}
                     </div>
                 )}
 
                 {/* Action Buttons */}
-                <div className="mb-6 flex justify-between items-center print:hidden">
-                    <div className="flex gap-3">
+                <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
+                    <div className="flex flex-wrap gap-3">
                         {!isPaid && paymentsEnabled && (
                             <Button onClick={() => setShowPaymentModal(true)} className="shadow-neon">
                                 <CreditCard className="w-4 h-4 mr-2" /> {t('Pay Now')}
@@ -369,12 +361,12 @@ const InvoiceView: React.FC = () => {
                     </Button>
                 </div>
 
-                <div className="bg-white p-12 shadow-sm rounded-lg print:shadow-none">
+                <div className="bg-white p-6 sm:p-12 shadow-sm rounded-lg print:shadow-none text-slate-900">
                     {/* Header */}
                     <div className="flex justify-between items-start border-b border-slate-100 pb-8 mb-8">
                         <div>
                             {org.logoUrl && <img src={org.logoUrl} alt="Logo" className="h-12 w-auto mb-4 object-contain" />}
-                            <h1 className="text-2xl font-bold mb-1">{org.name}</h1>
+                            <h1 className="text-2xl font-bold mb-1 text-slate-900">{org.name}</h1>
                             <div className="text-slate-500 text-sm space-y-0.5">
                                 <p>{org.contactEmail}</p>
                                 {org.contactPhone && <p>{org.contactPhone}</p>}
@@ -396,7 +388,7 @@ const InvoiceView: React.FC = () => {
                         </div>
                         <div className="text-right">
                             <h2 className="text-4xl font-light text-slate-300 mb-2">{t('INVOICE')}</h2>
-                            <p className="font-mono font-bold text-lg">{invoice.invoiceNumber}</p>
+                            <p className="font-mono font-bold text-lg text-slate-900">{invoice.invoiceNumber}</p>
                             <div className="mt-2">
                                 <Badge status={invoice.status} />
                             </div>
@@ -407,11 +399,11 @@ const InvoiceView: React.FC = () => {
                     <div className="grid grid-cols-2 gap-12 mb-12">
                         <div>
                             <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">{t('Bill To')}</p>
-                            <h3 className="font-bold">{invoice.clientName}</h3>
+                            <h3 className="font-bold text-slate-900">{invoice.clientName}</h3>
                             {invoice.clientCompany && <p className="text-slate-600">{invoice.clientCompany}</p>}
                             <p className="text-slate-500 text-sm">{invoice.clientEmail}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right text-slate-900">
                             <div className="space-y-1">
                                 <div className="flex justify-between">
                                     <span className="text-slate-500 text-sm">{t('Date:')}</span>
@@ -426,9 +418,10 @@ const InvoiceView: React.FC = () => {
                     </div>
 
                     {/* Line Items */}
-                    <table className="w-full mb-12">
+                    <div className="overflow-x-auto -mx-12 px-12 md:mx-0 md:px-0 custom-scrollbar">
+                        <table className="w-full mb-12 min-w-[600px]">
                         <thead>
-                            <tr className="border-b border-black text-sm">
+                            <tr className="border-b border-slate-900 text-sm text-slate-900">
                                 <th className="text-left py-2 font-bold">{t('Description')}</th>
                                 <th className="text-right py-2 font-bold w-20">{t('Qty')}</th>
                                 <th className="text-right py-2 font-bold w-32">{t('Price')}</th>
@@ -441,14 +434,15 @@ const InvoiceView: React.FC = () => {
                                     <td className="py-4 text-slate-700">{item.description}</td>
                                     <td className="py-4 text-right text-slate-500">{item.quantity}</td>
                                     <td className="py-4 text-right text-slate-500">{formatCurrency(item.unitPrice, org.currency)}</td>
-                                    <td className="py-4 text-right font-medium">{formatCurrency(item.total, org.currency)}</td>
+                                    <td className="py-4 text-right font-medium text-slate-900">{formatCurrency(item.total, org.currency)}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                </div>
 
                     {/* Totals */}
-                    <div className="flex justify-end">
+                    <div className="flex justify-end text-slate-900">
                         <div className="w-64 space-y-3">
                             <div className="flex justify-between text-slate-500">
                                 <span>{t('Subtotal')}</span>
@@ -458,7 +452,7 @@ const InvoiceView: React.FC = () => {
                                 <span>{vatLabel}</span>
                                 <span>{formatCurrency(vatAmount, org.currency)}</span>
                             </div>
-                            <div className="flex justify-between font-bold text-xl pt-4 border-t border-slate-200">
+                            <div className="flex justify-between font-bold text-xl pt-4 border-t border-slate-200 text-slate-900">
                                 <span>{t('Total')}</span>
                                 <span>{formatCurrency(invoice.total, org.currency)}</span>
                             </div>
@@ -482,19 +476,19 @@ const InvoiceView: React.FC = () => {
 
             {/* Payment Gateway Modal */}
             {showPaymentModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm print:hidden">
-                    <Card className="w-full max-w-md p-6 bg-white relative animate-fade-in-up">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm print:hidden" onClick={() => setShowPaymentModal(false)}>
+                    <Card className="w-full max-w-md p-6 bg-surface relative animate-fade-in-up shadow-2xl border-border" onClick={e => e.stopPropagation()}>
                         <button
                             onClick={() => setShowPaymentModal(false)}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+                            className="absolute top-4 right-4 text-muted hover:text-foreground transition-colors"
                         >
                             <X className="w-5 h-5" />
                         </button>
 
-                        <div className="text-center mb-6">
+                        <div className="text-center mb-8">
                             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                                 {paymentStatus === 'success' ? (
-                                    <CheckCircle2 className="w-8 h-8 text-green-500 animate-in zoom-in duration-300" />
+                                    <CheckCircle2 className="w-8 h-8 text-emerald-500 animate-in zoom-in duration-300" />
                                 ) : paymentStatus === 'redirecting' || paymentStatus === 'pending' ? (
                                     <RefreshCw className="w-8 h-8 text-primary animate-spin" />
                                 ) : paymentStatus === 'error' ? (
@@ -503,61 +497,82 @@ const InvoiceView: React.FC = () => {
                                     <DollarSign className="w-8 h-8 text-primary" />
                                 )}
                             </div>
-                            <h3 className="text-xl font-bold">
+                            <h3 className="text-xl font-bold text-foreground">
                                 {paymentStatus === 'success' ? t('Payment Successful!') :
                                     paymentStatus === 'redirecting' ? t('Redirecting to secure checkout...') :
                                         paymentStatus === 'pending' ? t('Waiting for payment confirmation...') :
                                         paymentStatus === 'error' ? t('Payment Failed') : t('Pay Invoice')}
                             </h3>
-                            <p className="text-slate-500 text-sm mt-1">
+                            <p className="text-muted text-sm mt-1">
                                 {paymentStatus === 'success' ? t('Your invoice has been marked as paid.') :
                                     paymentStatus === 'redirecting' ? `${t('Invoice:')} ${invoice.invoiceNumber}` :
                                         paymentStatus === 'pending' ? t('Payment prompt sent. Please approve on your phone.') :
                                         paymentStatus === 'error' ? errorMessage : `${t('Invoice:')} ${invoice.invoiceNumber}`}
                             </p>
                             {paymentStatus === 'idle' && (
-                                <p className="text-2xl font-bold text-primary mt-2">
+                                <p className="text-3xl font-display font-bold text-primary mt-4">
                                     {formatCurrency(invoice.total, org.currency)}
                                 </p>
                             )}
                         </div>
 
                         {paymentStatus === 'idle' ? (
-                            <div className="space-y-3">
-                                <p className="text-sm font-medium text-slate-600 mb-2">{t('Select Payment Method:')}</p>
+                            <div className="space-y-4">
+                                <p className="text-sm font-semibold text-foreground uppercase tracking-wider opacity-70">{t('Select Payment Method:')}</p>
 
                                 {requiresPhone && (
-                                    <div className="mb-2">
+                                    <div className="space-y-4 mb-4">
                                         <Input
                                             label={t('Mobile money number')}
                                             value={momoPhone}
                                             inputMode="tel"
+                                            placeholder="7XXXXXXXX"
                                             onChange={(e) => setMomoPhone(e.target.value)}
-                                            className="bg-white border-slate-200 focus:border-primary"
+                                            className="bg-surface border-2 border-border focus:border-primary focus:ring-primary/20"
                                         />
-                                        <p className="text-xs text-slate-500 mt-1">
+                                        {networks.length > 0 && (
+                                            <div>
+                                                <label className="text-sm font-medium mb-2 block text-foreground">{t('Network')}</label>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {networks.map(n => (
+                                                        <button
+                                                            key={n.value}
+                                                            onClick={() => setMomoNetwork(n.value)}
+                                                            className={`py-2 px-4 rounded-xl border-2 transition-all text-sm font-bold ${momoNetwork === n.value ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted hover:border-border-hover'}`}
+                                                        >
+                                                            {n.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        <p className="text-[10px] text-muted mt-1.5 leading-tight">
                                             {t('Enter your mobile money number to receive the payment prompt.')}
                                         </p>
                                     </div>
                                 )}
 
                                 <button
-                                    onClick={() => handlePayment(afnexProvider, requiresPhone)}
+                                    onClick={() => handlePayment(requiresPhone)}
                                     disabled={isProcessing}
-                                    className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${isProcessing
-                                        ? 'border-primary bg-primary/5'
-                                        : 'border-slate-200 hover:border-primary/50 hover:bg-slate-50'
+                                    className={`w-full p-5 rounded-2xl border-2 transition-all flex items-center gap-4 group ${isProcessing
+                                        ? 'border-primary bg-primary/5 cursor-wait'
+                                        : 'border-border hover:border-primary/50 hover:bg-primary/5'
                                         }`}
                                 >
-                                    <div className={`w-12 h-12 ${afnexDetails.color} rounded-lg flex items-center justify-center text-white`}>
+                                    <div className={`w-12 h-12 ${afnexDetails.color} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
                                         <AfnexIcon className="w-6 h-6" />
                                     </div>
                                     <div className="flex-1 text-left">
-                                        <p className="font-bold">{afnexDetails.name}</p>
-                                        <p className="text-sm text-slate-500">{t(afnexDetails.description)}</p>
+                                        <p className="font-bold text-foreground">{afnexDetails.name}</p>
+                                        <p className="text-xs text-muted leading-relaxed">{t(afnexDetails.description)}</p>
                                     </div>
-                                    {isProcessing && (
+                                    {isProcessing ? (
                                         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <div className="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center border border-border group-hover:bg-primary group-hover:text-background transition-colors">
+                                            <ArrowRight className="w-3.5 h-3.5" />
+                                        </div>
                                     )}
                                 </button>
                             </div>

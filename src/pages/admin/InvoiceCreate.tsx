@@ -9,11 +9,13 @@ import { parseInvoicePrompt, validateInvoiceCompliance, ComplianceResult } from 
 import ComplianceModal from '@/components/ComplianceModal';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
+import { usePrompt } from '@/context/PromptContext';
 
 const InvoiceCreate: React.FC = () => {
     const { org } = useAdminContext();
     const navigate = useNavigate();
     const location = useLocation();
+    const prompt = usePrompt();
     const translationStrings = useMemo(() => ([
         'Back to Invoices',
         'New Invoice',
@@ -137,7 +139,7 @@ const InvoiceCreate: React.FC = () => {
             }
         } else {
             console.error('AI Parse Failed:', result.error);
-            alert(`${t('AI Error:')} ${result.error} `);
+            prompt.alert({ message: `${t('AI Error:')} ${result.error} `, type: 'error' });
         }
 
         setIsAiLoading(false);
@@ -191,7 +193,10 @@ const InvoiceCreate: React.FC = () => {
     const vatLabel = `${t('VAT')} (${vatRate}%)`;
 
     const handleSubmit = async () => {
-        if (!formData.clientName || items.length === 0) return alert(t('Please fill client info and add items'));
+        if (!formData.clientName || items.length === 0) {
+            prompt.alert(t('Please fill client info and add items'));
+            return;
+        }
         setLoading(true);
         await createInvoice({
             organizationId: org.id,

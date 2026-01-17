@@ -3,12 +3,14 @@ import { useNavigate } from '@tanstack/react-router';
 import { Button, Input, Select } from '../components/ui';
 import { createAccount, createOrganization, ensureAuthUser, getAccountById, getOrganizationBySlug, setCurrentAccountId, setCurrentUserId } from '../services/storage';
 import { UserRole } from '../types';
-import { Zap, ShieldCheck, Clock3, Sparkles } from 'lucide-react';
+import { Zap, ShieldCheck, Clock3, Sparkles, CheckCircle } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { usePrompt } from '@/context/PromptContext';
 import { resolveDefaultCurrency, resolvePayoutProvider } from '@/services/paymentRouting';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 import { getSupabaseClient } from '@/services/supabaseClient';
+import { PRICING_PLANS, calculateTrialEndDate, getPricingPlan } from '@/constants/pricing';
 
 type CountryOption = {
     code: string;
@@ -54,6 +56,11 @@ const baseSlides = [
 
 const Onboarding: React.FC = () => {
     const navigate = useNavigate();
+    const prompt = usePrompt();
+    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    const selectedPlanId = searchParams.get('plan') || 'yearly';
+    const selectedPlan = getPricingPlan(selectedPlanId) || PRICING_PLANS.yearly;
+
     const [loading, setLoading] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [googleProfile, setGoogleProfile] = useState<{ name: string; email: string; picture?: string } | null>(null);
@@ -129,6 +136,13 @@ const Onboarding: React.FC = () => {
         '10-min setup',
         'Secure by default',
         'AI-assisted',
+        'Selected Plan',
+        'Monthly Plan',
+        'Yearly Plan',
+        '/mo',
+        '14-day free trial',
+        'You can cancel anytime during the trial period.',
+        'Change plan',
         ...baseSlides.flatMap(slide => [slide.title, slide.description]),
     ]), []);
     const { t, language, setLanguage, isTranslating } = useTranslation(translationKeys);
@@ -172,27 +186,37 @@ const Onboarding: React.FC = () => {
     }, [countryCode, countries]);
 
     useEffect(() => {
+        const checkAuth = async () => {
+            const supabase = getSupabaseClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            if (user) {
+                const metadata = user.user_metadata || {};
+                const email = user.email || '';
+                const name = metadata.full_name || metadata.name || deriveOwnerName(email);
+                const picture = metadata.avatar_url || metadata.picture || '';
+
+                setGoogleProfile({
+                    name,
+                    email,
+                    picture: picture || undefined,
+                });
+                setFormData(prev => ({
+                    ...prev,
+                    contactEmail: prev.contactEmail || email,
+                }));
+            }
+        };
+
+        checkAuth();
+
         const params = new URLSearchParams(window.location.search);
         const sso = params.get('sso');
         const email = params.get('email') || '';
-        const name = params.get('name') || '';
-        const picture = params.get('picture') || '';
         const error = params.get('oauthError');
 
         if (error) {
             setOauthError(error);
-        }
-
-        if (sso === 'google' && email) {
-            setGoogleProfile({
-                name: name || deriveOwnerName(email),
-                email,
-                picture: picture || undefined,
-            });
-            setFormData(prev => ({
-                ...prev,
-                contactEmail: prev.contactEmail || email,
-            }));
         }
 
         if (!sso && email) {
@@ -259,18 +283,18 @@ const Onboarding: React.FC = () => {
         const authEmail = authUser?.email?.trim().toLowerCase() || '';
 
         if (authError || !authUser || !authEmail) {
-            alert(t('Please sign in to continue.'));
+            prompt.alert(t('Please sign in to continue.'));
             navigate({ to: '/login', search: formData.contactEmail ? ({ email: formData.contactEmail.trim() } as any) : {} as any });
             return;
         }
 
         if (!formData.name.trim() || !(formData.contactEmail.trim() || authEmail)) {
-            alert(t('Please enter your business name and contact email.'));
+            prompt.alert(t('Please enter your business name and contact email.'));
             return;
         }
         const selectedCountry = countries.find((country) => country.code === countryCode);
         if (!selectedCountry) {
-            alert(t('Please select a country.'));
+            prompt.alert(t('Please select a country.'));
             return;
         }
         setLoading(true);
@@ -306,6 +330,10 @@ const Onboarding: React.FC = () => {
             const slug = await generateUniqueSlug(formData.name);
             const resolvedCurrency = resolveDefaultCurrency(selectedCountry.code, selectedCountry.currencyCode);
             const payoutProvider = resolvePayoutProvider(selectedCountry.code);
+            // Calculate trial dates
+            const trialStartDate = new Date();
+            const trialEndDate = calculateTrialEndDate(trialStartDate);
+
             await createOrganization({
                 accountId: accountId!,
                 ownerId: ownerId!,
@@ -329,10 +357,22 @@ const Onboarding: React.FC = () => {
                     zip: '',
                     country: selectedCountry.name,
                 },
+                // Trial period info
+                trial: {
+                    startsAt: trialStartDate.toISOString(),
+                    endsAt: trialEndDate.toISOString(),
+                    accessLevel: 'full',
+                },
+                // Subscription info (will be activated after trial)
+                subscription: {
+                    status: 'active', // Active during trial
+                    billingCycle: selectedPlan.billingCycle,
+                    startedAt: trialStartDate.toISOString(),
+                },
             });
             navigate({ to: `/org/${slug}` });
         } catch (err) {
-            alert(t('Slug might already exist or invalid data.'));
+            prompt.alert({ message: t('Slug might already exist or invalid data.'), type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -390,9 +430,8 @@ const Onboarding: React.FC = () => {
                                         key={slide.title}
                                         src={slide.image}
                                         alt={slide.title}
-                                        className={`absolute inset-0 h-full w-full object-contain transition-all duration-700 ${
-                                            index === currentSlide ? 'opacity-100 translate-x-0' : index < currentSlide ? 'opacity-0 -translate-x-6' : 'opacity-0 translate-x-6'
-                                        }`}
+                                        className={`absolute inset-0 h-full w-full object-contain transition-all duration-700 ${index === currentSlide ? 'opacity-100 translate-x-0' : index < currentSlide ? 'opacity-0 -translate-x-6' : 'opacity-0 translate-x-6'
+                                            }`}
                                         loading="lazy"
                                     />
                                 ))}
@@ -435,130 +474,159 @@ const Onboarding: React.FC = () => {
                 <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-12 lg:px-12">
                     <div className="max-w-md w-full">
                         <div className="bg-white p-8 rounded-3xl shadow-soft border border-slate-200">
-                        <div className="mt-6">
-                            <h1 className="text-3xl font-display font-semibold text-black">{t('Set up your organization')}</h1>
-                            <p className="mt-2 text-slate-600">{t('Enter your business details to get started with InvoiceFlow.')}</p>
-                        </div>
+                            <div className="mt-6">
+                                <h1 className="text-3xl font-display font-semibold text-black">{t('Set up your organization')}</h1>
+                                <p className="mt-2 text-slate-600">{t('Enter your business details to get started with InvoiceFlow.')}</p>
+                            </div>
 
-                        {showGoogleButton && (
-                            <div className="mt-6 space-y-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full h-12 text-base border-slate-300 text-slate-800 hover:bg-slate-50"
-                                    onClick={handleGoogleLogin}
-                                >
-                                    <span className="mr-3 flex h-7 w-7 items-center justify-center rounded-full bg-white border border-slate-200 text-sm font-bold text-slate-700">
-                                        G
-                                    </span>
-                                    {t('Continue with Google')}
-                                </Button>
+                            {showGoogleButton && (
+                                <div className="mt-6 space-y-4">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full h-12 text-base border-slate-300 text-slate-800 hover:bg-slate-50"
+                                        onClick={handleGoogleLogin}
+                                    >
+                                        <span className="mr-3 flex h-7 w-7 items-center justify-center rounded-full bg-white border border-slate-200 text-sm font-bold text-slate-700">
+                                            G
+                                        </span>
+                                        {t('Continue with Google')}
+                                    </Button>
 
-                                {googleProfile && (
-                                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                        <div className="flex items-center gap-3">
-                                            {googleProfile.picture ? (
-                                                <img
-                                                    src={googleProfile.picture}
-                                                    alt={googleProfile.name}
-                                                    className="h-10 w-10 rounded-full border border-slate-200 object-cover"
-                                                />
-                                            ) : (
-                                                <div className="h-10 w-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-semibold">
-                                                    {googleProfile.name.charAt(0)}
+                                    {googleProfile && (
+                                        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                {googleProfile.picture ? (
+                                                    <img
+                                                        src={googleProfile.picture}
+                                                        alt={googleProfile.name}
+                                                        className="h-10 w-10 rounded-full border border-slate-200 object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="h-10 w-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-semibold">
+                                                        {googleProfile.name.charAt(0)}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <div className="text-xs uppercase tracking-wide text-slate-500">{t('Signed in as')}</div>
+                                                    <div className="text-sm font-semibold text-slate-900">{googleProfile.name}</div>
+                                                    <div className="text-xs text-slate-500">{googleProfile.email}</div>
                                                 </div>
-                                            )}
-                                            <div>
-                                                <div className="text-xs uppercase tracking-wide text-slate-500">{t('Signed in as')}</div>
-                                                <div className="text-sm font-semibold text-slate-900">{googleProfile.name}</div>
-                                                <div className="text-xs text-slate-500">{googleProfile.email}</div>
                                             </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleGoogleLogin}
+                                                className="text-xs font-semibold text-primary hover:text-primary/80"
+                                            >
+                                                {t('Use a different account')}
+                                            </button>
                                         </div>
+                                    )}
+
+                                    {oauthError && (
+                                        <div className="text-xs text-red-600">{t('Google sign-in failed. Please try again.')}</div>
+                                    )}
+
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-px flex-1 bg-slate-200" />
+                                        <span className="text-xs uppercase tracking-wide text-slate-400">{t('Or continue with email')}</span>
+                                        <div className="h-px flex-1 bg-slate-200" />
+                                    </div>
+                                </div>
+                            )}
+
+                            <form onSubmit={handleSubmit} className="space-y-6 mt-8">
+                                <Input
+                                    label={t('Business Name')}
+                                    required
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                />
+
+                                <Input
+                                    label={t('Contact Email')}
+                                    type="email"
+                                    required
+                                    value={formData.contactEmail}
+                                    onChange={e => setFormData({ ...formData, contactEmail: e.target.value })}
+                                />
+
+                                <Select
+                                    label={t('Country')}
+                                    options={countryOptions}
+                                    value={countryCode}
+                                    onChange={(e) => setCountryCode(e.target.value)}
+                                    disabled={countriesLoading}
+                                />
+
+                                <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-4 py-3">
+                                    <div className="text-xs uppercase tracking-wider text-slate-500">{t('Currency')}</div>
+                                    <div className="text-sm font-semibold text-black mt-1">
+                                        {currencyInfo.code} • {currencyInfo.name}
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-1">{t('We will set your currency automatically.')}</p>
+                                </div>
+
+                                {/* Selected Plan Display */}
+                                <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="text-xs uppercase tracking-wider text-primary font-semibold">{t('Selected Plan')}</div>
                                         <button
                                             type="button"
-                                            onClick={handleGoogleLogin}
-                                            className="text-xs font-semibold text-primary hover:text-primary/80"
+                                            onClick={() => navigate({ to: '/', hash: 'pricing' })}
+                                            className="text-xs text-primary hover:text-primary/80 font-medium"
                                         >
-                                            {t('Use a different account')}
+                                            {t('Change plan')}
                                         </button>
                                     </div>
-                                )}
-
-                                {oauthError && (
-                                    <div className="text-xs text-red-600">{t('Google sign-in failed. Please try again.')}</div>
-                                )}
-
-                                <div className="flex items-center gap-3">
-                                    <div className="h-px flex-1 bg-slate-200" />
-                                    <span className="text-xs uppercase tracking-wide text-slate-400">{t('Or continue with email')}</span>
-                                    <div className="h-px flex-1 bg-slate-200" />
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-lg font-display font-semibold text-black">
+                                            {t(selectedPlan.name)}
+                                        </span>
+                                        <span className="text-sm text-slate-600">
+                                            ${selectedPlan.pricePerMonth}{t('/mo')}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-3">
+                                        <CheckCircle className="w-4 h-4 text-primary" />
+                                        <span className="text-sm text-slate-600">{t('14-day free trial')}</span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-2">
+                                        {t('You can cancel anytime during the trial period.')}
+                                    </p>
                                 </div>
-                            </div>
-                        )}
 
-                        <form onSubmit={handleSubmit} className="space-y-6 mt-8">
-                            <Input
-                                label={t('Business Name')}
-                                required
-                                value={formData.name}
-                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                            />
-
-                            <Input
-                                label={t('Contact Email')}
-                                type="email"
-                                required
-                                value={formData.contactEmail}
-                                onChange={e => setFormData({ ...formData, contactEmail: e.target.value })}
-                            />
-
-                            <Select
-                                label={t('Country')}
-                                options={countryOptions}
-                                value={countryCode}
-                                onChange={(e) => setCountryCode(e.target.value)}
-                                disabled={countriesLoading}
-                            />
-
-                            <div className="rounded-lg border-2 border-slate-200 bg-slate-50 px-4 py-3">
-                                <div className="text-xs uppercase tracking-wider text-slate-500">{t('Currency')}</div>
-                                <div className="text-sm font-semibold text-black mt-1">
-                                    {currencyInfo.code} • {currencyInfo.name}
+                                <div>
+                                    <Input
+                                        label={t('Preferred Language')}
+                                        list="language-options"
+                                        value={language}
+                                        onChange={(e) => {
+                                            localStorage.setItem(LANGUAGE_SOURCE_KEY, 'user');
+                                            setLanguage(e.target.value);
+                                        }}
+                                    />
+                                    <datalist id="language-options">
+                                        {SUPPORTED_LANGUAGES.map(option => (
+                                            <option key={option} value={option} />
+                                        ))}
+                                    </datalist>
+                                    {countryCode === 'NG' && (
+                                        <p className="text-xs text-slate-500 mt-2">{t('Popular languages in Nigeria: Hausa, Yoruba, Igbo, Nigerian Pidgin.')}</p>
+                                    )}
+                                    {isTranslating && (
+                                        <p className="text-xs text-slate-500 mt-2">{t('Translating...')}</p>
+                                    )}
                                 </div>
-                                <p className="text-xs text-slate-500 mt-1">{t('We will set your currency automatically.')}</p>
-                            </div>
 
-                            <div>
-                                <Input
-                                    label={t('Preferred Language')}
-                                    list="language-options"
-                                    value={language}
-                                    onChange={(e) => {
-                                        localStorage.setItem(LANGUAGE_SOURCE_KEY, 'user');
-                                        setLanguage(e.target.value);
-                                    }}
-                                />
-                                <datalist id="language-options">
-                                    {SUPPORTED_LANGUAGES.map(option => (
-                                        <option key={option} value={option} />
-                                    ))}
-                                </datalist>
-                                {countryCode === 'NG' && (
-                                    <p className="text-xs text-slate-500 mt-2">{t('Popular languages in Nigeria: Hausa, Yoruba, Igbo, Nigerian Pidgin.')}</p>
-                                )}
-                                {isTranslating && (
-                                    <p className="text-xs text-slate-500 mt-2">{t('Translating...')}</p>
-                                )}
-                            </div>
+                                <Button type="submit" className="w-full h-12 text-base" isLoading={loading}>
+                                    {t('Create & Launch Dashboard')}
+                                </Button>
 
-                            <Button type="submit" className="w-full h-12 text-base" isLoading={loading}>
-                                {t('Create & Launch Dashboard')}
-                            </Button>
-
-                            <p className="text-xs text-center text-slate-500">
-                                {t('By showing up, you agree to our Terms of Service and Privacy Policy.')}
-                            </p>
-                        </form>
+                                <p className="text-xs text-center text-slate-500">
+                                    {t('By showing up, you agree to our Terms of Service and Privacy Policy.')}
+                                </p>
+                            </form>
                         </div>
                     </div>
                 </div>
