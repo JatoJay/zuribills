@@ -92,6 +92,7 @@ export const initAfnexPayment = async (
             body: JSON.stringify({
                 invoiceId: config.invoiceId,
                 payerPhone: config.payerPhone,
+                payerNetwork: config.payerNetwork,
                 customerEmail: config.customerEmail,
                 customerName: config.customerName,
             }),

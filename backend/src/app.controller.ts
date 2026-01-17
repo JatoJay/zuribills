@@ -35,7 +35,7 @@ const FLUTTERWAVE_MOMO_OPTIONS = {
     ZA: 'mobilemoneysa',
 };
 
-const MOMO_NETWORK_REQUIRED = new Set(['GH']);
+const MOMO_NETWORK_REQUIRED = new Set(['GH', 'RW']);
 
 const MOMO_COUNTRY_BY_CURRENCY = {
     RWF: 'RW',
@@ -1157,7 +1157,7 @@ export class AppController {
         }
 
         const { invoiceId, payerPhone, payerNetwork } = req.body || {};
-        const trimmedPhone = String(payerPhone || '').trim();
+        const trimmedPhone = String(payerPhone || '').replace(/\s+/g, '').trim();
         const trimmedNetwork = String(payerNetwork || '').trim().toUpperCase();
         if (!invoiceId || !trimmedPhone) {
             return res.status(400).json({ error: 'invoiceId and payerPhone are required.' });
@@ -1213,6 +1213,7 @@ export class AppController {
             tx_ref: txRef,
             amount: Number.parseFloat(String(invoice.total || '0')),
             currency,
+            country: momoCountry,
             email: invoice.client_email,
             phone_number: trimmedPhone,
             fullname: invoice.client_name,
@@ -1225,9 +1226,12 @@ export class AppController {
         };
         if (trimmedNetwork) {
             payload.network = trimmedNetwork;
+        } else if (momoCountry === 'RW') {
+            payload.network = 'MTN'; // Default to MTN for Rwanda if not specified
         }
 
         try {
+            console.log(`Initializing MoMo charge for ${momoCountry} (${chargeType}) with network: ${payload.network || 'none'}`);
             const response = await fetch(`https://api.flutterwave.com/v3/charges?type=${encodeURIComponent(chargeType)}`, {
                 method: 'POST',
                 headers: {
@@ -1245,6 +1249,7 @@ export class AppController {
                         tx_ref: txRef,
                         amount: Number.parseFloat(String(invoice.total || '0')),
                         currency,
+                        country: momoCountry,
                         redirect_url: redirectUrl,
                         payment_options: paymentOption,
                         customer: {

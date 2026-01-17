@@ -76,6 +76,7 @@ const InvoiceView: React.FC = () => {
     const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
     const [paymentReturnStatus, setPaymentReturnStatus] = useState<'success' | 'failed' | null>(null);
     const [momoPhone, setMomoPhone] = useState('');
+    const [momoNetwork, setMomoNetwork] = useState('');
     const resumedPendingRef = useRef(false);
 
     useEffect(() => {
@@ -254,7 +255,8 @@ const InvoiceView: React.FC = () => {
             customerName: data.invoice.clientName,
             description: `Payment for Invoice ${data.invoice.invoiceNumber}`,
             payerPhone: momoPhone.trim(),
-        });
+            payerNetwork: momoNetwork,
+        } as any);
 
         if (result.reference) {
             persistPendingPayment(result.reference);
@@ -311,6 +313,18 @@ const InvoiceView: React.FC = () => {
     const vatAmount = Number.isFinite(invoice.taxAmount) ? invoice.taxAmount : 0;
     const vatLabel = `${t('VAT')} (${vatRate}%)`;
     const AfnexIcon = afnexDetails.icon;
+
+    const networks = useMemo(() => {
+        if (org.currency === 'RWF') return [{ label: 'MTN', value: 'MTN' }, { label: 'Airtel', value: 'AIRTEL' }];
+        if (org.currency === 'GHS') return [{ label: 'MTN', value: 'MTN' }, { label: 'Vodafone', value: 'VODAFONE' }, { label: 'AirtelTigo', value: 'AIRTEL' }];
+        return [];
+    }, [org.currency]);
+
+    useEffect(() => {
+        if (networks.length > 0 && !momoNetwork) {
+            setMomoNetwork(networks[0].value);
+        }
+    }, [networks, momoNetwork]);
 
     return (
         <div className="min-h-screen bg-slate-100 p-4 sm:p-8 dark:bg-background transition-colors duration-300 print:p-0 print:bg-white flex justify-center">
@@ -506,7 +520,7 @@ const InvoiceView: React.FC = () => {
                                 <p className="text-sm font-semibold text-foreground uppercase tracking-wider opacity-70">{t('Select Payment Method:')}</p>
 
                                 {requiresPhone && (
-                                    <div className="mb-4">
+                                    <div className="space-y-4 mb-4">
                                         <Input
                                             label={t('Mobile money number')}
                                             value={momoPhone}
@@ -515,6 +529,22 @@ const InvoiceView: React.FC = () => {
                                             onChange={(e) => setMomoPhone(e.target.value)}
                                             className="bg-surface border-border focus:ring-primary/20"
                                         />
+                                        {networks.length > 0 && (
+                                            <div>
+                                                <label className="text-sm font-medium mb-2 block text-foreground">{t('Network')}</label>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {networks.map(n => (
+                                                        <button
+                                                            key={n.value}
+                                                            onClick={() => setMomoNetwork(n.value)}
+                                                            className={`py-2 px-4 rounded-xl border-2 transition-all text-sm font-bold ${momoNetwork === n.value ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted hover:border-border-hover'}`}
+                                                        >
+                                                            {n.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                         <p className="text-[10px] text-muted mt-1.5 leading-tight">
                                             {t('Enter your mobile money number to receive the payment prompt.')}
                                         </p>
