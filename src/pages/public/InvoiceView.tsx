@@ -313,8 +313,8 @@ const InvoiceView: React.FC = () => {
     const AfnexIcon = afnexDetails.icon;
 
     return (
-        <div className="min-h-screen bg-slate-100 p-4 sm:p-8 print:p-0 print:bg-white">
-            <div className="max-w-3xl mx-auto print:max-w-none">
+        <div className="min-h-screen bg-slate-100 p-4 sm:p-8 dark:bg-background transition-colors duration-300 print:p-0 print:bg-white flex justify-center">
+            <div className="w-full max-w-5xl print:max-w-none">
                 {paymentNotice && (
                     <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
                         {paymentNotice}
@@ -346,12 +346,12 @@ const InvoiceView: React.FC = () => {
                     </Button>
                 </div>
 
-                <div className="bg-white p-6 sm:p-12 shadow-sm rounded-lg print:shadow-none">
+                <div className="bg-white p-6 sm:p-12 shadow-sm rounded-lg print:shadow-none text-slate-900">
                     {/* Header */}
                     <div className="flex justify-between items-start border-b border-slate-100 pb-8 mb-8">
                         <div>
                             {org.logoUrl && <img src={org.logoUrl} alt="Logo" className="h-12 w-auto mb-4 object-contain" />}
-                            <h1 className="text-2xl font-bold mb-1">{org.name}</h1>
+                            <h1 className="text-2xl font-bold mb-1 text-slate-900">{org.name}</h1>
                             <div className="text-slate-500 text-sm space-y-0.5">
                                 <p>{org.contactEmail}</p>
                                 {org.contactPhone && <p>{org.contactPhone}</p>}
@@ -373,7 +373,7 @@ const InvoiceView: React.FC = () => {
                         </div>
                         <div className="text-right">
                             <h2 className="text-4xl font-light text-slate-300 mb-2">{t('INVOICE')}</h2>
-                            <p className="font-mono font-bold text-lg">{invoice.invoiceNumber}</p>
+                            <p className="font-mono font-bold text-lg text-slate-900">{invoice.invoiceNumber}</p>
                             <div className="mt-2">
                                 <Badge status={invoice.status} />
                             </div>
@@ -384,11 +384,11 @@ const InvoiceView: React.FC = () => {
                     <div className="grid grid-cols-2 gap-12 mb-12">
                         <div>
                             <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">{t('Bill To')}</p>
-                            <h3 className="font-bold">{invoice.clientName}</h3>
+                            <h3 className="font-bold text-slate-900">{invoice.clientName}</h3>
                             {invoice.clientCompany && <p className="text-slate-600">{invoice.clientCompany}</p>}
                             <p className="text-slate-500 text-sm">{invoice.clientEmail}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right text-slate-900">
                             <div className="space-y-1">
                                 <div className="flex justify-between">
                                     <span className="text-slate-500 text-sm">{t('Date:')}</span>
@@ -406,7 +406,7 @@ const InvoiceView: React.FC = () => {
                     <div className="overflow-x-auto -mx-12 px-12 md:mx-0 md:px-0 custom-scrollbar">
                         <table className="w-full mb-12 min-w-[600px]">
                         <thead>
-                            <tr className="border-b border-black text-sm">
+                            <tr className="border-b border-slate-900 text-sm text-slate-900">
                                 <th className="text-left py-2 font-bold">{t('Description')}</th>
                                 <th className="text-right py-2 font-bold w-20">{t('Qty')}</th>
                                 <th className="text-right py-2 font-bold w-32">{t('Price')}</th>
@@ -419,7 +419,7 @@ const InvoiceView: React.FC = () => {
                                     <td className="py-4 text-slate-700">{item.description}</td>
                                     <td className="py-4 text-right text-slate-500">{item.quantity}</td>
                                     <td className="py-4 text-right text-slate-500">{formatCurrency(item.unitPrice, org.currency)}</td>
-                                    <td className="py-4 text-right font-medium">{formatCurrency(item.total, org.currency)}</td>
+                                    <td className="py-4 text-right font-medium text-slate-900">{formatCurrency(item.total, org.currency)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -427,7 +427,7 @@ const InvoiceView: React.FC = () => {
                 </div>
 
                     {/* Totals */}
-                    <div className="flex justify-end">
+                    <div className="flex justify-end text-slate-900">
                         <div className="w-64 space-y-3">
                             <div className="flex justify-between text-slate-500">
                                 <span>{t('Subtotal')}</span>
@@ -437,7 +437,7 @@ const InvoiceView: React.FC = () => {
                                 <span>{vatLabel}</span>
                                 <span>{formatCurrency(vatAmount, org.currency)}</span>
                             </div>
-                            <div className="flex justify-between font-bold text-xl pt-4 border-t border-slate-200">
+                            <div className="flex justify-between font-bold text-xl pt-4 border-t border-slate-200 text-slate-900">
                                 <span>{t('Total')}</span>
                                 <span>{formatCurrency(invoice.total, org.currency)}</span>
                             </div>
