@@ -9,10 +9,12 @@ import { sendInvoiceEmail } from '@/services/email';
 import { generateInvoiceEmailBody } from '@/services/geminiService';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
+import { usePrompt } from '@/context/PromptContext';
 
 const Invoices: React.FC = () => {
     const { org, formatMoney } = useAdminContext();
     const navigate = useNavigate();
+    const prompt = usePrompt();
     const translationStrings = useMemo(() => ([
         'Invoices',
         'Create Invoice',
@@ -89,7 +91,8 @@ const Invoices: React.FC = () => {
     };
 
     const handleBulkMarkPaid = async () => {
-        if (!confirm(`${t('Mark invoices as paid?')} (${selectedIds.size})`)) return;
+        const confirmed = await prompt.confirm(`${t('Mark invoices as paid?')} (${selectedIds.size})`);
+        if (!confirmed) return;
         setIsBulkProcessing(true);
         await Promise.all(Array.from(selectedIds).map(id => updateInvoiceStatus(id, InvoiceStatus.PAID)));
         setIsBulkProcessing(false);
@@ -98,7 +101,8 @@ const Invoices: React.FC = () => {
     };
 
     const handleBulkSendReminders = async () => {
-        if (!confirm(`${t('Send emails for invoices?')} (${selectedIds.size})`)) return;
+        const confirmed = await prompt.confirm(`${t('Send emails for invoices?')} (${selectedIds.size})`);
+        if (!confirmed) return;
         setIsBulkProcessing(true);
         const selectedInvoices = invoices.filter(i => selectedIds.has(i.id));
         const failedInvoices: string[] = [];
@@ -119,7 +123,7 @@ const Invoices: React.FC = () => {
         setSelectedIds(new Set());
         loadInvoices();
         if (failedInvoices.length > 0) {
-            alert(`${t('Some emails failed to send.')} (${failedInvoices.join(', ')})`);
+            prompt.alert({ message: `${t('Some emails failed to send.')} (${failedInvoices.join(', ')})`, type: 'warning' });
         }
     };
 
@@ -151,7 +155,7 @@ const Invoices: React.FC = () => {
             loadInvoices();
         } catch (error) {
             console.error(error);
-            alert(t('Failed to send email.'));
+            prompt.alert({ message: t('Failed to send email.'), type: 'error' });
         } finally {
             setIsSending(false);
         }
@@ -293,7 +297,7 @@ const Invoices: React.FC = () => {
                                                     onClick={() => {
                                                         const url = `${window.location.origin}/#/catalog/${org.slug}/invoice/${invoice.id}`;
                                                         navigator.clipboard.writeText(url);
-                                                        alert(t('Invoice link copied to clipboard!'));
+                                                        prompt.alert({ message: t('Invoice link copied to clipboard!'), type: 'success' });
                                                     }}
                                                 >
                                                     <LinkIcon className="w-4 h-4" />
