@@ -21,6 +21,7 @@ const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY;
 const flutterwaveEncryptionKey = process.env.FLUTTERWAVE_ENCRYPTION_KEY;
 const flutterwaveWebhookSecret = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const afnexDemoBaseUrl = process.env.AFNEX_DEMO_BASE_URL || 'https://afnex.dev/api/demo';
 const platformFeePercent = 1.5;
 
 const getFlutterwaveHeaders = () => {
@@ -872,17 +873,129 @@ export class AppController {
 
     @Get('payments/afnex/providers')
     async getAfnexProviders(@Req() req: Request, @Res() res: Response) {
-        return res.json({ providers: [] });
+        try {
+            const response = await fetch(`${afnexDemoBaseUrl}/providers`);
+            const data = await response.json();
+            return res.json(data);
+        } catch (error) {
+            console.error('Failed to fetch Afnex providers', error);
+            return res.status(500).json({ error: 'Failed to fetch providers.' });
+        }
     }
 
     @Post('payments/afnex/charge')
     async chargeAfnex(@Req() req: Request, @Res() res: Response) {
-        return res.status(400).json({ error: 'Afnex is disabled. Use Flutterwave instead.' });
+        if (!supabaseAdmin) {
+            return res.status(500).json({ error: 'Supabase admin is not configured.' });
+        }
+
+        const { invoiceId, provider, payerPhone, customerEmail } = req.body || {};
+        if (!invoiceId) {
+            return res.status(400).json({ error: 'invoiceId is required.' });
+        }
+
+        const { data: invoice, error: invoiceError } = await supabaseAdmin
+            .from('invoices')
+            .select('id, organization_id, total, client_name, client_email, invoice_number')
+            .eq('id', invoiceId)
+            .maybeSingle();
+        if (invoiceError || !invoice) {
+            return res.status(404).json({ error: 'Invoice not found.' });
+        }
+
+        const { data: org, error: orgError } = await supabaseAdmin
+            .from('organizations')
+            .select('id, slug, currency, payment_config')
+            .eq('id', invoice.organization_id)
+            .maybeSingle();
+        if (orgError || !org) {
+            return res.status(404).json({ error: 'Organization not found.' });
+        }
+
+        const currency = String(org.currency || 'USD').toUpperCase();
+        const payload: Record<string, any> = {
+            provider: provider || 'flutterwave',
+            amount: invoice.total,
+            currency,
+            metadata: {
+                invoice_id: invoice.id,
+                organization_id: org.id,
+                invoice_number: invoice.invoice_number,
+            },
+        };
+
+        if (payload.provider === 'mtn_momo' || payload.provider === 'mpesa') {
+            payload.phone = payerPhone;
+        } else {
+            payload.email = customerEmail || invoice.client_email;
+        }
+
+        try {
+            const response = await fetch(`${afnexDemoBaseUrl}/charge`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data: any = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                return res.status(response.status).json({ error: data?.error || 'Failed to initialize payment.' });
+            }
+
+            return res.json({
+                reference: data?.reference,
+                provider: data?.provider,
+                paymentUrl: data?.payment_url || data?.link,
+                status: data?.status,
+            });
+        } catch (error) {
+            console.error('Afnex charge error', error);
+            return res.status(500).json({ error: 'Failed to initialize payment.' });
+        }
     }
 
     @Post('payments/afnex/verify')
     async verifyAfnex(@Req() req: Request, @Res() res: Response) {
-        return res.status(400).json({ error: 'Afnex is disabled.' });
+        if (!supabaseAdmin) {
+            return res.status(500).json({ error: 'Supabase admin is not configured.' });
+        }
+
+        const { reference, provider, invoiceId } = req.body || {};
+        if (!reference || !provider || !invoiceId) {
+            return res.status(400).json({ error: 'reference, provider, and invoiceId are required.' });
+        }
+
+        try {
+            const response = await fetch(`${afnexDemoBaseUrl}/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider, reference }),
+            });
+            const data: any = await response.json().catch(() => ({}));
+            
+            if (data?.status === 'SUCCESS') {
+                // Update invoice status
+                await supabaseAdmin.from('invoices').update({ status: 'PAID' }).eq('id', invoiceId);
+                
+                // Fetch org and invoice for instant payout
+                const { data: invoice } = await supabaseAdmin.from('invoices').select('*').eq('id', invoiceId).single();
+                const { data: org } = await supabaseAdmin.from('organizations').select('*').eq('id', invoice.organization_id).single();
+                
+                if (org && invoice) {
+                    await triggerInstantPayout({
+                        org,
+                        invoice,
+                        amount: data.amount || invoice.total,
+                        currency: data.currency || org.currency,
+                        reference: reference,
+                    });
+                }
+            }
+
+            return res.json(data);
+        } catch (error) {
+            console.error('Afnex verify error', error);
+            return res.status(500).json({ error: 'Failed to verify payment.' });
+        }
     }
 
     @Post('payments/flutterwave/payouts')
