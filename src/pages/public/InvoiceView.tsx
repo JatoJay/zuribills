@@ -262,7 +262,7 @@ const InvoiceView: React.FC = () => {
             persistPendingPayment(result.reference);
         }
 
-        if (result.redirectUrl) {
+        if (result.redirectUrl && !requiresPhone) {
             window.location.href = result.redirectUrl;
             return;
         }
