@@ -3,7 +3,7 @@ import { AgentLog, Organization } from '@/types';
 import { getAgentLogsByOrg, updateOrganization } from '@/services/storage';
 import { createFlutterwavePayoutAccount, fetchFlutterwaveBanks, FlutterwaveBank } from '@/services/paymentService';
 import { resolveCountryCode, resolvePayoutProvider } from '@/services/paymentRouting';
-import { Button, Input, Card, Select } from '@/components/ui';
+import { Button, Input, Card, Select, Badge } from '@/components/ui';
 import { AlertCircle } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -116,8 +116,10 @@ const Payouts: React.FC = () => {
         'Method',
         'Reference',
         'Transfer ID',
-        'Invoice',
-        'Updated',
+    'Invoice',
+    'Amount',
+    'Updated',
+
         'Initiated',
         'Completed',
         'Failed',
@@ -539,11 +541,12 @@ const Payouts: React.FC = () => {
     const payoutProviderLabel = isMomoProvider ? 'MoMo' : isFlutterwaveProvider ? 'Flutterwave' : 'Stripe';
 
     const canConnectPayout = !payoutValidationError && !payoutLoading;
-    const payoutEntries = useMemo(() => payoutLogs.slice(0, 5), [payoutLogs]);
+    const payoutEntries = useMemo(() => payoutLogs.slice(0, 20), [payoutLogs]);
     const latestPayout = payoutEntries[0];
     const getPayoutStatusLabel = (action?: string) => {
         if (!action) return t('Pending');
         switch (action) {
+            case 'PAYOUT_SENT':
             case 'PAYOUT_INITIATED':
                 return t('Initiated');
             case 'PAYOUT_COMPLETED':
@@ -604,9 +607,12 @@ const Payouts: React.FC = () => {
                         {t('Payments are disabled until a payout account is connected.')}
                     </p>
 
-                    <div className="mb-4 flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm">
-                        <span className="text-slate-600">{t('Payout method')}</span>
-                        <span className="font-semibold text-slate-900">{payoutProviderLabel}</span>
+                    <div className="mb-4 flex items-center justify-between rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm">
+                        <span className="text-emerald-800 font-medium">{t('Payout method')}</span>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <span className="font-bold text-emerald-900">{payoutProviderLabel} (Instant)</span>
+                        </div>
                     </div>
 
                     {formData.paymentConfig?.enabled && payoutAccountSummary && (
@@ -794,7 +800,10 @@ const Payouts: React.FC = () => {
 
                     <div className="mt-4 rounded-lg border border-slate-100 bg-white px-4 py-3 text-sm">
                         <div className="flex items-center justify-between">
-                            <span className="font-medium text-slate-700">{t('Payout status')}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium text-slate-700">{t('Payout status')}</span>
+                                <Badge status="ACTIVE" label="Real-time" />
+                            </div>
                             {latestPayout && (
                                 <span className={`text-xs font-semibold ${payoutStatusTone}`}>
                                     {payoutStatusLabel}
@@ -855,6 +864,7 @@ const Payouts: React.FC = () => {
                                     <tr>
                                         <th className="px-4 py-3 font-medium text-slate-500">{t('Date')}</th>
                                         <th className="px-4 py-3 font-medium text-slate-500">{t('Status')}</th>
+                                        <th className="px-4 py-3 font-medium text-slate-500">{t('Amount')}</th>
                                         <th className="px-4 py-3 font-medium text-slate-500">{t('Provider')}</th>
                                         <th className="px-4 py-3 font-medium text-slate-500">{t('Method')}</th>
                                         <th className="px-4 py-3 font-medium text-slate-500">{t('Reference')}</th>
@@ -877,6 +887,9 @@ const Payouts: React.FC = () => {
                                                 </td>
                                                 <td className="px-4 py-3 text-xs">
                                                     <span className={`font-semibold ${statusTone}`}>{statusLabel}</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-xs font-medium text-slate-900">
+                                                    {details.amount ? `${details.currency || ''} ${details.amount.toLocaleString()}` : '—'}
                                                 </td>
                                                 <td className="px-4 py-3 text-xs text-slate-600">
                                                     {details.provider || '—'}
