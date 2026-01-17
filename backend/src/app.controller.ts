@@ -24,9 +24,10 @@ const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const platformFeePercent = 1.5;
 
 const getFlutterwaveHeaders = () => {
-    // For V4 APIs, use the Secret Key directly in the Authorization header
+    // Standard Flutterwave Authorization header format is 'Bearer SECRET_KEY'
+    // Even for V4 keys, this is the most common format.
     const headers: Record<string, string> = {
-        Authorization: `${flutterwaveSecretKey}`,
+        Authorization: `Bearer ${flutterwaveSecretKey}`,
         'Content-Type': 'application/json',
     };
     if (flutterwaveClientId) {
@@ -202,7 +203,7 @@ const hasPayoutLog = async (organizationId: string, relatedId: string) => {
 };
 
 const createFlutterwaveTransfer = async (payload: any) => {
-    const response = await fetch('https://api.flutterwave.com/v4/transfers', {
+    const response = await fetch('https://api.flutterwave.com/v3/transfers', {
         method: 'POST',
         headers: getFlutterwaveHeaders(),
         body: JSON.stringify(payload),
@@ -572,7 +573,7 @@ const fetchStripeRate = async (from: string, to: string) => {
 
 const fetchFlutterwaveRate = async (from: string, to: string, amount = 1) => {
     if (!flutterwaveSecretKey) return null;
-    const response = await fetch(`https://api.flutterwave.com/v4/rates?from=${from}&to=${to}&amount=${amount}`, {
+    const response = await fetch(`https://api.flutterwave.com/v3/rates?from=${from}&to=${to}&amount=${amount}`, {
         headers: getFlutterwaveHeaders(),
     });
     const data: any = await response.json().catch(() => ({}));
@@ -802,7 +803,7 @@ export class AppController {
     async getFlutterwaveBanks(@Req() req: Request, @Res() res: Response) {
         const country = String(req.query.country || 'NG').toUpperCase();
         try {
-            const response = await fetch(`https://api.flutterwave.com/v4/banks/${country}`, {
+            const response = await fetch(`https://api.flutterwave.com/v3/banks/${country}`, {
                 headers: getFlutterwaveHeaders(),
             });
             const data: any = await response.json().catch(() => ({}));
@@ -965,7 +966,7 @@ export class AppController {
         };
 
         try {
-            const response = await fetch('https://api.flutterwave.com/v4/subaccounts', {
+            const response = await fetch('https://api.flutterwave.com/v3/subaccounts', {
                 method: 'POST',
                 headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
@@ -980,7 +981,7 @@ export class AppController {
                 // Rescue Logic: If subaccount exists, fetch it and link it
                 if (errorMsg.toLowerCase().includes('already exists')) {
                     try {
-                        const listResponse = await fetch('https://api.flutterwave.com/v4/subaccounts', {
+                        const listResponse = await fetch('https://api.flutterwave.com/v3/subaccounts', {
                             headers: getFlutterwaveHeaders(),
                         });
                         const listData: any = await listResponse.json();
@@ -1115,7 +1116,7 @@ export class AppController {
         };
 
         try {
-            const response = await fetch('https://api.flutterwave.com/v4/payments', {
+            const response = await fetch('https://api.flutterwave.com/v3/payments', {
                 method: 'POST',
                 headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
@@ -1222,7 +1223,8 @@ export class AppController {
 
         try {
             console.log(`Initializing MoMo charge for ${momoCountry} (${chargeType}) with network: ${payload.network || 'none'}`);
-            const response = await fetch(`https://api.flutterwave.com/v4/charges?type=${encodeURIComponent(chargeType)}`, {
+            console.log('Payload:', JSON.stringify(payload));
+            const response = await fetch(`https://api.flutterwave.com/v3/charges?type=${encodeURIComponent(chargeType)}`, {
                 method: 'POST',
                 headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
@@ -1230,7 +1232,7 @@ export class AppController {
 
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
-                console.error('Flutterwave MoMo charge failed', data);
+                console.error('Flutterwave MoMo charge failed. Status:', response.status, 'Data:', JSON.stringify(data));
                 if (paymentOption) {
                     const linkPayload = {
                         tx_ref: txRef,
@@ -1305,8 +1307,8 @@ export class AppController {
         try {
             const isIdReference = referenceType === 'id';
             const endpoint = isIdReference
-                ? `https://api.flutterwave.com/v4/transactions/${encodeURIComponent(reference)}/verify`
-                : `https://api.flutterwave.com/v4/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`;
+                ? `https://api.flutterwave.com/v3/transactions/${encodeURIComponent(reference)}/verify`
+                : `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`;
             const response = await fetch(endpoint, {
                 headers: getFlutterwaveHeaders(),
             });
@@ -1498,7 +1500,7 @@ export class AppController {
         };
 
         try {
-            const response = await fetch('https://api.flutterwave.com/v4/payments', {
+            const response = await fetch('https://api.flutterwave.com/v3/payments', {
                 method: 'POST',
                 headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
