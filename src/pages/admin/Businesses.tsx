@@ -13,6 +13,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { Building2, Plus } from 'lucide-react';
 import { resolveDefaultCurrency, resolvePayoutProvider } from '@/services/paymentRouting';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
+import { usePrompt } from '@/context/PromptContext';
 
 type CountryOption = {
   code: string;
@@ -41,7 +42,9 @@ const fallbackCountries: CountryOption[] = [
 const Businesses: React.FC = () => {
   const { org, account } = useAdminContext();
   const navigate = useNavigate();
+  const prompt = usePrompt();
   const translationStrings = useMemo(() => ([
+
     'Businesses',
     'Manage multiple businesses under one account.',
     'Create Business',
@@ -207,12 +210,12 @@ const Businesses: React.FC = () => {
   const handleCreateBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.contactEmail.trim()) {
-      alert(t('Please enter your business name and contact email.'));
+      prompt.alert(t('Please enter your business name and contact email.'));
       return;
     }
     const selectedCountry = countries.find((country) => country.code === countryCode);
     if (!selectedCountry) {
-      alert(t('Please select a country.'));
+      prompt.alert(t('Please select a country.'));
       return;
     }
 
@@ -223,7 +226,7 @@ const Businesses: React.FC = () => {
       const payoutProvider = resolvePayoutProvider(selectedCountry.code);
       const currentUserId = getCurrentUserId();
       if (!currentUserId) {
-        alert(t('Please sign in again to continue.'));
+        prompt.alert(t('Please sign in again to continue.'));
         setSaving(false);
         return;
       }
@@ -258,7 +261,7 @@ const Businesses: React.FC = () => {
       navigate({ to: '/org/$slug', params: { slug: newOrg.slug } });
     } catch (error) {
       console.error(error);
-      alert(t('Slug might already exist or invalid data.'));
+      prompt.alert({ message: t('Slug might already exist or invalid data.'), type: 'error' });
     } finally {
       setSaving(false);
     }

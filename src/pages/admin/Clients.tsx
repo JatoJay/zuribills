@@ -6,9 +6,11 @@ import { Button, Input, Card } from '@/components/ui';
 import { Plus, Trash2, Edit2, Search, Mail, Phone, MapPin } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
+import { usePrompt } from '@/context/PromptContext';
 
 const Clients: React.FC = () => {
     const { org } = useAdminContext();
+    const prompt = usePrompt();
     const translationStrings = useMemo(() => ([
         'Clients',
         'Search clients...',
@@ -115,7 +117,8 @@ const Clients: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm(t('Are you sure you want to delete this client?'))) {
+        const confirmed = await prompt.confirm(t('Are you sure you want to delete this client?'));
+        if (confirmed) {
             await deleteClient(id);
             loadClients();
         }

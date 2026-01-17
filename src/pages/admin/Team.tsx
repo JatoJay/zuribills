@@ -13,6 +13,7 @@ import { Lock, Plus, Shield, Trash2 } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
 import { apiFetch } from '@/services/apiClient';
+import { usePrompt } from '@/context/PromptContext';
 
 const PERMISSIONS_LIST = [
     { id: 'MANAGE_INVOICES', label: 'Manage Invoices' },
@@ -24,6 +25,7 @@ type AccessMode = 'assign' | 'edit';
 
 const Team: React.FC = () => {
     const { org, account, isOwner } = useAdminContext();
+    const prompt = usePrompt();
     const translationStrings = useMemo(() => ([
         'Team & Access',
         'Manage your team across all businesses.',
@@ -179,27 +181,37 @@ const Team: React.FC = () => {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                alert(errorData.error || t('Failed to add team member.'));
+                prompt.alert({ message: errorData.error || t('Failed to add team member.'), type: 'error' });
             } else {
                 setIsCreateModalOpen(false);
                 await loadTeam();
             }
         } catch (error) {
             console.error('Failed to provision user', error);
-            alert(t('Failed to add team member.'));
+            prompt.alert({ message: t('Failed to add team member.'), type: 'error' });
         } finally {
             setCreateLoading(false);
         }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm(t('Remove this user?'))) return;
+        const confirmed = await prompt.confirm({
+            message: t('Remove this user?'),
+            type: 'warning',
+            confirmText: t('Remove')
+        });
+        if (!confirmed) return;
         await deleteUser(id);
         await loadTeam();
     };
 
     const handleRemoveAccess = async (membership: OrgMembership) => {
-        if (!confirm(t('Remove access for this business?'))) return;
+        const confirmed = await prompt.confirm({
+            message: t('Remove access for this business?'),
+            type: 'warning',
+            confirmText: t('Remove')
+        });
+        if (!confirmed) return;
         await removeOrgMembership(membership.organizationId, membership.userId);
         await loadTeam();
     };

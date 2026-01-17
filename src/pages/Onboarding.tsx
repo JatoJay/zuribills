@@ -5,6 +5,7 @@ import { createAccount, createOrganization, ensureAuthUser, getAccountById, getO
 import { UserRole } from '../types';
 import { Zap, ShieldCheck, Clock3, Sparkles, CheckCircle } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { usePrompt } from '@/context/PromptContext';
 import { resolveDefaultCurrency, resolvePayoutProvider } from '@/services/paymentRouting';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
@@ -55,6 +56,7 @@ const baseSlides = [
 
 const Onboarding: React.FC = () => {
     const navigate = useNavigate();
+    const prompt = usePrompt();
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
     const selectedPlanId = searchParams.get('plan') || 'yearly';
     const selectedPlan = getPricingPlan(selectedPlanId) || PRICING_PLANS.yearly;
@@ -281,18 +283,18 @@ const Onboarding: React.FC = () => {
         const authEmail = authUser?.email?.trim().toLowerCase() || '';
 
         if (authError || !authUser || !authEmail) {
-            alert(t('Please sign in to continue.'));
+            prompt.alert(t('Please sign in to continue.'));
             navigate({ to: '/login', search: formData.contactEmail ? ({ email: formData.contactEmail.trim() } as any) : {} as any });
             return;
         }
 
         if (!formData.name.trim() || !(formData.contactEmail.trim() || authEmail)) {
-            alert(t('Please enter your business name and contact email.'));
+            prompt.alert(t('Please enter your business name and contact email.'));
             return;
         }
         const selectedCountry = countries.find((country) => country.code === countryCode);
         if (!selectedCountry) {
-            alert(t('Please select a country.'));
+            prompt.alert(t('Please select a country.'));
             return;
         }
         setLoading(true);
@@ -370,7 +372,7 @@ const Onboarding: React.FC = () => {
             });
             navigate({ to: `/org/${slug}` });
         } catch (err) {
-            alert(t('Slug might already exist or invalid data.'));
+            prompt.alert({ message: t('Slug might already exist or invalid data.'), type: 'error' });
         } finally {
             setLoading(false);
         }

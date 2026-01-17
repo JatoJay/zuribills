@@ -4,12 +4,13 @@ import { getServices, createService, updateService, deleteService } from '@/serv
 import { Button, Input, Card, formatCurrency } from '@/components/ui';
 import { generateServiceDescription } from '@/services/geminiService';
 import { Plus, Trash2, Wand2, Search, Edit2 } from 'lucide-react';
-
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
+import { usePrompt } from '@/context/PromptContext';
 
 const Services: React.FC = () => {
     const { org } = useAdminContext();
+    const prompt = usePrompt();
     const translationStrings = useMemo(() => ([
         'Services',
         'Search services...',
@@ -127,7 +128,8 @@ const Services: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm(t('Are you sure?'))) {
+        const confirmed = await prompt.confirm(t('Are you sure?'));
+        if (confirmed) {
             await deleteService(id);
             loadServices(org.id);
         }
