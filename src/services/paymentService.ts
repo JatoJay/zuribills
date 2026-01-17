@@ -193,6 +193,14 @@ export const processPayment = async (
 
 export const getRecommendedGateway = (currency: string): PaymentGateway => resolveAfnexProvider(currency);
 
+// Async version that uses dynamic providers from Afnex API
+export const getRecommendedGatewayAsync = async (currency: string): Promise<PaymentGateway> =>
+    resolveAfnexProviderAsync(currency);
+
+// Get all available gateways for a currency (for showing user options)
+export const getAvailableGateways = async (currency: string): Promise<AfnexProviderInfo[]> =>
+    getProvidersForCurrency(currency);
+
 export const isGatewayConfigured = (_gateway: PaymentGateway): boolean => true;
 
 export const fetchProviderRate = async (
