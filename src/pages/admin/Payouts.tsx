@@ -540,10 +540,9 @@ const Payouts: React.FC = () => {
         const updated: Organization = {
             ...formData,
             paymentConfig: {
-                ...formData.paymentConfig,
                 enabled: false,
-                accountId: '', // Clear subaccount/payout ID
-                momoMsisdn: '', // Clear momo number
+                provider: 'flutterwave',
+                platformFeePercent: PLATFORM_FEE_PERCENT,
             } as any
         };
 
