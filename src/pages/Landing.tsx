@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input } from '../components/ui';
 import { askBusinessAnalyst } from '@/services/geminiService';
@@ -20,7 +20,6 @@ import {
   MousePointer2,
   BarChart3,
   ShieldCheck,
-  Wallet,
   ChevronDown,
   Bot
 } from 'lucide-react';
@@ -31,16 +30,44 @@ const HERO_HIGHLIGHTS = ['No credit card', 'Setup in minutes', 'Shareable link']
 
 const PRODUCT_FEATURES = [
   {
-    title: 'Zooming service catalog',
-    description: 'Organize packages visually so clients understand the story behind your pricing.',
+    category: 'Sales & Branding',
+    categoryIcon: <Layers className="w-4 h-4 text-emerald-500" />,
+    brand: 'Client Catalogs',
+    title: 'Showcase your services with high-fidelity catalogs',
+    description: 'Create a professional digital presence for your packages. Let clients explore your offerings through a zooming visual interface designed for clarity and conversion.',
+    image: '/features/catalog-mock.png',
+    bgColor: 'bg-emerald-500/5',
+    labelColor: 'text-emerald-500',
   },
   {
-    title: 'Expense invoices',
-    description: 'Capture vendor bills, operating costs, and reimbursements in one place.',
+    category: 'Automation',
+    categoryIcon: <Bot className="w-4 h-4 text-blue-500" />,
+    brand: 'AI Agent',
+    title: 'Let the AI monitor and follow up on your behalf',
+    description: 'Our intelligent agent scans your invoices daily. It detects overdue payments and drafts context-aware reminders, ensuring you get paid without the manual admin work.',
+    image: '/features/ai-mock.png',
+    bgColor: 'bg-blue-500/5',
+    labelColor: 'text-blue-500',
   },
   {
-    title: 'Tax-ready reports',
-    description: 'Generate monthly or yearly cash-flow reports for seamless tax filing.',
+    category: 'Payments',
+    categoryIcon: <Zap className="w-4 h-4 text-orange-500" />,
+    brand: 'Instant Payouts',
+    title: 'Receive funds in real-time with direct bank routing',
+    description: 'Bypass standard settlement delays. When a customer pays, our direct routing engine pushes the net amount to your bank account or mobile wallet instantly.',
+    image: '/features/payment-mock.png',
+    bgColor: 'bg-orange-500/5',
+    labelColor: 'text-orange-500',
+  },
+  {
+    category: 'Intelligence',
+    categoryIcon: <BarChart3 className="w-4 h-4 text-purple-500" />,
+    brand: 'Deep Analytics',
+    title: 'Understand your cash flow with tax-ready reporting',
+    description: 'Get a clear view of your business health. Generate monthly or yearly inflow/outflow reports that make tax season a breeze and auditing effortless.',
+    image: '/features/analytics-mock.png',
+    bgColor: 'bg-purple-500/5',
+    labelColor: 'text-purple-500',
   },
 ];
 
@@ -190,7 +217,7 @@ const NavBar: React.FC<{
 }> = ({ t, language, languages, onLanguageChange }) => {
   const navigate = useNavigate();
   return (
-    <nav className="fixed w-full z-50 bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-[0_10px_40px_-30px_rgba(15,23,42,0.45)]">
+    <nav className="fixed w-full z-[100] bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-[0_10px_40px_-30px_rgba(15,23,42,0.45)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div
@@ -292,20 +319,129 @@ const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => 
   </div>
 );
 
-const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; description: string; className?: string }> = ({
-  icon,
-  title,
-  description,
-  className = '',
-}) => (
-  <div className={`p-6 rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl text-foreground shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)] transition-transform duration-300 hover:-translate-y-1 ${className}`}>
-    <div className="w-12 h-12 rounded-full bg-primary text-[var(--on-primary)] flex items-center justify-center mb-4 shadow-soft">
-      {icon}
+const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index: number; scrollProgress: number; t: any }> = ({ feature, index, scrollProgress, t }) => {
+  const count = PRODUCT_FEATURES.length;
+  
+  // arrival starts slightly before its segment and completes at the start of its segment
+  const segmentSize = 1 / count;
+  const startAt = index * segmentSize;
+  
+  // Progress of this card coming onto the screen (0 to 1)
+  const arrival = Math.max(0, Math.min(1, (scrollProgress - (startAt - 0.1)) / 0.1));
+  
+  // Progress of this card being covered by the NEXT card (0 to 1)
+  const nextStart = (index + 1) * segmentSize;
+  const recession = Math.max(0, Math.min(1, (scrollProgress - nextStart) / 0.1));
+  
+  const style: React.CSSProperties = {
+    transform: `translateY(${(1 - arrival) * 60}vh) scale(${1 - (recession * 0.05)})`,
+    opacity: arrival - (recession * 0.6),
+    zIndex: 10 + index,
+    visibility: arrival > 0 ? 'visible' : 'hidden',
+    transition: 'transform 0.05s linear, opacity 0.05s linear'
+  };
+
+  return (
+    <div className="absolute inset-0 w-full h-full flex items-center justify-center px-4" style={style}>
+      <div className="bg-white/95 rounded-[48px] border border-black/[0.05] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] backdrop-blur-xl overflow-hidden min-h-[580px] w-full max-w-6xl flex flex-col lg:flex-row items-center group">
+        {/* Content Side */}
+        <div className="p-12 lg:p-20 flex-1 relative z-10 text-left">
+          <div className="flex items-center gap-3 mb-8">
+            <div className={`w-10 h-10 rounded-xl ${feature.bgColor} flex items-center justify-center shadow-sm border border-black/[0.03]`}>
+              {feature.categoryIcon}
+            </div>
+            <span className={`text-[13px] font-black uppercase tracking-[0.2em] ${feature.labelColor}`}>
+              {t(feature.category)}
+            </span>
+          </div>
+          
+          <h3 className="text-primary font-display font-bold text-2xl mb-6 tracking-tight">{t(feature.brand)}</h3>
+          <h2 className="text-[40px] lg:text-[56px] font-display font-medium tracking-tight leading-[1.05] mb-10 text-[#0b0b0b]">
+            {t(feature.title)}
+          </h2>
+          <p className="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">
+            {t(feature.description)}
+          </p>
+
+          <Button variant="primary" className="mt-12 rounded-2xl h-14 px-10 text-base">
+             {t('Learn more')}
+          </Button>
+        </div>
+
+        {/* Visual Side (Mockup) */}
+        <div className="flex-1 w-full h-full relative p-12 lg:p-0 flex justify-center items-center bg-[#fcfcfc] border-l border-black/[0.03]">
+          <div className="absolute inset-0 bg-grid-slate-200/40 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
+          
+          {/* Animated Mobile Mockup */}
+          <div className="relative z-10 w-[290px] h-[580px] bg-[#000000] rounded-[48px] border-[10px] border-[#121212] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden transform lg:translate-y-20 lg:translate-x-12 lg:-rotate-[8deg] transition-all duration-700">
+             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#121212] rounded-b-2xl z-20" />
+             
+             <div className="p-6 pt-16 space-y-8 text-center">
+                <div className="h-12 w-full bg-white/5 rounded-2xl animate-pulse" />
+                <div className="space-y-3">
+                   <div className="h-2 w-2/3 bg-white/10 rounded-full mx-auto" />
+                   <div className="h-2 w-full bg-white/5 rounded-full mx-auto" />
+                </div>
+                <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/20 via-teal-500/5 to-transparent rounded-[36px] border border-white/5 flex items-center justify-center shadow-inner overflow-hidden">
+                   <feature.categoryIcon.type className="w-14 h-14 text-primary opacity-80" />
+                </div>
+                <div className="h-14 w-full bg-primary rounded-2xl flex items-center justify-center font-bold text-[#000000] text-sm shadow-xl shadow-primary/30">
+                   {t('Confirm')}
+                </div>
+             </div>
+          </div>
+
+          {/* Decorative Orbits */}
+          <div className="absolute w-[450px] h-[450px] rounded-full border border-slate-200/50 -z-10" />
+          <div className="absolute w-[600px] h-[600px] rounded-full border border-slate-200/30 -z-10" />
+        </div>
+      </div>
     </div>
-    <h3 className="text-lg font-display font-semibold text-current mb-2">{title}</h3>
-    <p className="text-sm leading-relaxed opacity-80">{description}</p>
-  </div>
-);
+  );
+};
+
+const FeatureSlider: React.FC<{ t: any }> = ({ t }) => {
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      
+      // Calculate how far through the section we are
+      // 0 = section top at viewport top
+      // 1 = section bottom at viewport top
+      const totalScrollableHeight = rect.height - viewportHeight;
+      const currentScroll = -rect.top;
+      const progress = Math.max(0, Math.min(1, currentScroll / totalScrollableHeight));
+      
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <section ref={containerRef} className="relative h-[400vh] bg-transparent">
+      <div className="sticky top-0 h-screen overflow-hidden flex items-center justify-center">
+        <div className="max-w-7xl mx-auto w-full h-full relative">
+           {PRODUCT_FEATURES.map((feature, index) => (
+             <StackedFeatureCard 
+               key={feature.brand} 
+               feature={feature} 
+               index={index} 
+               scrollProgress={scrollProgress}
+               t={t}
+             />
+           ))}
+        </div>
+      </div>
+    </section>
+  );
+};
 
 const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([
@@ -641,7 +777,7 @@ const Landing: React.FC = () => {
     'Product',
     'A single canvas for every client touchpoint.',
     'Replace scattered tools with a focused experience. Your catalog, invoices, expenses, and payments live in one place.',
-    ...PRODUCT_FEATURES.flatMap(feature => [feature.title, feature.description]),
+    ...PRODUCT_FEATURES.flatMap(feature => [feature.title, feature.description, feature.category, feature.brand]),
     'How it works',
     'From setup to payment in three moves.',
     ...HOW_IT_WORKS_STEPS.flatMap(step => [step.title, step.description]),
@@ -683,11 +819,17 @@ const Landing: React.FC = () => {
     'Developer Policy',
     'IMS Policy',
     'Terms of Use',
+    'Disclaimer',
     'Privacy Policy',
     'Security',
     'Cookies',
     'Start building',
-    'with InvoiceFlow today'
+    'with InvoiceFlow today',
+    'Sales & Branding',
+    'Automation',
+    'Intelligence',
+    'Confirm',
+    'Learn more'
   ]), []);
   const { t, language, setLanguage } = useTranslation(translationStrings);
   const languageOptions = useMemo(() => {
@@ -819,28 +961,19 @@ const Landing: React.FC = () => {
       <section id="product" className="py-24 bg-transparent relative overflow-hidden">
         <div className="absolute -top-20 right-8 w-64 h-64 bg-primary/10 blur-[120px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-14">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-24">
             <div>
               <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('Product')}</div>
-              <h2 className="text-3xl md:text-4xl font-display font-semibold">
+              <h2 className="text-4xl md:text-5xl font-display font-semibold">
                 {t('A single canvas for every client touchpoint.')}
               </h2>
             </div>
-            <p className="text-muted max-w-xl">
+            <p className="text-muted max-w-xl text-lg">
               {t('Replace scattered tools with a focused experience. Your catalog, invoices, expenses, and payments live in one place.')}
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {PRODUCT_FEATURES.map((feature, index) => (
-              <FeatureCard
-                key={feature.title}
-                icon={[<Layers className="w-5 h-5" />, <Wallet className="w-5 h-5" />, <BarChart3 className="w-5 h-5" />][index]}
-                title={t(feature.title)}
-                description={t(feature.description)}
-              />
-            ))}
-          </div>
+          <FeatureSlider t={t} />
         </div>
       </section>
 
@@ -1100,7 +1233,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
       <div className="sticky top-0 h-[450px] flex items-center overflow-hidden bg-[#000000] z-10">
         <div className="max-w-7xl mx-auto px-10 md:px-16 w-full relative flex items-center justify-between h-full">
           <div className="max-w-2xl relative z-20">
-            <h2 className="text-[40px] md:text-[52px] font-display font-medium tracking-[-0.03em] leading-[1.1] mb-10 text-white">
+            <h2 className="text-[40px] md:text-[52px] font-display font-medium tracking-[-0.03em] leading-[1.1] mb-10 text-white text-left">
               {t('Start building')} <br />
               {t('with InvoiceFlow today')}
             </h2>
@@ -1164,7 +1297,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
             <div className="py-24">
               {/* Nav Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-12 gap-y-24">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-12 gap-y-24 text-left">
                 
                 {/* Brand/Social Column */}
                 <div className="col-span-2 lg:col-span-1">
@@ -1253,7 +1386,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
               </div>
 
               {/* Disclaimer Section */}
-              <div className="mt-32 pt-12 border-t border-white/[0.03]">
+              <div className="mt-32 pt-12 border-t border-white/[0.03] text-left">
                  <p className="text-[11px] leading-[1.8] text-white/20 max-w-5xl tracking-wide">
                    <span className="font-black text-white/30 mr-2 uppercase tracking-widest text-white/40">{t('Disclaimer:')}</span>
                    {t('The information provided on this website is intended for general informational purposes only and does not constitute financial, legal, or professional advice. While we strive to ensure that the content presented is accurate and up-to-date, we make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability. Our platform is designed to ensure secure access to financial accounts for the purposes of retrieving statements, monitoring transactions in real-time, and verifying customer identities.')}
