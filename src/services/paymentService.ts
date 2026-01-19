@@ -88,8 +88,8 @@ export const initAfnexPayment = async (
         // Resolve provider based on currency for Afnex
         let provider = 'flutterwave';
         if (currency === 'NGN') provider = 'paystack';
-        else if (currency === 'KES') provider = 'pesapal';
-        else if (currency === 'RWF' || currency === 'GHS' || currency === 'ZAR') provider = 'mtn_momo';
+        // Removed explicit overrides for MoMo to default to Flutterwave via Afnex
+
 
         const response = await apiFetch('/api/payments/afnex/charge', {
             method: 'POST',
