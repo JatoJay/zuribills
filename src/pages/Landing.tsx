@@ -1127,12 +1127,12 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
       </div>
 
       {/* SECTION 2: THE GLASS OVERLAP FOOTER */}
-      <div className="relative z-20 -mt-52 px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="max-w-7xl mx-auto rounded-[48px] border border-white/10 bg-[#121212]/60 backdrop-blur-[80px] shadow-[0_-40px_100px_-20px_rgba(0,0,0,0.9)] overflow-hidden">
+      <div className="relative z-20 -mt-64 px-4 sm:px-6 lg:px-8 pb-16 flex justify-center">
+        <div className="w-full max-w-[1600px] rounded-[48px] border border-white/10 bg-white/[0.04] backdrop-blur-[120px] shadow-[0_-40px_100px_-20px_rgba(0,0,0,0.9)] overflow-hidden">
           
           {/* Top Integrated Header Row */}
-          <div className="px-10 md:px-16 py-10 flex flex-col md:flex-row justify-between items-center gap-6 border-b border-white/[0.05]">
-            <div className="flex items-center gap-3">
+          <div className="px-10 md:px-20 py-12 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-[6px] bg-white flex items-center justify-center">
                   <Zap className="w-4 h-4 text-black fill-current" />
@@ -1146,9 +1146,13 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
             </div>
           </div>
 
-          <div className="px-10 md:px-16 py-20">
+          <div className="px-10 md:px-20">
+            <div className="w-full h-px bg-white/[0.08]" />
+          </div>
+
+          <div className="px-10 md:px-20 py-24">
             {/* Nav Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-12 gap-y-20">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-12 gap-y-24">
               
               {/* Brand/Social Column */}
               <div className="col-span-2 lg:col-span-1">
