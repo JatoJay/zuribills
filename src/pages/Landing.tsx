@@ -363,8 +363,8 @@ const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index:
             {t(feature.description)}
           </p>
 
-          <Button variant="primary" className="mt-12 rounded-2xl h-14 px-10 text-base">
-             {t('Learn more')}
+          <Button variant="primary" className="mt-12 rounded-2xl h-14 px-10 text-base shadow-lg shadow-primary/20">
+             {t('Start with')} {t(feature.brand)}
           </Button>
         </div>
 
@@ -373,7 +373,7 @@ const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index:
           <div className="absolute inset-0 bg-grid-slate-200/40 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
           
           {/* Animated Mobile Mockup */}
-          <div className="relative z-10 w-[290px] h-[580px] bg-[#000000] rounded-[48px] border-[10px] border-[#121212] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden transform lg:translate-y-20 lg:translate-x-12 lg:-rotate-[8deg] transition-all duration-700">
+          <div className="relative z-10 w-[290px] h-[580px] bg-[#000000] rounded-[48px] border-[10px] border-[#121212] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden transform lg:translate-y-20 lg:translate-x-12 lg:-rotate-[8deg]">
              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#121212] rounded-b-2xl z-20" />
              
              <div className="p-6 pt-16 space-y-8 text-center">
@@ -829,7 +829,8 @@ const Landing: React.FC = () => {
     'Automation',
     'Intelligence',
     'Confirm',
-    'Learn more'
+    'Learn more',
+    'Start with'
   ]), []);
   const { t, language, setLanguage } = useTranslation(translationStrings);
   const languageOptions = useMemo(() => {
