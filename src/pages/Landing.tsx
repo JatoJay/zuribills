@@ -1113,25 +1113,25 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
               </Button>
               <Button
                 variant="outline"
-                className="h-[52px] px-8 rounded-full border-white/20 text-[#FFFFFF] hover:bg-white/10 font-bold text-sm transition-all"
+                className="h-[52px] px-8 rounded-full border-white/40 text-white hover:bg-white/10 font-bold text-sm transition-all bg-white/5 backdrop-blur-sm"
               >
                 {t('See a demo')} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
           </div>
 
-          {/* Background Illustration (3 Slabs - Scaled Down) */}
-          <div className="absolute right-[-5%] top-0 bottom-0 w-2/3 hidden lg:flex items-center justify-end gap-8 opacity-40 pointer-events-none select-none pr-32">
+          {/* Background Illustration (3 Slabs - Enhanced Visibility) */}
+          <div className="absolute right-[-5%] top-0 bottom-0 w-2/3 hidden lg:flex items-center justify-end gap-8 opacity-80 pointer-events-none select-none pr-32">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="w-[160px] h-[450px] bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a] rounded-[32px] border border-white/[0.05] shadow-[15px_15px_40px_rgba(0,0,0,0.5)] transform -rotate-[22deg] skew-x-[-8deg] transition-transform duration-700"
+                className="w-[160px] h-[450px] bg-gradient-to-b from-[#2a2a2a] to-[#0f0f0f] rounded-[32px] border border-white/20 shadow-[20px_20px_60px_rgba(0,0,0,0.8)] transform -rotate-[22deg] skew-x-[-8deg] transition-transform duration-700"
                 style={{
                   marginTop: `${i * 100}px`,
-                  boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.1)',
+                  boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.15)',
                 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] to-transparent rounded-[32px]" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.05] to-transparent rounded-[32px]" />
               </div>
             ))}
           </div>
@@ -1140,7 +1140,8 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
       {/* SECTION 2: THE GLASS OVERLAP FOOTER (Scrolls over Section 1) */}
       <div className="relative z-30 px-4 sm:px-6 lg:px-8 pb-16 flex justify-center bg-transparent -mt-16">
-        <div className="w-full max-w-[1600px] rounded-[48px] border border-white/10 bg-black/60 backdrop-blur-[120px] shadow-[0_-80px_100px_rgba(0,0,0,1)] overflow-hidden">
+        <div className="w-full max-w-[1600px] rounded-[48px] border border-white/20 bg-white/[0.06] backdrop-blur-[160px] shadow-[0_-80px_100px_rgba(0,0,0,1)] overflow-hidden">
+
           
           <div className="max-w-7xl mx-auto px-10 md:px-16">
             {/* Top Integrated Header Row */}
