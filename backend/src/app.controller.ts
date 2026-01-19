@@ -924,9 +924,10 @@ export class AppController {
             },
         };
 
-        if (payload.provider === 'mtn_momo' || payload.provider === 'mpesa') {
+        if (payerPhone) {
             payload.phone = payerPhone;
-        } else {
+        }
+        if (customerEmail || invoice.client_email) {
             payload.email = customerEmail || invoice.client_email;
         }
 
