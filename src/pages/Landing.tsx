@@ -190,7 +190,7 @@ const NavBar: React.FC<{
 }> = ({ t, language, languages, onLanguageChange }) => {
   const navigate = useNavigate();
   return (
-    <nav className="fixed w-full z-50 bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-[0_10px_40px_-30px_rgba(15,23,42,0.4)]">
+    <nav className="fixed w-full z-50 bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-[0_10px_40px_-30px_rgba(15,23,42,0.45)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div
@@ -683,7 +683,6 @@ const Landing: React.FC = () => {
     'Developer Policy',
     'IMS Policy',
     'Terms of Use',
-    'Disclaimer',
     'Privacy Policy',
     'Security',
     'Cookies',
@@ -1096,10 +1095,10 @@ const Landing: React.FC = () => {
 const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   const navigate = useNavigate();
   return (
-    <footer className="relative bg-[#000000] text-white font-sans">
-      {/* SECTION 1: CTA WITH 3D VISUALS (Sticky Reveal) */}
-      <div className="sticky top-0 h-[700px] flex items-center overflow-hidden bg-[#000000] z-10">
-        <div className="max-w-7xl mx-auto px-10 md:px-16 w-full relative h-full flex items-center">
+    <div className="relative bg-black">
+      {/* SECTION 1: CTA WITH 3D VISUALS (Sticky Base) */}
+      <div className="sticky top-0 h-screen min-h-[700px] flex items-center overflow-hidden bg-[#000000] z-10">
+        <div className="max-w-7xl mx-auto px-10 md:px-16 w-full relative h-full flex items-center justify-between">
           <div className="max-w-2xl relative z-20">
             <h2 className="text-[48px] md:text-[64px] font-display font-medium tracking-[-0.03em] leading-[1.05] mb-12 text-white">
               {t('Start building')} <br />
@@ -1121,7 +1120,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
             </div>
           </div>
 
-          {/* Background Illustration (Bringing it back) */}
+          {/* Background Illustration (Bringing it back - 3 Slabs + Picture) */}
           <div className="absolute right-[-5%] top-0 bottom-0 w-2/3 hidden lg:flex items-center justify-end pointer-events-none select-none">
              <div className="relative w-[600px] h-[500px]">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-[120px] opacity-40 animate-pulse" />
@@ -1131,13 +1130,18 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
                   className="relative z-10 w-full h-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] transform translate-x-12 translate-y-8"
                 />
                 {/* 3D Glass Slabs behind the image */}
-                <div className="absolute inset-0 flex items-center justify-end gap-6 opacity-30 pr-12">
-                   {[0, 1].map(i => (
+                <div className="absolute inset-0 flex items-center justify-end gap-10 opacity-60 pr-12">
+                   {[0, 1, 2].map(i => (
                      <div 
                        key={i}
-                       className="w-[140px] h-[400px] bg-white/[0.03] rounded-[40px] border border-white/10 backdrop-blur-xl transform -rotate-[22deg] skew-x-[-8deg]"
-                       style={{ marginTop: `${i * 140}px` }}
-                     />
+                       className="w-[180px] h-[550px] bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a] rounded-[48px] border border-white/[0.05] shadow-[20px_20px_60px_rgba(0,0,0,0.5)] transform -rotate-[22deg] skew-x-[-8deg] transition-transform duration-700"
+                       style={{ 
+                         marginTop: `${i * 120}px`,
+                         boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.1)',
+                       }}
+                     >
+                        <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] to-transparent rounded-[48px]" />
+                     </div>
                    ))}
                 </div>
              </div>
@@ -1147,8 +1151,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
       {/* SECTION 2: THE GLASS OVERLAP FOOTER (Scrolls over Section 1) */}
       <div className="relative z-30 px-4 sm:px-6 lg:px-8 pb-16 flex justify-center bg-transparent">
-        {/* The glass card itself needs its own margin-top to start below the viewport of Section 1 */}
-        <div className="w-full max-w-[1600px] rounded-[48px] border border-white/10 bg-black/60 backdrop-blur-[120px] shadow-[0_-50px_100px_rgba(0,0,0,1)] overflow-hidden">
+        <div className="w-full max-w-[1600px] rounded-[48px] border border-white/10 bg-black/60 backdrop-blur-[120px] shadow-[0_-80px_100px_rgba(0,0,0,1)] overflow-hidden">
           
           <div className="max-w-7xl mx-auto px-10 md:px-16">
             {/* Top Integrated Header Row */}
@@ -1270,7 +1273,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           </div>
         </div>
       </div>
-    </footer>
+    </div>
   );
 };
 
