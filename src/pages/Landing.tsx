@@ -1120,16 +1120,10 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
             </div>
           </div>
 
-          {/* Background Illustration (Bringing it back - 3 Slabs + Picture) */}
+          {/* Background Illustration (Bringing it back - 3 Slabs) */}
           <div className="absolute right-[-5%] top-0 bottom-0 w-2/3 hidden lg:flex items-center justify-end pointer-events-none select-none">
              <div className="relative w-[600px] h-[500px]">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-[120px] opacity-40 animate-pulse" />
-                <img 
-                  src="/dashboard_sync.svg" 
-                  alt="Footer Illustration" 
-                  className="relative z-10 w-full h-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] transform translate-x-12 translate-y-8"
-                />
-                {/* 3D Glass Slabs behind the image */}
+                {/* 3D Glass Slabs only - removed dashboard_sync image */}
                 <div className="absolute inset-0 flex items-center justify-end gap-10 opacity-60 pr-12">
                    {[0, 1, 2].map(i => (
                      <div 
