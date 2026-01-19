@@ -1082,83 +1082,94 @@ const Landing: React.FC = () => {
 const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   const navigate = useNavigate();
   return (
-    <footer className="relative bg-black text-white overflow-hidden">
-      {/* SECTION 1: CTA (The part the footer will overlap) */}
-      <div className="relative pt-32 pb-64 px-4 sm:px-6 lg:px-8 bg-[#050505]">
-        {/* Background 3D Pillars (CSS Art) */}
-        <div className="absolute right-0 top-0 bottom-0 w-1/2 hidden lg:flex items-center justify-end gap-12 opacity-20 pointer-events-none pr-24">
-          <div className="w-24 h-[500px] bg-gradient-to-b from-white/20 to-transparent rounded-full rotate-[25deg] blur-sm translate-y-[-100px]" />
-          <div className="w-24 h-[500px] bg-gradient-to-b from-white/20 to-transparent rounded-full rotate-[25deg] blur-sm translate-y-[-20px]" />
-          <div className="w-24 h-[500px] bg-gradient-to-b from-white/20 to-transparent rounded-full rotate-[25deg] blur-sm translate-y-[60px]" />
+    <footer className="relative bg-[#000000] text-white overflow-hidden font-sans">
+      {/* SECTION 1: CTA WITH 3D VISUALS */}
+      <div className="relative pt-40 pb-72 px-4 sm:px-6 lg:px-8 bg-[#000000]">
+        {/* Background Slabs (3D Visual Effect) */}
+        <div className="absolute right-[-10%] top-0 bottom-0 w-2/3 hidden lg:flex items-center justify-end gap-10 opacity-60 pointer-events-none select-none pr-32">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-[180px] h-[550px] bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a] rounded-[48px] border border-white/[0.05] shadow-[20px_20px_60px_rgba(0,0,0,0.5)] transform -rotate-[22deg] skew-x-[-8deg] transition-transform duration-700 hover:scale-105"
+              style={{
+                marginTop: `${i * 120}px`,
+                boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.1)',
+              }}
+            >
+              {/* Internal slab glow */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] to-transparent rounded-[48px]" />
+            </div>
+          ))}
         </div>
-        
+
         <div className="max-w-7xl mx-auto relative z-10">
-          <div className="max-w-3xl">
-            <h2 className="text-6xl md:text-8xl font-display font-medium tracking-tighter mb-10">
-              {t('Start building with InvoiceFlow today')}
+          <div className="max-w-4xl">
+            <h2 className="text-[56px] md:text-[84px] font-display font-medium tracking-[-0.04em] leading-[0.95] mb-12">
+              {t('Start building')} <br />
+              {t('with InvoiceFlow today')}
             </h2>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-5">
               <Button
                 onClick={() => navigate({ to: '/onboarding' })}
-                className="h-14 px-10 rounded-full bg-white text-black font-bold hover:bg-gray-200 transition-all border-none"
+                className="h-[60px] px-10 rounded-full bg-[#FFFFFF] text-[#000000] font-bold text-lg hover:bg-opacity-90 transition-all border-none"
               >
                 {t('Start for free')}
               </Button>
               <Button
                 variant="outline"
-                className="h-14 px-10 rounded-full border-white/20 text-white hover:bg-white/10 font-bold transition-all"
+                className="h-[60px] px-10 rounded-full border-white/20 text-[#FFFFFF] hover:bg-white/10 font-bold text-lg transition-all"
               >
-                {t('See a demo')} <ArrowRight className="w-4 h-4 ml-2" />
+                {t('See a demo')} <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* SECTION 2: MAIN FOOTER (The Glass Overlap) */}
-      <div className="relative z-20 -mt-40 px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="max-w-7xl mx-auto rounded-[40px] border border-white/10 bg-white/[0.03] backdrop-blur-[60px] shadow-[0_-20px_80px_-20px_rgba(0,0,0,0.8)] overflow-hidden">
+      {/* SECTION 2: THE GLASS OVERLAP FOOTER */}
+      <div className="relative z-20 -mt-52 px-4 sm:px-6 lg:px-8 pb-16">
+        <div className="max-w-7xl mx-auto rounded-[48px] border border-white/10 bg-[#121212]/60 backdrop-blur-[80px] shadow-[0_-40px_100px_-20px_rgba(0,0,0,0.9)] overflow-hidden">
           
-          {/* Top Branding Row */}
-          <div className="px-8 md:px-12 py-10 flex flex-col md:flex-row justify-between items-center gap-6 border-b border-white/5">
-            <div className="flex items-center gap-4">
-               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-white flex items-center justify-center">
-                  <Zap className="w-3.5 h-3.5 text-black fill-current" />
+          {/* Top Integrated Header Row */}
+          <div className="px-10 md:px-16 py-10 flex flex-col md:flex-row justify-between items-center gap-6 border-b border-white/[0.05]">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-[6px] bg-white flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-black fill-current" />
                 </div>
-                <span className="font-display font-bold text-xl tracking-tight">InvoiceFlow</span>
+                <span className="font-display font-bold text-[22px] tracking-tight">InvoiceFlow</span>
               </div>
-              <span className="text-xs text-white/30 pt-1 font-medium italic">a Flutterwave company</span>
+              <span className="text-[13px] text-white/30 pt-1 font-medium tracking-wide ml-2">a Flutterwave company</span>
             </div>
-            <div className="text-[10px] uppercase tracking-widest text-white/30 font-bold">
+            <div className="text-[11px] uppercase tracking-[0.25em] text-white/30 font-bold">
               2026 © InvoiceFlow Technologies Nigeria Limited
             </div>
           </div>
 
-          <div className="px-8 md:px-12 py-16">
-            {/* Links Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-16">
+          <div className="px-10 md:px-16 py-20">
+            {/* Nav Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-12 gap-y-20">
               
-              {/* Logo Column */}
+              {/* Brand/Social Column */}
               <div className="col-span-2 lg:col-span-1">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-teal-400 p-3 mb-10 shadow-lg shadow-primary/20 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary to-[#2DD4BF] p-3.5 mb-12 shadow-[0_10px_30px_rgba(14,165,164,0.3)] flex items-center justify-center">
                    <Zap className="w-full h-full text-black fill-current" />
                 </div>
                 
-                <div className="space-y-8">
+                <div className="space-y-10">
                   <div>
-                    <h4 className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold mb-5">Get Started</h4>
-                    <ul className="space-y-3 text-sm font-semibold">
-                      <li><button onClick={() => navigate({ to: '/onboarding' })} className="text-white/60 hover:text-white transition-colors">Create an account</button></li>
-                      <li><button onClick={() => navigate({ to: '/login' })} className="text-white/60 hover:text-white transition-colors">Sign in</button></li>
+                    <h4 className="text-[10px] uppercase tracking-[0.3em] text-white/25 font-black mb-6">Get Started</h4>
+                    <ul className="space-y-4 text-[15px] font-semibold text-white/60">
+                      <li><button onClick={() => navigate({ to: '/onboarding' })} className="hover:text-white transition-colors">Create an account</button></li>
+                      <li><button onClick={() => navigate({ to: '/login' })} className="hover:text-white transition-colors">Sign in</button></li>
                     </ul>
                   </div>
                   <div>
-                    <h4 className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold mb-5">Stay in touch</h4>
-                    <div className="flex gap-5">
-                      <Twitter className="w-5 h-5 text-white/30 hover:text-white transition-colors cursor-pointer" />
-                      <Instagram className="w-5 h-5 text-white/30 hover:text-white transition-colors cursor-pointer" />
-                      <Linkedin className="w-5 h-5 text-white/30 hover:text-white transition-colors cursor-pointer" />
+                    <h4 className="text-[10px] uppercase tracking-[0.3em] text-white/25 font-black mb-6">Stay in touch</h4>
+                    <div className="flex gap-6">
+                      <Twitter className="w-[18px] h-[18px] text-white/30 hover:text-white transition-colors cursor-pointer" />
+                      <Instagram className="w-[18px] h-[18px] text-white/30 hover:text-white transition-colors cursor-pointer" />
+                      <Linkedin className="w-[18px] h-[18px] text-white/30 hover:text-white transition-colors cursor-pointer" />
                     </div>
                   </div>
                 </div>
@@ -1166,8 +1177,8 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
               {/* Products */}
               <div>
-                <h4 className="text-xs uppercase tracking-widest text-white/30 font-bold mb-8">{t('Products')}</h4>
-                <ul className="space-y-4 text-sm font-semibold text-white/70">
+                <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Products')}</h4>
+                <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                   {['Data', 'Payments', 'Statements Pages', 'Payment Pages', 'Prove', 'Lookup', 'Portal', 'Pricing', 'Demo'].map(item => (
                     <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
                   ))}
@@ -1176,8 +1187,8 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
               {/* Use Cases */}
               <div>
-                <h4 className="text-xs uppercase tracking-widest text-white/30 font-bold mb-8">{t('Use Cases')}</h4>
-                <ul className="space-y-4 text-sm font-semibold text-white/70">
+                <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Use Cases')}</h4>
+                <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                   {['Customer Onboarding', 'Credit Risk Assessment', 'Payment Collection', 'Personal Finance Insights'].map(item => (
                     <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
                   ))}
@@ -1186,8 +1197,8 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
               {/* Company */}
               <div>
-                <h4 className="text-xs uppercase tracking-widest text-white/30 font-bold mb-8">{t('Company')}</h4>
-                <ul className="space-y-4 text-sm font-semibold text-white/70">
+                <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Company')}</h4>
+                <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                   {['About Us', 'Careers', 'Coverage', 'Contact'].map(item => (
                     <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
                   ))}
@@ -1196,15 +1207,15 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
               {/* Developers */}
               <div>
-                <h4 className="text-xs uppercase tracking-widest text-white/30 font-bold mb-8">{t('Developers')}</h4>
-                <ul className="space-y-4 text-sm font-semibold text-white/70">
+                <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Developers')}</h4>
+                <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                   {['Documentation', 'API Reference', 'SDKs'].map(item => (
                     <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
                   ))}
                 </ul>
-                <div className="mt-12">
-                   <h4 className="text-xs uppercase tracking-widest text-white/30 font-bold mb-8">{t('Resources')}</h4>
-                    <ul className="space-y-4 text-sm font-semibold text-white/70">
+                <div className="mt-16">
+                   <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Resources')}</h4>
+                    <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                       {['Blog', "Partners' Stories", 'Support', 'Consumers'].map(item => (
                         <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
                       ))}
@@ -1214,19 +1225,20 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
               {/* Legal */}
               <div>
-                <h4 className="text-xs uppercase tracking-widest text-white/30 font-bold mb-8">{t('Legal')}</h4>
-                <ul className="space-y-4 text-sm font-semibold text-white/70">
-                   {["End Users' Policy", 'Privacy Policy', 'Terms of Use', 'Security'].map(item => (
+                <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Legal')}</h4>
+                <ul className="space-y-5 text-[15px] font-semibold text-white/70">
+                   {["End Users' Policy", 'Privacy Policy', 'Terms of Use', 'Security', 'Cookies', 'IMS Policy'].map(item => (
                     <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
                   ))}
                 </ul>
               </div>
             </div>
 
-            {/* Bottom Disclaimer */}
-            <div className="mt-24 pt-10 border-t border-white/5">
-               <p className="text-[10px] leading-relaxed text-white/20 max-w-4xl uppercase tracking-widest font-bold">
-                 {t('Disclaimer: The information provided on this website is intended for general informational purposes only and does not constitute financial, legal, or professional advice. Our platform is designed to ensure secure access to financial accounts for the purposes of retrieving statements, monitoring transactions in real-time, and verifying customer identities.')}
+            {/* Disclaimer Section */}
+            <div className="mt-32 pt-12 border-t border-white/[0.03]">
+               <p className="text-[11px] leading-[1.8] text-white/20 max-w-5xl tracking-wide">
+                 <span className="font-black text-white/30 mr-2 uppercase tracking-widest">{t('Disclaimer:')}</span>
+                 {t('The information provided on this website is intended for general informational purposes only and does not constitute financial, legal, or professional advice. While we strive to ensure that the content presented is accurate and up-to-date, we make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability. Our platform is designed to ensure secure access to financial accounts for the purposes of retrieving statements, monitoring transactions in real-time, and verifying customer identities.')}
                </p>
             </div>
           </div>
