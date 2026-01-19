@@ -321,50 +321,65 @@ const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => 
 
 const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index: number; t: any }> = ({ feature, index, t }) => (
   <div 
-    className="sticky top-28 w-full mb-12"
-    style={{ top: `${112 + (index * 24)}px` }}
+    className="sticky w-full"
+    style={{ 
+        top: `${120 + (index * 20)}px`,
+        zIndex: index + 10,
+        marginBottom: index === PRODUCT_FEATURES.length - 1 ? '0' : '40vh'
+    }}
   >
-    <div className="bg-white rounded-[40px] border border-black/[0.03] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] overflow-hidden min-h-[520px] flex flex-col lg:flex-row items-center">
-      <div className="p-10 lg:p-16 flex-1">
-        <div className="flex items-center gap-2.5 mb-6">
-          <div className={`w-8 h-8 rounded-lg ${feature.bgColor} flex items-center justify-center`}>
+    <div className="bg-white/95 rounded-[48px] border border-black/[0.05] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.12)] backdrop-blur-xl overflow-hidden min-h-[560px] flex flex-col lg:flex-row items-center transition-all duration-500 hover:shadow-[0_50px_120px_-20px_rgba(0,0,0,0.15)] group">
+      <div className="p-12 lg:p-20 flex-1 relative z-10">
+        <div className="flex items-center gap-3 mb-8">
+          <div className={`w-9 h-9 rounded-xl ${feature.bgColor} flex items-center justify-center shadow-sm`}>
             {feature.categoryIcon}
           </div>
-          <span className={`text-[13px] font-bold uppercase tracking-[0.15em] ${feature.labelColor}`}>
+          <span className={`text-[14px] font-black uppercase tracking-[0.2em] ${feature.labelColor}`}>
             {t(feature.category)}
           </span>
         </div>
         
-        <h3 className="text-blue-600 font-display font-bold text-2xl mb-4">{t(feature.brand)}</h3>
-        <h2 className="text-[42px] lg:text-[56px] font-display font-medium tracking-tight leading-[1.1] mb-8 text-[#0b0b0b]">
+        <h3 className="text-primary font-display font-bold text-2xl mb-6 tracking-tight">{t(feature.brand)}</h3>
+        <h2 className="text-[40px] lg:text-[52px] font-display font-medium tracking-tight leading-[1.05] mb-10 text-[#0b0b0b]">
           {t(feature.title)}
         </h2>
-        <p className="text-lg text-slate-500 max-w-xl leading-relaxed">
+        <p className="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">
           {t(feature.description)}
         </p>
+
+        <div className="mt-12 flex items-center gap-4 group/btn cursor-pointer">
+           <span className="text-sm font-bold uppercase tracking-widest text-[#0b0b0b]">{t('Learn more')}</span>
+           <div className="w-10 h-10 rounded-full border border-black/5 flex items-center justify-center transition-transform group-hover/btn:translate-x-1">
+              <ArrowRight className="w-4 h-4 text-black" />
+           </div>
+        </div>
       </div>
 
-      <div className="flex-1 w-full h-full relative p-10 lg:p-0 flex justify-center items-center bg-slate-50/50">
-        <div className="absolute inset-0 bg-grid-slate-100 opacity-50" />
-        <div className="relative z-10 w-[300px] h-[600px] bg-[#0b0b0b] rounded-[52px] border-[12px] border-[#1a1a1a] shadow-2xl overflow-hidden transform lg:translate-y-12 lg:translate-x-12 lg:-rotate-[12deg]">
-           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-[#1a1a1a] rounded-b-2xl z-20" />
-           <div className="p-4 pt-12 space-y-6">
-              <div className="h-12 w-full bg-white/5 rounded-2xl animate-pulse" />
-              <div className="space-y-3">
-                 <div className="h-3 w-2/3 bg-white/10 rounded-full" />
-                 <div className="h-3 w-full bg-white/5 rounded-full" />
+      <div className="flex-1 w-full h-full relative p-12 lg:p-0 flex justify-center items-center bg-[#f8fafc]">
+        <div className="absolute inset-0 bg-grid-slate-200/50 [mask-image:radial-gradient(ellipse_at_center,white,transparent)]" />
+        
+        {/* Animated Mobile Mockup */}
+        <div className="relative z-10 w-[280px] h-[580px] bg-[#0b0b0b] rounded-[48px] border-[10px] border-[#1a1a1a] shadow-[0_50px_100px_rgba(0,0,0,0.4)] overflow-hidden transform lg:translate-y-16 lg:translate-x-12 lg:-rotate-[10deg] transition-transform duration-700 group-hover:rotate-0 group-hover:translate-y-12">
+           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#1a1a1a] rounded-b-2xl z-20" />
+           <div className="p-5 pt-14 space-y-6">
+              <div className="h-10 w-full bg-white/5 rounded-xl animate-pulse" />
+              <div className="space-y-2">
+                 <div className="h-2 w-2/3 bg-white/10 rounded-full" />
+                 <div className="h-2 w-full bg-white/5 rounded-full" />
               </div>
-              <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/20 to-teal-500/10 rounded-3xl border border-white/5 flex items-center justify-center">
-                 <feature.categoryIcon.type className="w-12 h-12 text-primary opacity-50" />
+              <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/30 to-teal-500/10 rounded-[32px] border border-white/5 flex items-center justify-center shadow-inner">
+                 <feature.categoryIcon.type className="w-12 h-12 text-primary opacity-60" />
               </div>
-              <div className="h-14 w-full bg-primary rounded-2xl flex items-center justify-center font-bold text-black">
-                 {t('Confirm')}
+              <div className="h-12 w-full bg-primary rounded-xl flex items-center justify-center font-bold text-black text-sm shadow-lg shadow-primary/20">
+                 {t('Process Action')}
               </div>
            </div>
         </div>
-        {/* Decorative Circles */}
-        <div className="absolute w-[400px] h-[400px] rounded-full border border-slate-200/60 -z-10" />
-        <div className="absolute w-[550px] h-[550px] rounded-full border border-slate-200/40 -z-10" />
+
+        {/* Decorative Floating Elements */}
+        <div className="absolute w-[350px] h-[350px] rounded-full border border-slate-200/80 animate-slow-spin -z-10" />
+        <div className="absolute w-[500px] h-[500px] rounded-full border border-slate-200/40 -z-10" />
+        <div className="absolute top-1/4 right-1/4 w-32 h-32 bg-primary/10 blur-3xl rounded-full" />
       </div>
     </div>
   </div>
@@ -755,7 +770,9 @@ const Landing: React.FC = () => {
     'Sales & Branding',
     'Automation',
     'Intelligence',
-    'Confirm'
+    'Confirm',
+    'Process Action',
+    'Learn more'
   ]), []);
   const { t, language, setLanguage } = useTranslation(translationStrings);
   const languageOptions = useMemo(() => {
