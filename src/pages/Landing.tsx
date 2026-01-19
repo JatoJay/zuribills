@@ -321,26 +321,26 @@ const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => 
 
 const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index: number; t: any }> = ({ feature, index, t }) => (
   <div 
-    className="sticky w-full"
+    className="sticky w-full mb-12"
     style={{ 
-        top: `${120 + (index * 20)}px`,
+        top: `${80 + (index * 32)}px`,
         zIndex: index + 10,
-        marginBottom: index === PRODUCT_FEATURES.length - 1 ? '0' : '40vh'
     }}
   >
-    <div className="bg-white/95 rounded-[48px] border border-black/[0.05] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.12)] backdrop-blur-xl overflow-hidden min-h-[560px] flex flex-col lg:flex-row items-center transition-all duration-500 hover:shadow-[0_50px_120px_-20px_rgba(0,0,0,0.15)] group">
+    <div className="bg-white rounded-[40px] border border-black/[0.08] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] overflow-hidden min-h-[580px] flex flex-col lg:flex-row items-center transition-transform duration-500 hover:-translate-y-1 group">
+      {/* Content Side */}
       <div className="p-12 lg:p-20 flex-1 relative z-10">
         <div className="flex items-center gap-3 mb-8">
-          <div className={`w-9 h-9 rounded-xl ${feature.bgColor} flex items-center justify-center shadow-sm`}>
+          <div className={`w-10 h-10 rounded-xl ${feature.bgColor} flex items-center justify-center shadow-sm border border-black/[0.03]`}>
             {feature.categoryIcon}
           </div>
-          <span className={`text-[14px] font-black uppercase tracking-[0.2em] ${feature.labelColor}`}>
+          <span className={`text-[13px] font-black uppercase tracking-[0.2em] ${feature.labelColor}`}>
             {t(feature.category)}
           </span>
         </div>
         
         <h3 className="text-primary font-display font-bold text-2xl mb-6 tracking-tight">{t(feature.brand)}</h3>
-        <h2 className="text-[40px] lg:text-[52px] font-display font-medium tracking-tight leading-[1.05] mb-10 text-[#0b0b0b]">
+        <h2 className="text-[40px] lg:text-[56px] font-display font-medium tracking-tight leading-[1.05] mb-10 text-[#0b0b0b]">
           {t(feature.title)}
         </h2>
         <p className="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">
@@ -349,37 +349,41 @@ const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index:
 
         <div className="mt-12 flex items-center gap-4 group/btn cursor-pointer">
            <span className="text-sm font-bold uppercase tracking-widest text-[#0b0b0b]">{t('Learn more')}</span>
-           <div className="w-10 h-10 rounded-full border border-black/5 flex items-center justify-center transition-transform group-hover/btn:translate-x-1">
+           <div className="w-10 h-10 rounded-full border border-black/10 flex items-center justify-center transition-transform group-hover/btn:translate-x-1">
               <ArrowRight className="w-4 h-4 text-black" />
            </div>
         </div>
       </div>
 
-      <div className="flex-1 w-full h-full relative p-12 lg:p-0 flex justify-center items-center bg-[#f8fafc]">
-        <div className="absolute inset-0 bg-grid-slate-200/50 [mask-image:radial-gradient(ellipse_at_center,white,transparent)]" />
+      {/* Visual Side (Mockup) */}
+      <div className="flex-1 w-full h-full relative p-12 lg:p-0 flex justify-center items-center bg-[#fcfcfc] border-l border-black/[0.03]">
+        <div className="absolute inset-0 bg-grid-slate-200/40 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
         
         {/* Animated Mobile Mockup */}
-        <div className="relative z-10 w-[280px] h-[580px] bg-[#0b0b0b] rounded-[48px] border-[10px] border-[#1a1a1a] shadow-[0_50px_100px_rgba(0,0,0,0.4)] overflow-hidden transform lg:translate-y-16 lg:translate-x-12 lg:-rotate-[10deg] transition-transform duration-700 group-hover:rotate-0 group-hover:translate-y-12">
-           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#1a1a1a] rounded-b-2xl z-20" />
-           <div className="p-5 pt-14 space-y-6">
-              <div className="h-10 w-full bg-white/5 rounded-xl animate-pulse" />
-              <div className="space-y-2">
+        <div className="relative z-10 w-[290px] h-[580px] bg-[#000000] rounded-[48px] border-[10px] border-[#121212] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden transform lg:translate-y-20 lg:translate-x-12 lg:-rotate-[8deg] transition-all duration-700 group-hover:rotate-0 group-hover:translate-y-10 group-hover:scale-105">
+           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#121212] rounded-b-2xl z-20" />
+           
+           <div className="p-6 pt-16 space-y-8">
+              <div className="h-12 w-full bg-white/5 rounded-2xl animate-pulse" />
+              <div className="space-y-3">
                  <div className="h-2 w-2/3 bg-white/10 rounded-full" />
                  <div className="h-2 w-full bg-white/5 rounded-full" />
+                 <div className="h-2 w-1/2 bg-white/5 rounded-full" />
               </div>
-              <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/30 to-teal-500/10 rounded-[32px] border border-white/5 flex items-center justify-center shadow-inner">
-                 <feature.categoryIcon.type className="w-12 h-12 text-primary opacity-60" />
+              <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/20 via-teal-500/5 to-transparent rounded-[36px] border border-white/5 flex items-center justify-center shadow-inner overflow-hidden">
+                 <div className="w-20 h-20 bg-primary/20 rounded-full blur-2xl animate-pulse" />
+                 <feature.categoryIcon.type className="absolute w-14 h-14 text-primary opacity-80" />
               </div>
-              <div className="h-12 w-full bg-primary rounded-xl flex items-center justify-center font-bold text-black text-sm shadow-lg shadow-primary/20">
+              <div className="h-14 w-full bg-primary rounded-2xl flex items-center justify-center font-bold text-[#000000] text-sm shadow-xl shadow-primary/30">
                  {t('Process Action')}
               </div>
            </div>
         </div>
 
-        {/* Decorative Floating Elements */}
-        <div className="absolute w-[350px] h-[350px] rounded-full border border-slate-200/80 animate-slow-spin -z-10" />
-        <div className="absolute w-[500px] h-[500px] rounded-full border border-slate-200/40 -z-10" />
-        <div className="absolute top-1/4 right-1/4 w-32 h-32 bg-primary/10 blur-3xl rounded-full" />
+        {/* Decorative Orbits */}
+        <div className="absolute w-[450px] h-[450px] rounded-full border border-slate-200/50 -z-10" />
+        <div className="absolute w-[600px] h-[600px] rounded-full border border-slate-200/30 -z-10" />
+        <div className="absolute top-10 right-10 w-40 h-40 bg-primary/5 blur-[80px] rounded-full" />
       </div>
     </div>
   </div>
