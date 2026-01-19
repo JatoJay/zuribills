@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input } from '../components/ui';
 import { askBusinessAnalyst } from '@/services/geminiService';
@@ -6,6 +6,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useParallax } from '@/hooks/useParallax';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
+import { motion, useScroll, useTransform, MotionValue } from 'framer-motion';
 import {
   CheckCircle,
   Zap,
@@ -319,126 +320,113 @@ const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => 
   </div>
 );
 
-const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index: number; scrollProgress: number; t: any }> = ({ feature, index, scrollProgress, t }) => {
+const StackedFeatureCard: React.FC<{ 
+  feature: typeof PRODUCT_FEATURES[0]; 
+  index: number; 
+  scrollYProgress: MotionValue<number>;
+  t: any 
+}> = ({ feature, index, scrollYProgress, t }) => {
   const count = PRODUCT_FEATURES.length;
+  const start = index / count;
+  const end = (index + 1) / count;
+
+  // The card starts off-screen at the bottom and slides in
+  const y = useTransform(scrollYProgress, [start - 0.1, start], ['100vh', '0vh']);
   
-  // arrival starts slightly before its segment and completes at the start of its segment
-  const segmentSize = 1 / count;
-  const startAt = index * segmentSize;
-  
-  // Progress of this card coming onto the screen (0 to 1)
-  const arrival = Math.max(0, Math.min(1, (scrollProgress - (startAt - 0.1)) / 0.1));
-  
-  // Progress of this card being covered by the NEXT card (0 to 1)
-  const nextStart = (index + 1) * segmentSize;
-  const recession = Math.max(0, Math.min(1, (scrollProgress - nextStart) / 0.1));
-  
-  const style: React.CSSProperties = {
-    transform: `translateY(${(1 - arrival) * 60}vh) scale(${1 - (recession * 0.05)})`,
-    opacity: arrival - (recession * 0.6),
-    zIndex: 10 + index,
-    visibility: arrival > 0 ? 'visible' : 'hidden',
-    transition: 'transform 0.05s linear, opacity 0.05s linear'
-  };
+  // Once the card is at the top, it scales down and fades as the next card covers it
+  const scale = useTransform(scrollYProgress, [end, end + 0.1], [1, 0.92]);
+  const opacity = useTransform(scrollYProgress, [end, end + 0.1], [1, 0.3]);
+  const filter = useTransform(scrollYProgress, [end, end + 0.1], ['blur(0px)', 'blur(8px)']);
 
   return (
-    <div className="absolute inset-0 w-full h-full flex items-center justify-center px-4" style={style}>
-      <div className="bg-white/95 rounded-[48px] border border-black/[0.05] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] backdrop-blur-xl overflow-hidden min-h-[580px] w-full max-w-6xl flex flex-col lg:flex-row items-center group">
+    <motion.div 
+      className="sticky top-0 h-screen w-full flex items-center justify-center px-4 md:px-10"
+      style={{ zIndex: 10 + index }}
+    >
+      <motion.div 
+        className="bg-white/95 rounded-[48px] border border-black/[0.05] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] backdrop-blur-3xl overflow-hidden min-h-[620px] w-full max-w-7xl flex flex-col lg:flex-row items-center group relative"
+        style={{ 
+          y,
+          scale,
+          opacity,
+          filter
+        }}
+      >
         {/* Content Side */}
-        <div className="p-12 lg:p-20 flex-1 relative z-10 text-left">
-          <div className="flex items-center gap-3 mb-8">
-            <div className={`w-10 h-10 rounded-xl ${feature.bgColor} flex items-center justify-center shadow-sm border border-black/[0.03]`}>
+        <div className="p-12 lg:p-24 flex-1 relative z-10 text-left">
+          <div className="flex items-center gap-3 mb-10">
+            <div className={`w-12 h-12 rounded-2xl ${feature.bgColor} flex items-center justify-center shadow-sm border border-black/[0.03]`}>
               {feature.categoryIcon}
             </div>
-            <span className={`text-[13px] font-black uppercase tracking-[0.2em] ${feature.labelColor}`}>
+            <span className={`text-[14px] font-black uppercase tracking-[0.25em] ${feature.labelColor}`}>
               {t(feature.category)}
             </span>
           </div>
           
-          <h3 className="text-primary font-display font-bold text-2xl mb-6 tracking-tight">{t(feature.brand)}</h3>
-          <h2 className="text-[40px] lg:text-[56px] font-display font-medium tracking-tight leading-[1.05] mb-10 text-[#0b0b0b]">
+          <h3 className="text-primary font-display font-bold text-3xl mb-8 tracking-tight">{t(feature.brand)}</h3>
+          <h2 className="text-[44px] lg:text-[68px] font-display font-medium tracking-tight leading-[1.0] mb-12 text-[#0b0b0b]">
             {t(feature.title)}
           </h2>
-          <p className="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">
+          <p className="text-xl text-slate-500 max-w-xl leading-relaxed font-medium mb-12">
             {t(feature.description)}
           </p>
 
-          <Button variant="primary" className="mt-12 rounded-2xl h-14 px-10 text-base shadow-lg shadow-primary/20">
-             {t('Start with')} {t(feature.brand)}
+          <Button variant="primary" className="rounded-[20px] h-16 px-12 text-lg font-bold shadow-xl shadow-primary/20">
+             {t('Get started')}
           </Button>
         </div>
 
         {/* Visual Side (Mockup) */}
-        <div className="flex-1 w-full h-full relative p-12 lg:p-0 flex justify-center items-center bg-[#fcfcfc] border-l border-black/[0.03]">
-          <div className="absolute inset-0 bg-grid-slate-200/40 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
+        <div className="flex-1 w-full h-full relative p-12 lg:p-0 flex justify-center items-center bg-[#F9FAFB] border-l border-black/[0.03]">
+          <div className="absolute inset-0 bg-grid-slate-200/50 [mask-image:radial-gradient(ellipse_at_center,white,transparent)]" />
           
-          {/* Animated Mobile Mockup */}
-          <div className="relative z-10 w-[290px] h-[580px] bg-[#000000] rounded-[48px] border-[10px] border-[#121212] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden transform lg:translate-y-20 lg:translate-x-12 lg:-rotate-[8deg]">
-             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#121212] rounded-b-2xl z-20" />
-             
-             <div className="p-6 pt-16 space-y-8 text-center">
-                <div className="h-12 w-full bg-white/5 rounded-2xl animate-pulse" />
-                <div className="space-y-3">
-                   <div className="h-2 w-2/3 bg-white/10 rounded-full mx-auto" />
-                   <div className="h-2 w-full bg-white/5 rounded-full mx-auto" />
+          <div className="relative z-10 w-[310px] h-[640px] bg-[#000000] rounded-[56px] border-[12px] border-[#1a1a1a] shadow-[0_60px_120px_rgba(0,0,0,0.5)] overflow-hidden transform lg:translate-y-20 lg:translate-x-12 lg:-rotate-[8deg] transition-all duration-700 group-hover:rotate-0">
+             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-[#1a1a1a] rounded-b-3xl z-20" />
+             <div className="p-7 pt-20 space-y-8 text-center">
+                <div className="h-14 w-full bg-white/5 rounded-2xl animate-pulse" />
+                <div className="space-y-4">
+                   <div className="h-3 w-2/3 bg-white/10 rounded-full mx-auto" />
+                   <div className="h-3 w-full bg-white/5 rounded-full mx-auto" />
                 </div>
-                <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/20 via-teal-500/5 to-transparent rounded-[36px] border border-white/5 flex items-center justify-center shadow-inner overflow-hidden">
-                   <feature.categoryIcon.type className="w-14 h-14 text-primary opacity-80" />
+                <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/20 via-teal-500/10 to-transparent rounded-[40px] border border-white/10 flex items-center justify-center shadow-inner overflow-hidden relative">
+                   <div className="absolute inset-0 bg-white/5 backdrop-blur-sm" />
+                   <feature.categoryIcon.type className="relative z-10 w-16 h-16 text-primary drop-shadow-glow" />
                 </div>
-                <div className="h-14 w-full bg-primary rounded-2xl flex items-center justify-center font-bold text-[#000000] text-sm shadow-xl shadow-primary/30">
+                <div className="h-16 w-full bg-primary rounded-2xl flex items-center justify-center font-black text-[#000000] text-sm uppercase tracking-widest shadow-2xl shadow-primary/40">
                    {t('Confirm')}
                 </div>
              </div>
           </div>
 
-          {/* Decorative Orbits */}
-          <div className="absolute w-[450px] h-[450px] rounded-full border border-slate-200/50 -z-10" />
-          <div className="absolute w-[600px] h-[600px] rounded-full border border-slate-200/30 -z-10" />
+          <motion.div 
+             animate={{ rotate: 360 }}
+             transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+             className="absolute w-[500px] h-[500px] rounded-full border border-dashed border-slate-300/50 -z-10" 
+          />
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
 const FeatureSlider: React.FC<{ t: any }> = ({ t }) => {
-  const [scrollProgress, setScrollProgress] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      
-      // Calculate how far through the section we are
-      // 0 = section top at viewport top
-      // 1 = section bottom at viewport top
-      const totalScrollableHeight = rect.height - viewportHeight;
-      const currentScroll = -rect.top;
-      const progress = Math.max(0, Math.min(1, currentScroll / totalScrollableHeight));
-      
-      setScrollProgress(progress);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ['start start', 'end end'],
+  });
 
   return (
-    <section ref={containerRef} className="relative h-[400vh] bg-transparent">
-      <div className="sticky top-0 h-screen overflow-hidden flex items-center justify-center">
-        <div className="max-w-7xl mx-auto w-full h-full relative">
-           {PRODUCT_FEATURES.map((feature, index) => (
-             <StackedFeatureCard 
-               key={feature.brand} 
-               feature={feature} 
-               index={index} 
-               scrollProgress={scrollProgress}
-               t={t}
-             />
-           ))}
-        </div>
-      </div>
+    <section ref={containerRef} className="relative h-[600vh] bg-transparent">
+      {PRODUCT_FEATURES.map((feature, index) => (
+        <StackedFeatureCard 
+          key={feature.brand} 
+          feature={feature} 
+          index={index} 
+          scrollYProgress={scrollYProgress}
+          t={t}
+        />
+      ))}
     </section>
   );
 };
@@ -830,7 +818,7 @@ const Landing: React.FC = () => {
     'Intelligence',
     'Confirm',
     'Learn more',
-    'Start with'
+    'Get started'
   ]), []);
   const { t, language, setLanguage } = useTranslation(translationStrings);
   const languageOptions = useMemo(() => {
@@ -1279,7 +1267,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           
           <div className="max-w-7xl mx-auto px-10 md:px-16">
             {/* Top Integrated Header Row */}
-            <div className="py-12 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="py-12 flex flex-col md:flex-row justify-between items-center gap-6 text-left">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-[6px] bg-white flex items-center justify-center">
