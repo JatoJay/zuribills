@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input } from '../components/ui';
 import { askBusinessAnalyst } from '@/services/geminiService';
@@ -319,76 +319,129 @@ const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => 
   </div>
 );
 
-const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index: number; t: any }> = ({ feature, index, t }) => (
-  <div 
-    className="sticky w-full"
-    style={{ 
-        top: `${140 + (index * 20)}px`,
-        zIndex: index + 10,
-        paddingBottom: index === PRODUCT_FEATURES.length - 1 ? '0' : '30vh'
-    }}
-  >
-    <div className="bg-white rounded-[40px] border border-black/[0.05] shadow-[0_-20px_50px_-20px_rgba(0,0,0,0.1),0_40px_100px_-20px_rgba(0,0,0,0.2)] overflow-hidden min-h-[580px] flex flex-col lg:flex-row items-center transition-all duration-500 group">
-      {/* Content Side */}
-      <div className="p-12 lg:p-20 flex-1 relative z-10">
-        <div className="flex items-center gap-3 mb-8">
-          <div className={`w-10 h-10 rounded-xl ${feature.bgColor} flex items-center justify-center shadow-sm border border-black/[0.03]`}>
-            {feature.categoryIcon}
+const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index: number; scrollProgress: number; t: any }> = ({ feature, index, scrollProgress, t }) => {
+  const count = PRODUCT_FEATURES.length;
+  
+  // arrival starts slightly before its segment and completes at the start of its segment
+  const segmentSize = 1 / count;
+  const startAt = index * segmentSize;
+  
+  // Progress of this card coming onto the screen (0 to 1)
+  const arrival = Math.max(0, Math.min(1, (scrollProgress - (startAt - 0.1)) / 0.1));
+  
+  // Progress of this card being covered by the NEXT card (0 to 1)
+  const nextStart = (index + 1) * segmentSize;
+  const recession = Math.max(0, Math.min(1, (scrollProgress - nextStart) / 0.1));
+  
+  const style: React.CSSProperties = {
+    transform: `translateY(${(1 - arrival) * 60}vh) scale(${1 - (recession * 0.05)})`,
+    opacity: arrival - (recession * 0.6),
+    zIndex: 10 + index,
+    visibility: arrival > 0 ? 'visible' : 'hidden',
+    transition: 'transform 0.05s linear, opacity 0.05s linear'
+  };
+
+  return (
+    <div className="absolute inset-0 w-full h-full flex items-center justify-center px-4" style={style}>
+      <div className="bg-white/95 rounded-[48px] border border-black/[0.05] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] backdrop-blur-xl overflow-hidden min-h-[580px] w-full max-w-6xl flex flex-col lg:flex-row items-center group">
+        {/* Content Side */}
+        <div className="p-12 lg:p-20 flex-1 relative z-10 text-left">
+          <div className="flex items-center gap-3 mb-8">
+            <div className={`w-10 h-10 rounded-xl ${feature.bgColor} flex items-center justify-center shadow-sm border border-black/[0.03]`}>
+              {feature.categoryIcon}
+            </div>
+            <span className={`text-[13px] font-black uppercase tracking-[0.2em] ${feature.labelColor}`}>
+              {t(feature.category)}
+            </span>
           </div>
-          <span className={`text-[13px] font-black uppercase tracking-[0.2em] ${feature.labelColor}`}>
-            {t(feature.category)}
-          </span>
-        </div>
-        
-        <h3 className="text-primary font-display font-bold text-2xl mb-6 tracking-tight">{t(feature.brand)}</h3>
-        <h2 className="text-[40px] lg:text-[56px] font-display font-medium tracking-tight leading-[1.05] mb-10 text-[#0b0b0b]">
-          {t(feature.title)}
-        </h2>
-        <p className="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">
-          {t(feature.description)}
-        </p>
+          
+          <h3 className="text-primary font-display font-bold text-2xl mb-6 tracking-tight">{t(feature.brand)}</h3>
+          <h2 className="text-[40px] lg:text-[56px] font-display font-medium tracking-tight leading-[1.05] mb-10 text-[#0b0b0b]">
+            {t(feature.title)}
+          </h2>
+          <p className="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">
+            {t(feature.description)}
+          </p>
 
-        <div className="mt-12 flex items-center gap-4 group/btn cursor-pointer">
-           <span className="text-sm font-bold uppercase tracking-widest text-[#0b0b0b]">{t('Learn more')}</span>
-           <div className="w-10 h-10 rounded-full border border-black/10 flex items-center justify-center transition-transform group-hover/btn:translate-x-1">
-              <ArrowRight className="w-4 h-4 text-black" />
-           </div>
-        </div>
-      </div>
-
-      {/* Visual Side (Mockup) */}
-      <div className="flex-1 w-full h-full relative p-12 lg:p-0 flex justify-center items-center bg-[#fcfcfc] border-l border-black/[0.03]">
-        <div className="absolute inset-0 bg-grid-slate-200/40 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
-        
-        {/* Animated Mobile Mockup */}
-        <div className="relative z-10 w-[290px] h-[580px] bg-[#000000] rounded-[48px] border-[10px] border-[#121212] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden transform lg:translate-y-20 lg:translate-x-12 lg:-rotate-[8deg] transition-all duration-700 group-hover:rotate-0 group-hover:translate-y-10 group-hover:scale-105">
-           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#121212] rounded-b-2xl z-20" />
-           
-           <div className="p-6 pt-16 space-y-8">
-              <div className="h-12 w-full bg-white/5 rounded-2xl animate-pulse" />
-              <div className="space-y-3">
-                 <div className="h-2 w-2/3 bg-white/10 rounded-full" />
-                 <div className="h-2 w-full bg-white/5 rounded-full" />
-                 <div className="h-2 w-1/2 bg-white/5 rounded-full" />
-              </div>
-              <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/20 via-teal-500/5 to-transparent rounded-[36px] border border-white/5 flex items-center justify-center shadow-inner overflow-hidden">
-                 <div className="w-20 h-20 bg-primary/20 rounded-full blur-2xl animate-pulse" />
-                 <feature.categoryIcon.type className="absolute w-14 h-14 text-primary opacity-80" />
-              </div>
-              <div className="h-14 w-full bg-primary rounded-2xl flex items-center justify-center font-bold text-[#000000] text-sm shadow-xl shadow-primary/30">
-                 {t('Process Action')}
-              </div>
-           </div>
+          <Button variant="primary" className="mt-12 rounded-2xl h-14 px-10 text-base">
+             {t('Learn more')}
+          </Button>
         </div>
 
-        {/* Decorative Orbits */}
-        <div className="absolute w-[450px] h-[450px] rounded-full border border-slate-200/50 -z-10" />
-        <div className="absolute w-[600px] h-[600px] rounded-full border border-slate-200/30 -z-10" />
-        <div className="absolute top-10 right-10 w-40 h-40 bg-primary/5 blur-[80px] rounded-full" />
+        {/* Visual Side (Mockup) */}
+        <div className="flex-1 w-full h-full relative p-12 lg:p-0 flex justify-center items-center bg-[#fcfcfc] border-l border-black/[0.03]">
+          <div className="absolute inset-0 bg-grid-slate-200/40 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
+          
+          {/* Animated Mobile Mockup */}
+          <div className="relative z-10 w-[290px] h-[580px] bg-[#000000] rounded-[48px] border-[10px] border-[#121212] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden transform lg:translate-y-20 lg:translate-x-12 lg:-rotate-[8deg] transition-all duration-700">
+             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#121212] rounded-b-2xl z-20" />
+             
+             <div className="p-6 pt-16 space-y-8 text-center">
+                <div className="h-12 w-full bg-white/5 rounded-2xl animate-pulse" />
+                <div className="space-y-3">
+                   <div className="h-2 w-2/3 bg-white/10 rounded-full mx-auto" />
+                   <div className="h-2 w-full bg-white/5 rounded-full mx-auto" />
+                </div>
+                <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/20 via-teal-500/5 to-transparent rounded-[36px] border border-white/5 flex items-center justify-center shadow-inner overflow-hidden">
+                   <feature.categoryIcon.type className="w-14 h-14 text-primary opacity-80" />
+                </div>
+                <div className="h-14 w-full bg-primary rounded-2xl flex items-center justify-center font-bold text-[#000000] text-sm shadow-xl shadow-primary/30">
+                   {t('Confirm')}
+                </div>
+             </div>
+          </div>
+
+          {/* Decorative Orbits */}
+          <div className="absolute w-[450px] h-[450px] rounded-full border border-slate-200/50 -z-10" />
+          <div className="absolute w-[600px] h-[600px] rounded-full border border-slate-200/30 -z-10" />
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
+
+const FeatureSlider: React.FC<{ t: any }> = ({ t }) => {
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      
+      // Calculate how far through the section we are
+      // 0 = section top at viewport top
+      // 1 = section bottom at viewport top
+      const totalScrollableHeight = rect.height - viewportHeight;
+      const currentScroll = -rect.top;
+      const progress = Math.max(0, Math.min(1, currentScroll / totalScrollableHeight));
+      
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <section ref={containerRef} className="relative h-[400vh] bg-transparent">
+      <div className="sticky top-0 h-screen overflow-hidden flex items-center justify-center">
+        <div className="max-w-7xl mx-auto w-full h-full relative">
+           {PRODUCT_FEATURES.map((feature, index) => (
+             <StackedFeatureCard 
+               key={feature.brand} 
+               feature={feature} 
+               index={index} 
+               scrollProgress={scrollProgress}
+               t={t}
+             />
+           ))}
+        </div>
+      </div>
+    </section>
+  );
+};
 
 const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([
@@ -776,7 +829,6 @@ const Landing: React.FC = () => {
     'Automation',
     'Intelligence',
     'Confirm',
-    'Process Action',
     'Learn more'
   ]), []);
   const { t, language, setLanguage } = useTranslation(translationStrings);
@@ -921,16 +973,7 @@ const Landing: React.FC = () => {
             </p>
           </div>
 
-          <div className="relative">
-            {PRODUCT_FEATURES.map((feature, index) => (
-              <StackedFeatureCard
-                key={feature.brand}
-                feature={feature}
-                index={index}
-                t={t}
-              />
-            ))}
-          </div>
+          <FeatureSlider t={t} />
         </div>
       </section>
 
@@ -1190,7 +1233,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
       <div className="sticky top-0 h-[450px] flex items-center overflow-hidden bg-[#000000] z-10">
         <div className="max-w-7xl mx-auto px-10 md:px-16 w-full relative flex items-center justify-between h-full">
           <div className="max-w-2xl relative z-20">
-            <h2 className="text-[40px] md:text-[52px] font-display font-medium tracking-[-0.03em] leading-[1.1] mb-10 text-white">
+            <h2 className="text-[40px] md:text-[52px] font-display font-medium tracking-[-0.03em] leading-[1.1] mb-10 text-white text-left">
               {t('Start building')} <br />
               {t('with InvoiceFlow today')}
             </h2>
@@ -1203,7 +1246,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
               </Button>
               <Button
                 variant="outline"
-                className="h-[52px] px-8 rounded-full border-white/20 text-white hover:bg-white/10 font-bold text-sm transition-all bg-white/5 backdrop-blur-sm"
+                className="h-[52px] px-8 rounded-full border-white/40 text-white hover:bg-white/10 font-bold text-sm transition-all bg-white/5 backdrop-blur-sm"
               >
                 {t('See a demo')} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -1254,7 +1297,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
             <div className="py-24">
               {/* Nav Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-12 gap-y-24">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-12 gap-y-24 text-left">
                 
                 {/* Brand/Social Column */}
                 <div className="col-span-2 lg:col-span-1">
@@ -1343,7 +1386,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
               </div>
 
               {/* Disclaimer Section */}
-              <div className="mt-32 pt-12 border-t border-white/[0.03]">
+              <div className="mt-32 pt-12 border-t border-white/[0.03] text-left">
                  <p className="text-[11px] leading-[1.8] text-white/20 max-w-5xl tracking-wide">
                    <span className="font-black text-white/30 mr-2 uppercase tracking-widest text-white/40">{t('Disclaimer:')}</span>
                    {t('The information provided on this website is intended for general informational purposes only and does not constitute financial, legal, or professional advice. While we strive to ensure that the content presented is accurate and up-to-date, we make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability. Our platform is designed to ensure secure access to financial accounts for the purposes of retrieving statements, monitoring transactions in real-time, and verifying customer identities.')}
