@@ -1099,7 +1099,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
       {/* SECTION 1: CTA WITH 3D VISUALS */}
       <div className="relative pt-40 pb-72 px-4 sm:px-6 lg:px-8 bg-[#000000]">
         {/* Background Slabs (3D Visual Effect) */}
-        <div className="absolute right-[-10%] top-0 bottom-0 w-2/3 hidden lg:flex items-center justify-end gap-10 opacity-60 pointer-events-none select-none pr-32">
+        <div className="absolute right-[-5%] top-0 bottom-0 w-2/3 hidden lg:flex items-center justify-end gap-10 opacity-60 pointer-events-none select-none pr-32">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
@@ -1115,22 +1115,22 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           ))}
         </div>
 
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="max-w-4xl">
-            <h2 className="text-[56px] md:text-[84px] font-display font-medium tracking-[-0.04em] leading-[0.95] mb-12">
+        <div className="max-w-7xl mx-auto px-10 md:px-16 relative z-10">
+          <div className="max-w-3xl">
+            <h2 className="text-[48px] md:text-[64px] font-display font-medium tracking-[-0.03em] leading-[1.05] mb-12">
               {t('Start building')} <br />
               {t('with InvoiceFlow today')}
             </h2>
             <div className="flex flex-wrap gap-5">
               <Button
                 onClick={() => navigate({ to: '/onboarding' })}
-                className="h-[60px] px-10 rounded-full bg-[#FFFFFF] text-[#000000] font-bold text-lg hover:bg-opacity-90 transition-all border-none"
+                className="h-[56px] px-10 rounded-full bg-[#FFFFFF] text-[#000000] font-bold text-base hover:bg-opacity-90 transition-all border-none"
               >
                 {t('Start for free')}
               </Button>
               <Button
                 variant="outline"
-                className="h-[60px] px-10 rounded-full border-white/20 text-[#FFFFFF] hover:bg-white/10 font-bold text-lg transition-all"
+                className="h-[56px] px-10 rounded-full border-white/20 text-[#FFFFFF] hover:bg-white/10 font-bold text-base transition-all"
               >
                 {t('See a demo')} <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
