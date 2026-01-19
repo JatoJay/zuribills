@@ -1080,155 +1080,150 @@ const Landing: React.FC = () => {
 };
 
 const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
+  const navigate = useNavigate();
   return (
-    <footer className="relative bg-[#050505] text-white pt-24 pb-10 overflow-hidden">
+    <footer className="relative bg-[#050505] text-white pt-24 pb-16 overflow-hidden">
       {/* Ambient Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-blue-900/20 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/10 blur-[150px] rounded-full pointer-events-none" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Top CTA Section */}
-        <div className="grid lg:grid-cols-2 gap-16 items-center mb-20">
-          <div className="max-w-xl">
-            <h2 className="text-5xl md:text-6xl font-display font-medium tracking-tight mb-8">
+        {/* Top CTA Section (Mono Style) */}
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-12 mb-24">
+          <div className="max-w-2xl text-center lg:text-left">
+            <h2 className="text-5xl md:text-7xl font-display font-medium tracking-tight mb-8">
               {t('Start building with InvoiceFlow today')}
             </h2>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap justify-center lg:justify-start gap-4">
               <Button
-                onClick={() => window.location.href = '/onboarding'}
-                className="h-12 px-8 rounded-full bg-white text-black font-semibold hover:bg-gray-200"
+                onClick={() => navigate({ to: '/onboarding' })}
+                className="h-14 px-10 rounded-full bg-white text-black font-bold hover:bg-gray-200 transition-all border-none"
               >
                 {t('Start for free')}
               </Button>
               <Button
                 variant="outline"
-                className="h-12 px-8 rounded-full border-white/20 text-white hover:bg-white/10"
+                className="h-14 px-10 rounded-full border-white/20 text-white hover:bg-white/10 font-bold transition-all"
               >
-                {t('See a demo')} <ArrowRight className="w-4 h-4 ml-2" />
+                {t('See a demo')}
               </Button>
             </div>
           </div>
 
-          {/* 3D Visual Cards */}
-          <div className="hidden lg:block relative h-[320px] w-full perspective-[1000px]">
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[220px] h-[280px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-white/10 transform rotate-y-[-25deg] rotate-x-[10deg] translate-z-[-100px] translate-x-[40px] opacity-40" />
-            <div className="absolute right-16 top-1/2 -translate-y-1/2 w-[220px] h-[280px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-white/10 transform rotate-y-[-25deg] rotate-x-[10deg] translate-z-[-50px] translate-x-[20px] opacity-70" />
-            <div className="absolute right-32 top-1/2 -translate-y-1/2 w-[220px] h-[280px] bg-gradient-to-br from-[#1a1a1a] via-black to-[#1a1a1a] rounded-3xl border border-white/10 shadow-2xl transform rotate-y-[-25deg] rotate-x-[10deg] hover:-translate-y-4 transition-transform duration-500">
-              {/* Decorative screen content */}
-              <div className="p-6 opacity-80">
-                <div className="w-8 h-8 rounded-full bg-blue-600 mb-6" />
-                <div className="space-y-3">
-                  <div className="h-2 w-24 bg-white/20 rounded-full" />
-                  <div className="h-2 w-16 bg-white/10 rounded-full" />
-                </div>
-                <div className="mt-8 grid grid-cols-2 gap-2">
-                  <div className="h-16 bg-white/5 rounded-xl border border-white/5" />
-                  <div className="h-16 bg-white/5 rounded-xl border border-white/5" />
-                </div>
-              </div>
-            </div>
+          <div className="hidden lg:block relative shrink-0">
+             <div className="w-[380px] h-[380px] bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-3xl absolute -inset-4 opacity-50" />
+             <img 
+               src="/dashboard_sync.svg" 
+               alt="Footer Illustration" 
+               className="relative w-[450px] object-contain drop-shadow-2xl"
+             />
           </div>
         </div>
 
-        {/* Glass Footer Container */}
-        <div className="relative rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-2xl p-8 md:p-12 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-
-          {/* Logo & Copyright Row */}
-          <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-12 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <Zap className="w-5 h-5 text-white fill-current" />
+        {/* Links Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-12 mb-20 border-t border-white/10 pt-20">
+          
+          {/* Logo & Info Column */}
+          <div className="col-span-2 lg:col-span-1">
+            <div className="flex items-center gap-2 mb-8">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <Zap className="w-4 h-4 text-black fill-current" />
+              </div>
               <span className="font-display font-bold text-lg tracking-tight">InvoiceFlow</span>
-              <span className="text-xs text-white/40 ml-2 pt-1">a Gemini company</span>
             </div>
-            <div className="text-xs text-white/40 font-medium">
-              2026 © InvoiceFlow Technologies Nigeria Limited
+            <div className="space-y-6">
+               <div>
+                  <h4 className="text-xs uppercase tracking-widest text-white/40 font-bold mb-4">Get Started</h4>
+                  <ul className="space-y-3 text-sm font-semibold">
+                    <li><button onClick={() => navigate({ to: '/onboarding' })} className="text-white/80 hover:text-white transition-colors">Create an account</button></li>
+                    <li><button onClick={() => navigate({ to: '/login' })} className="text-white/80 hover:text-white transition-colors">Sign in</button></li>
+                  </ul>
+               </div>
+               <div>
+                  <h4 className="text-xs uppercase tracking-widest text-white/40 font-bold mb-4">Stay in touch</h4>
+                  <div className="flex gap-5">
+                    <Twitter className="w-5 h-5 text-white/40 hover:text-white transition-colors cursor-pointer" />
+                    <Instagram className="w-5 h-5 text-white/40 hover:text-white transition-colors cursor-pointer" />
+                    <Linkedin className="w-5 h-5 text-white/40 hover:text-white transition-colors cursor-pointer" />
+                  </div>
+               </div>
             </div>
           </div>
 
-          {/* Links Grid */}
-          <div className="relative grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-12 pt-12">
+          {/* Column 2 */}
+          <div>
+            <h4 className="text-sm font-bold mb-6 text-white">{t('Products')}</h4>
+            <ul className="space-y-4 text-sm font-medium text-white/60">
+              {['Data', 'Payments', 'Statements Pages', 'Payment Pages', 'Prove', 'Lookup', 'Portal', 'Pricing', 'Demo'].map(item => (
+                <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
+              ))}
+            </ul>
+          </div>
 
-            {/* Brand Column */}
-            <div className="col-span-2 lg:col-span-1 flex flex-col justify-between h-full">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-teal-400 mb-8 shadow-lg shadow-blue-500/20" />
+          {/* Column 3 */}
+          <div>
+            <h4 className="text-sm font-bold mb-6 text-white">{t('Use Cases')}</h4>
+            <ul className="space-y-4 text-sm font-medium text-white/60">
+              {['Customer Onboarding', 'Credit Risk Assessment', 'Payment Collection', 'Personal Finance Insights'].map(item => (
+                <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
+              ))}
+            </ul>
+          </div>
 
-                <div className="mb-8">
-                  <h4 className="text-xs uppercase tracking-widest text-white/40 font-semibold mb-4">Get Started</h4>
-                  <ul className="space-y-3 text-sm font-medium">
-                    <li><a href="#" className="hover:text-blue-400 transition-colors">Create an account</a></li>
-                    <li><a href="#" className="hover:text-blue-400 transition-colors">Sign in</a></li>
-                  </ul>
-                </div>
-              </div>
+          {/* Column 4 */}
+          <div>
+            <h4 className="text-sm font-bold mb-6 text-white">{t('Company')}</h4>
+            <ul className="space-y-4 text-sm font-medium text-white/60">
+              {['About Us', 'Careers', 'Coverage', 'Contact'].map(item => (
+                <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
+              ))}
+            </ul>
+          </div>
 
-              <div>
-                <h4 className="text-xs uppercase tracking-widest text-white/40 font-semibold mb-4">Stay in touch</h4>
-                <div className="flex gap-4 opacity-60">
-                  <Twitter className="w-5 h-5 hover:text-white transition-colors cursor-pointer" />
-                  <Instagram className="w-5 h-5 hover:text-white transition-colors cursor-pointer" />
-                  <Linkedin className="w-5 h-5 hover:text-white transition-colors cursor-pointer" />
-                </div>
-              </div>
-            </div>
+          {/* Column 5 */}
+          <div>
+            <h4 className="text-sm font-bold mb-6 text-white">{t('Developers')}</h4>
+            <ul className="space-y-4 text-sm font-medium text-white/60">
+              {['Documentation', 'API Reference', 'SDKs'].map(item => (
+                <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
+              ))}
+            </ul>
+          </div>
 
-            {/* Products */}
-            <div>
-              <h4 className="text-sm text-white/40 font-medium mb-6">Products</h4>
-              <ul className="space-y-3 text-sm text-white/80">
-                {['Connect', 'Statements', 'Direct Debit', 'Direct Pay', 'Lookup', 'Percept'].map(item => (
-                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Use Cases */}
-            <div>
-              <h4 className="text-sm text-white/40 font-medium mb-6">Use Cases</h4>
-              <ul className="space-y-3 text-sm text-white/80">
-                {['Lending', 'Personal Finance', 'Payments', 'Business Banking'].map(item => (
-                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Company */}
-            <div>
-              <h4 className="text-sm text-white/40 font-medium mb-6">Company</h4>
-              <ul className="space-y-3 text-sm text-white/80">
-                {['About Us', 'Careers', 'Blog', 'Contact'].map(item => (
-                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
-                ))}
-              </ul>
-              <h4 className="text-sm text-white/40 font-medium mt-10 mb-6">Developers</h4>
-              <ul className="space-y-3 text-sm text-white/80">
-                {['Overview', 'Documentation', 'API Reference'].map(item => (
-                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Legal */}
-            <div>
-              <h4 className="text-sm text-white/40 font-medium mb-6">Legal</h4>
-              <ul className="space-y-3 text-sm text-white/80">
-                {['Terms of Use', 'Privacy Policy', 'Security'].map(item => (
-                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
-                ))}
-              </ul>
-
-              <h4 className="text-sm text-white/40 font-medium mt-10 mb-6">Resources</h4>
-              <ul className="space-y-3 text-sm text-white/80">
-                {['Media Kit', 'Support'].map(item => (
-                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
-                ))}
-              </ul>
-            </div>
-
+          {/* Column 6 */}
+          <div>
+            <h4 className="text-sm font-bold mb-6 text-white">{t('Resources')}</h4>
+            <ul className="space-y-4 text-sm font-medium text-white/60">
+              {['Blog', "Partners' Stories", 'Support', 'Consumers'].map(item => (
+                <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
+              ))}
+            </ul>
           </div>
         </div>
 
+        {/* Bottom Bar (Legal & Info) */}
+        <div className="pt-12 border-t border-white/5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+           <div className="flex flex-wrap gap-x-8 gap-y-4 text-xs font-semibold text-white/40">
+             <a href="#" className="hover:text-white transition-colors uppercase tracking-widest">{t('Legal')}</a>
+             <a href="#" className="hover:text-white transition-colors">{t("End Users' Policy")}</a>
+             <a href="#" className="hover:text-white transition-colors">{t('Privacy Policy')}</a>
+             <a href="#" className="hover:text-white transition-colors">{t('Terms of Use')}</a>
+             <a href="#" className="hover:text-white transition-colors">{t('Security')}</a>
+           </div>
+
+           <div className="flex items-center gap-4 text-xs font-bold text-white/40">
+              <span>a Flutterwave company</span>
+              <span className="w-1 h-1 rounded-full bg-white/20" />
+              <span>2026 © InvoiceFlow Technologies Limited</span>
+           </div>
+        </div>
+
+        {/* Disclaimer Area */}
+        <div className="mt-16 pt-8 border-t border-white/5">
+           <p className="text-[10px] leading-relaxed text-white/20 max-w-5xl">
+             {t('Disclaimer: The information provided on this website is intended for general informational purposes only and does not constitute financial, legal, or professional advice. Our platform is designed to ensure secure access to financial accounts for the purposes of retrieving statements, monitoring transactions in real-time, and verifying customer identities.')}
+           </p>
+        </div>
       </div>
     </footer>
   );
