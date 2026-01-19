@@ -20,7 +20,6 @@ import {
   MousePointer2,
   BarChart3,
   ShieldCheck,
-  Wallet,
   ChevronDown,
   Bot
 } from 'lucide-react';
@@ -31,16 +30,44 @@ const HERO_HIGHLIGHTS = ['No credit card', 'Setup in minutes', 'Shareable link']
 
 const PRODUCT_FEATURES = [
   {
-    title: 'Zooming service catalog',
-    description: 'Organize packages visually so clients understand the story behind your pricing.',
+    category: 'Sales & Branding',
+    categoryIcon: <Layers className="w-4 h-4 text-emerald-500" />,
+    brand: 'Client Catalogs',
+    title: 'Showcase your services with high-fidelity catalogs',
+    description: 'Create a professional digital presence for your packages. Let clients explore your offerings through a zooming visual interface designed for clarity and conversion.',
+    image: '/features/catalog-mock.png',
+    bgColor: 'bg-emerald-500/5',
+    labelColor: 'text-emerald-500',
   },
   {
-    title: 'Expense invoices',
-    description: 'Capture vendor bills, operating costs, and reimbursements in one place.',
+    category: 'Automation',
+    categoryIcon: <Bot className="w-4 h-4 text-blue-500" />,
+    brand: 'AI Agent',
+    title: 'Let the AI monitor and follow up on your behalf',
+    description: 'Our intelligent agent scans your invoices daily. It detects overdue payments and drafts context-aware reminders, ensuring you get paid without the manual admin work.',
+    image: '/features/ai-mock.png',
+    bgColor: 'bg-blue-500/5',
+    labelColor: 'text-blue-500',
   },
   {
-    title: 'Tax-ready reports',
-    description: 'Generate monthly or yearly cash-flow reports for seamless tax filing.',
+    category: 'Payments',
+    categoryIcon: <Zap className="w-4 h-4 text-orange-500" />,
+    brand: 'Instant Payouts',
+    title: 'Receive funds in real-time with direct bank routing',
+    description: 'Bypass standard settlement delays. When a customer pays, our direct routing engine pushes the net amount to your bank account or mobile wallet instantly.',
+    image: '/features/payment-mock.png',
+    bgColor: 'bg-orange-500/5',
+    labelColor: 'text-orange-500',
+  },
+  {
+    category: 'Intelligence',
+    categoryIcon: <BarChart3 className="w-4 h-4 text-purple-500" />,
+    brand: 'Deep Analytics',
+    title: 'Understand your cash flow with tax-ready reporting',
+    description: 'Get a clear view of your business health. Generate monthly or yearly inflow/outflow reports that make tax season a breeze and auditing effortless.',
+    image: '/features/analytics-mock.png',
+    bgColor: 'bg-purple-500/5',
+    labelColor: 'text-purple-500',
   },
 ];
 
@@ -190,7 +217,7 @@ const NavBar: React.FC<{
 }> = ({ t, language, languages, onLanguageChange }) => {
   const navigate = useNavigate();
   return (
-    <nav className="fixed w-full z-50 bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-[0_10px_40px_-30px_rgba(15,23,42,0.45)]">
+    <nav className="fixed w-full z-[100] bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-[0_10px_40px_-30px_rgba(15,23,42,0.45)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div
@@ -292,18 +319,54 @@ const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => 
   </div>
 );
 
-const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; description: string; className?: string }> = ({
-  icon,
-  title,
-  description,
-  className = '',
-}) => (
-  <div className={`p-6 rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl text-foreground shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)] transition-transform duration-300 hover:-translate-y-1 ${className}`}>
-    <div className="w-12 h-12 rounded-full bg-primary text-[var(--on-primary)] flex items-center justify-center mb-4 shadow-soft">
-      {icon}
+const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index: number; t: any }> = ({ feature, index, t }) => (
+  <div 
+    className="sticky top-28 w-full mb-12"
+    style={{ top: `${112 + (index * 24)}px` }}
+  >
+    <div className="bg-white rounded-[40px] border border-black/[0.03] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] overflow-hidden min-h-[520px] flex flex-col lg:flex-row items-center">
+      <div className="p-10 lg:p-16 flex-1">
+        <div className="flex items-center gap-2.5 mb-6">
+          <div className={`w-8 h-8 rounded-lg ${feature.bgColor} flex items-center justify-center`}>
+            {feature.categoryIcon}
+          </div>
+          <span className={`text-[13px] font-bold uppercase tracking-[0.15em] ${feature.labelColor}`}>
+            {t(feature.category)}
+          </span>
+        </div>
+        
+        <h3 className="text-blue-600 font-display font-bold text-2xl mb-4">{t(feature.brand)}</h3>
+        <h2 className="text-[42px] lg:text-[56px] font-display font-medium tracking-tight leading-[1.1] mb-8 text-[#0b0b0b]">
+          {t(feature.title)}
+        </h2>
+        <p className="text-lg text-slate-500 max-w-xl leading-relaxed">
+          {t(feature.description)}
+        </p>
+      </div>
+
+      <div className="flex-1 w-full h-full relative p-10 lg:p-0 flex justify-center items-center bg-slate-50/50">
+        <div className="absolute inset-0 bg-grid-slate-100 opacity-50" />
+        <div className="relative z-10 w-[300px] h-[600px] bg-[#0b0b0b] rounded-[52px] border-[12px] border-[#1a1a1a] shadow-2xl overflow-hidden transform lg:translate-y-12 lg:translate-x-12 lg:-rotate-[12deg]">
+           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-[#1a1a1a] rounded-b-2xl z-20" />
+           <div className="p-4 pt-12 space-y-6">
+              <div className="h-12 w-full bg-white/5 rounded-2xl animate-pulse" />
+              <div className="space-y-3">
+                 <div className="h-3 w-2/3 bg-white/10 rounded-full" />
+                 <div className="h-3 w-full bg-white/5 rounded-full" />
+              </div>
+              <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/20 to-teal-500/10 rounded-3xl border border-white/5 flex items-center justify-center">
+                 <feature.categoryIcon.type className="w-12 h-12 text-primary opacity-50" />
+              </div>
+              <div className="h-14 w-full bg-primary rounded-2xl flex items-center justify-center font-bold text-black">
+                 {t('Confirm')}
+              </div>
+           </div>
+        </div>
+        {/* Decorative Circles */}
+        <div className="absolute w-[400px] h-[400px] rounded-full border border-slate-200/60 -z-10" />
+        <div className="absolute w-[550px] h-[550px] rounded-full border border-slate-200/40 -z-10" />
+      </div>
     </div>
-    <h3 className="text-lg font-display font-semibold text-current mb-2">{title}</h3>
-    <p className="text-sm leading-relaxed opacity-80">{description}</p>
   </div>
 );
 
@@ -641,7 +704,7 @@ const Landing: React.FC = () => {
     'Product',
     'A single canvas for every client touchpoint.',
     'Replace scattered tools with a focused experience. Your catalog, invoices, expenses, and payments live in one place.',
-    ...PRODUCT_FEATURES.flatMap(feature => [feature.title, feature.description]),
+    ...PRODUCT_FEATURES.flatMap(feature => [feature.title, feature.description, feature.category, feature.brand]),
     'How it works',
     'From setup to payment in three moves.',
     ...HOW_IT_WORKS_STEPS.flatMap(step => [step.title, step.description]),
@@ -683,11 +746,16 @@ const Landing: React.FC = () => {
     'Developer Policy',
     'IMS Policy',
     'Terms of Use',
+    'Disclaimer',
     'Privacy Policy',
     'Security',
     'Cookies',
     'Start building',
-    'with InvoiceFlow today'
+    'with InvoiceFlow today',
+    'Sales & Branding',
+    'Automation',
+    'Intelligence',
+    'Confirm'
   ]), []);
   const { t, language, setLanguage } = useTranslation(translationStrings);
   const languageOptions = useMemo(() => {
@@ -819,25 +887,25 @@ const Landing: React.FC = () => {
       <section id="product" className="py-24 bg-transparent relative overflow-hidden">
         <div className="absolute -top-20 right-8 w-64 h-64 bg-primary/10 blur-[120px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-14">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-24">
             <div>
               <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('Product')}</div>
-              <h2 className="text-3xl md:text-4xl font-display font-semibold">
+              <h2 className="text-4xl md:text-5xl font-display font-semibold">
                 {t('A single canvas for every client touchpoint.')}
               </h2>
             </div>
-            <p className="text-muted max-w-xl">
+            <p className="text-muted max-w-xl text-lg">
               {t('Replace scattered tools with a focused experience. Your catalog, invoices, expenses, and payments live in one place.')}
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="relative">
             {PRODUCT_FEATURES.map((feature, index) => (
-              <FeatureCard
-                key={feature.title}
-                icon={[<Layers className="w-5 h-5" />, <Wallet className="w-5 h-5" />, <BarChart3 className="w-5 h-5" />][index]}
-                title={t(feature.title)}
-                description={t(feature.description)}
+              <StackedFeatureCard
+                key={feature.brand}
+                feature={feature}
+                index={index}
+                t={t}
               />
             ))}
           </div>
@@ -1113,7 +1181,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
               </Button>
               <Button
                 variant="outline"
-                className="h-[52px] px-8 rounded-full border-white/40 text-white hover:bg-white/10 font-bold text-sm transition-all bg-white/5 backdrop-blur-sm"
+                className="h-[52px] px-8 rounded-full border-white/20 text-white hover:bg-white/10 font-bold text-sm transition-all bg-white/5 backdrop-blur-sm"
               >
                 {t('See a demo')} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
