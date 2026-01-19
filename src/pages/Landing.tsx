@@ -321,13 +321,14 @@ const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => 
 
 const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index: number; t: any }> = ({ feature, index, t }) => (
   <div 
-    className="sticky w-full mb-12"
+    className="sticky w-full"
     style={{ 
-        top: `${80 + (index * 32)}px`,
+        top: `${140 + (index * 20)}px`,
         zIndex: index + 10,
+        paddingBottom: index === PRODUCT_FEATURES.length - 1 ? '0' : '30vh'
     }}
   >
-    <div className="bg-white rounded-[40px] border border-black/[0.08] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] overflow-hidden min-h-[580px] flex flex-col lg:flex-row items-center transition-transform duration-500 hover:-translate-y-1 group">
+    <div className="bg-white rounded-[40px] border border-black/[0.05] shadow-[0_-20px_50px_-20px_rgba(0,0,0,0.1),0_40px_100px_-20px_rgba(0,0,0,0.2)] overflow-hidden min-h-[580px] flex flex-col lg:flex-row items-center transition-all duration-500 group">
       {/* Content Side */}
       <div className="p-12 lg:p-20 flex-1 relative z-10">
         <div className="flex items-center gap-3 mb-8">
