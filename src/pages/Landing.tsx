@@ -683,6 +683,7 @@ const Landing: React.FC = () => {
     'Developer Policy',
     'IMS Policy',
     'Terms of Use',
+    'Disclaimer',
     'Privacy Policy',
     'Security',
     'Cookies',
@@ -1095,11 +1096,11 @@ const Landing: React.FC = () => {
 const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   const navigate = useNavigate();
   return (
-    <footer className="relative bg-[#000000] text-white overflow-hidden font-sans">
-      {/* SECTION 1: CTA WITH 3D VISUALS */}
-      <div className="relative pt-40 pb-72 px-4 sm:px-6 lg:px-8 bg-[#000000]">
+    <footer className="relative bg-[#000000] text-white font-sans">
+      {/* SECTION 1: CTA WITH 3D VISUALS (Sticky Reveal) */}
+      <div className="sticky top-0 h-[600px] flex items-center overflow-hidden bg-[#000000]">
         {/* Background Slabs (3D Visual Effect) */}
-        <div className="absolute right-[-5%] top-0 bottom-0 w-2/3 hidden lg:flex items-center justify-end gap-10 opacity-60 pointer-events-none select-none pr-32">
+        <div className="absolute right-[-5%] top-0 bottom-0 w-2/3 hidden lg:flex items-center justify-end gap-10 opacity-40 pointer-events-none select-none pr-32">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
@@ -1109,15 +1110,14 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
                 boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.1)',
               }}
             >
-              {/* Internal slab glow */}
               <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] to-transparent rounded-[48px]" />
             </div>
           ))}
         </div>
 
-        <div className="max-w-7xl mx-auto px-10 md:px-16 relative z-10">
+        <div className="max-w-7xl mx-auto px-10 md:px-16 w-full relative z-10">
           <div className="max-w-3xl">
-            <h2 className="text-[48px] md:text-[64px] font-display font-medium tracking-[-0.03em] leading-[1.05] mb-12">
+            <h2 className="text-[48px] md:text-[64px] font-display font-medium tracking-[-0.03em] leading-[1.05] mb-12 text-white">
               {t('Start building')} <br />
               {t('with InvoiceFlow today')}
             </h2>
@@ -1139,9 +1139,9 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
         </div>
       </div>
 
-      {/* SECTION 2: THE GLASS OVERLAP FOOTER */}
-      <div className="relative z-20 -mt-64 px-4 sm:px-6 lg:px-8 pb-16 flex justify-center">
-        <div className="w-full max-w-[1600px] rounded-[48px] border border-white/10 bg-white/[0.04] backdrop-blur-[120px] shadow-[0_-40px_100px_-20px_rgba(0,0,0,0.9)] overflow-hidden">
+      {/* SECTION 2: THE GLASS OVERLAP FOOTER (Scrolls over Section 1) */}
+      <div className="relative z-30 px-4 sm:px-6 lg:px-8 pb-16 flex justify-center">
+        <div className="w-full max-w-[1600px] rounded-[48px] border border-white/10 bg-[#0a0a0a]/60 backdrop-blur-[120px] shadow-[0_-40px_100px_-20px_rgba(0,0,0,1)] overflow-hidden">
           
           <div className="max-w-7xl mx-auto px-10 md:px-16">
             {/* Top Integrated Header Row */}
@@ -1193,7 +1193,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
                 {/* Products */}
                 <div>
-                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Products')}</h4>
+                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Products')}</h4>
                   <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                     {['Data', 'Payments', 'Statements Pages', 'Payment Pages', 'Prove', 'Lookup', 'Portal', 'Pricing', 'Demo'].map(item => (
                       <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
@@ -1203,7 +1203,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
                 {/* Use Cases */}
                 <div>
-                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Use Cases')}</h4>
+                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Use Cases')}</h4>
                   <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                     {['Customer Onboarding', 'Credit Risk Assessment', 'Payment Collection', 'Personal Finance Insights'].map(item => (
                       <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
@@ -1213,7 +1213,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
                 {/* Company */}
                 <div>
-                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Company')}</h4>
+                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Company')}</h4>
                   <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                     {['About Us', 'Careers', 'Coverage', 'Contact'].map(item => (
                       <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
@@ -1223,14 +1223,14 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
                 {/* Developers */}
                 <div>
-                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Developers')}</h4>
+                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Developers')}</h4>
                   <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                     {['Documentation', 'API Reference', 'SDKs'].map(item => (
                       <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
                     ))}
                   </ul>
                   <div className="mt-20">
-                     <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Resources')}</h4>
+                     <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Resources')}</h4>
                       <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                         {['Blog', "Partners' Stories", 'Support', 'Consumers'].map(item => (
                           <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
@@ -1242,7 +1242,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
                 {/* Legal */}
                 <div className="flex flex-col justify-between">
                   <div>
-                    <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10">{t('Legal')}</h4>
+                    <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Legal')}</h4>
                     <ul className="space-y-5 text-[15px] font-semibold text-white/70">
                       {["End Users' Policy", 'Developer Policy', 'IMS Policy', 'Terms of Use', 'Disclaimer', 'Cookies', 'Security'].map(item => (
                         <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
@@ -1255,7 +1255,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
               {/* Disclaimer Section */}
               <div className="mt-32 pt-12 border-t border-white/[0.03]">
                  <p className="text-[11px] leading-[1.8] text-white/20 max-w-5xl tracking-wide">
-                   <span className="font-black text-white/30 mr-2 uppercase tracking-widest">{t('Disclaimer:')}</span>
+                   <span className="font-black text-white/30 mr-2 uppercase tracking-widest text-white/40">{t('Disclaimer:')}</span>
                    {t('The information provided on this website is intended for general informational purposes only and does not constitute financial, legal, or professional advice. While we strive to ensure that the content presented is accurate and up-to-date, we make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability. Our platform is designed to ensure secure access to financial accounts for the purposes of retrieving statements, monitoring transactions in real-time, and verifying customer identities.')}
                  </p>
               </div>
