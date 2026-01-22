@@ -83,20 +83,14 @@ export const initAfnexPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
-        const currency = String(config.currency || '').toUpperCase();
-        
-        // Resolve provider based on currency for Afnex
-        let provider = 'flutterwave';
-        if (currency === 'NGN') provider = 'paystack';
-        else if (currency === 'KES') provider = 'pesapal';
-        else if (currency === 'RWF' || currency === 'GHS' || currency === 'ZAR') provider = 'mtn_momo';
-
+        // Let Afnex handle provider auto-selection
+        // Afnex will pick the best provider based on currency (Flutterwave is default)
         const response = await apiFetch('/api/payments/afnex/charge', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 invoiceId: config.invoiceId,
-                provider: provider,
+                // provider: omitted - let Afnex auto-select (Flutterwave by default)
                 payerPhone: config.payerPhone,
                 customerEmail: config.customerEmail,
                 customerName: config.customerName,
