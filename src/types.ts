@@ -134,6 +134,14 @@ export interface InvoiceItem {
   total: number;
 }
 
+export interface OwnershipTransfer {
+  previousClientName: string;
+  previousClientEmail: string;
+  previousClientCompany?: string;
+  transferredAt: string;
+  reason?: string;
+}
+
 export interface Invoice {
   id: string;
   organizationId: string;
@@ -141,6 +149,7 @@ export interface Invoice {
   clientName: string;
   clientEmail: string;
   clientCompany?: string;
+  clientTin?: string;
   items: InvoiceItem[];
   subtotal: number;
   taxRate: number;
@@ -150,6 +159,7 @@ export interface Invoice {
   date: string;
   dueDate: string;
   notes?: string;
+  ownershipTransfer?: OwnershipTransfer;
 }
 
 export interface CartItem extends Service {

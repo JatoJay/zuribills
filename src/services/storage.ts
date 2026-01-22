@@ -13,6 +13,7 @@ import {
   UserRole,
   TrialInfo,
   AgentLog,
+  OwnershipTransfer,
 } from '../types';
 import { getSupabaseClient } from './supabaseClient';
 import { resolveCountryCode, resolveDefaultCurrency, resolvePayoutProvider } from './paymentRouting';
@@ -236,6 +237,7 @@ const mapInvoiceFromDb = (row: any): Invoice => ({
   clientName: row.client_name,
   clientEmail: row.client_email,
   clientCompany: row.client_company ?? undefined,
+  clientTin: row.client_tin ?? undefined,
   items: row.items || [],
   subtotal: row.subtotal ?? 0,
   taxRate: row.tax_rate ?? 0,
@@ -245,6 +247,7 @@ const mapInvoiceFromDb = (row: any): Invoice => ({
   date: row.date,
   dueDate: row.due_date,
   notes: row.notes ?? undefined,
+  ownershipTransfer: row.ownership_transfer ?? undefined,
 });
 
 const mapInvoiceToDb = (invoice: Invoice) => ({
@@ -254,6 +257,7 @@ const mapInvoiceToDb = (invoice: Invoice) => ({
   client_name: invoice.clientName,
   client_email: invoice.clientEmail,
   client_company: toNullable(invoice.clientCompany),
+  client_tin: toNullable(invoice.clientTin),
   items: invoice.items || [],
   subtotal: invoice.subtotal,
   tax_rate: invoice.taxRate,
@@ -263,6 +267,7 @@ const mapInvoiceToDb = (invoice: Invoice) => ({
   date: invoice.date,
   due_date: invoice.dueDate,
   notes: toNullable(invoice.notes),
+  ownership_transfer: invoice.ownershipTransfer ?? null,
 });
 
 const mapExpenseFromDb = (row: any): Expense => ({
@@ -842,10 +847,62 @@ export const createInvoice = async (invoice: Omit<Invoice, 'id' | 'invoiceNumber
   return newInvoice;
 };
 
+export const updateInvoice = async (invoice: Invoice): Promise<Invoice> => {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from('invoices')
+    .update(mapInvoiceToDb(invoice))
+    .eq('id', invoice.id);
+  if (error) throw error;
+  return invoice;
+};
+
 export const updateInvoiceStatus = async (id: string, status: InvoiceStatus): Promise<void> => {
   const supabase = getSupabaseClient();
   const { error } = await supabase.from('invoices').update({ status }).eq('id', id);
   if (error) throw error;
+};
+
+export const transferInvoiceOwnership = async (
+  invoiceId: string,
+  newClient: { name: string; email: string; company?: string },
+  reason?: string
+): Promise<Invoice> => {
+  const supabase = getSupabaseClient();
+
+  const { data: invoiceRow, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+  if (!invoiceRow) throw new Error('Invoice not found');
+
+  const invoice = mapInvoiceFromDb(invoiceRow);
+
+  const ownershipTransfer: OwnershipTransfer = {
+    previousClientName: invoice.clientName,
+    previousClientEmail: invoice.clientEmail,
+    previousClientCompany: invoice.clientCompany,
+    transferredAt: new Date().toISOString(),
+    reason,
+  };
+
+  const updatedInvoice: Invoice = {
+    ...invoice,
+    clientName: newClient.name,
+    clientEmail: newClient.email,
+    clientCompany: newClient.company,
+    ownershipTransfer,
+  };
+
+  const { error: updateError } = await supabase
+    .from('invoices')
+    .update(mapInvoiceToDb(updatedInvoice))
+    .eq('id', invoiceId);
+  if (updateError) throw updateError;
+
+  return updatedInvoice;
 };
 
 // --- Expenses ---
