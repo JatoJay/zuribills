@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input } from '../components/ui';
 import { askBusinessAnalyst } from '@/services/geminiService';
@@ -320,44 +320,47 @@ const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => 
   </div>
 );
 
-const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featureIndex, t }) => {
+const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featureIndex, t: _t }) => {
   if (featureIndex === 0) {
     return (
-      <div className="h-full bg-gradient-to-b from-slate-50 to-white">
+      <div className="h-full bg-gradient-to-b from-slate-50 to-white flex flex-col">
         <div className="px-4 pt-4 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
-              <Zap className="w-4 h-4 text-black" />
+            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
+              <Layers className="w-4 h-4 text-white" />
             </div>
-            <span className="text-[13px] font-bold text-slate-800">My Catalog</span>
+            <span className="text-[13px] font-bold text-slate-900">My Catalog</span>
           </div>
         </div>
-        <div className="p-4 space-y-3">
+        <div className="flex-1 p-4 space-y-3 overflow-hidden">
           {[
-            { name: 'Brand Strategy', price: '$2,400', color: 'bg-emerald-500' },
-            { name: 'Web Design', price: '$1,800', color: 'bg-blue-500' },
-            { name: 'SEO Audit', price: '$500', color: 'bg-purple-500' },
+            { name: 'Brand Strategy', price: '$2,400', color: 'bg-emerald-500', desc: 'Full brand identity' },
+            { name: 'Web Design', price: '$1,800', color: 'bg-blue-500', desc: 'Custom website' },
+            { name: 'SEO Audit', price: '$500', color: 'bg-purple-500', desc: 'Site optimization' },
+            { name: 'Social Media', price: '$350', color: 'bg-orange-500', desc: 'Monthly package' },
           ].map((item, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.15 }}
-              className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm"
+              transition={{ delay: i * 0.1 }}
+              className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm"
             >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl ${item.color} flex items-center justify-center`}>
                   <Layers className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-[13px] font-semibold text-slate-800">{item.name}</p>
-                  <p className="text-[11px] text-slate-500">Service Package</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-bold text-slate-900 truncate">{item.name}</p>
+                  <p className="text-[10px] text-slate-500">{item.desc}</p>
                 </div>
-                <span className="text-[14px] font-bold text-slate-800">{item.price}</span>
+                <span className="text-[12px] font-bold text-slate-900">{item.price}</span>
               </div>
             </motion.div>
           ))}
-          <button className="w-full h-12 bg-primary rounded-xl text-black font-bold text-[13px] mt-4">
+        </div>
+        <div className="p-4 pt-2">
+          <button className="w-full h-11 bg-emerald-500 rounded-xl text-white font-bold text-[12px]">
             Share Catalog Link
           </button>
         </div>
@@ -367,41 +370,50 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
 
   if (featureIndex === 1) {
     return (
-      <div className="h-full bg-gradient-to-b from-blue-50 to-white">
+      <div className="h-full bg-gradient-to-b from-blue-50 to-white flex flex-col">
         <div className="px-4 pt-4 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <span className="text-[13px] font-bold text-slate-800">AI Agent</span>
+            <span className="text-[13px] font-bold text-slate-900">AI Agent</span>
           </div>
         </div>
-        <div className="p-4 space-y-3">
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+        <div className="flex-1 p-4 space-y-3 overflow-hidden">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
                 <Bot className="w-4 h-4 text-blue-600" />
               </div>
               <div>
-                <p className="text-[12px] text-slate-700 leading-relaxed">
-                  <span className="font-semibold">Invoice #1042</span> from Acme Corp is 3 days overdue.
-                  <span className="text-blue-600 font-medium"> Want me to send a reminder?</span>
+                <p className="text-[11px] text-slate-800 leading-relaxed font-medium">
+                  <span className="font-bold">Invoice #1042</span> from Acme Corp is 3 days overdue.
                 </p>
+                <p className="text-[11px] text-blue-600 font-semibold mt-1">Want me to send a reminder?</p>
               </div>
             </div>
           </div>
           <div className="flex gap-2">
-            <button className="flex-1 h-10 bg-blue-500 rounded-xl text-white font-semibold text-[12px]">
+            <button className="flex-1 h-10 bg-blue-500 rounded-xl text-white font-bold text-[11px]">
               Send Reminder
             </button>
-            <button className="flex-1 h-10 bg-slate-100 rounded-xl text-slate-600 font-semibold text-[12px]">
+            <button className="flex-1 h-10 bg-slate-100 rounded-xl text-slate-700 font-bold text-[11px]">
               View Invoice
             </button>
           </div>
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-4 text-white">
-            <p className="text-[11px] opacity-80 mb-1">This Week&apos;s Revenue</p>
-            <p className="text-[24px] font-bold">$3,450.00</p>
-            <p className="text-[11px] opacity-80 mt-1">↑ 15% vs last week</p>
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white">
+            <p className="text-[10px] opacity-90 mb-1">This Week&apos;s Revenue</p>
+            <p className="text-[22px] font-bold">$3,450.00</p>
+            <p className="text-[10px] opacity-90 mt-1">↑ 15% vs last week</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-slate-500">Pending invoices</span>
+              <span className="text-[12px] font-bold text-slate-900">3</span>
+            </div>
+            <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-2/3 h-full bg-blue-500 rounded-full" />
+            </div>
           </div>
         </div>
       </div>
@@ -410,34 +422,40 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
 
   if (featureIndex === 2) {
     return (
-      <div className="h-full bg-gradient-to-b from-orange-50 to-white">
+      <div className="h-full bg-gradient-to-b from-orange-50 to-white flex flex-col">
         <div className="px-4 pt-4 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" />
             </div>
-            <span className="text-[13px] font-bold text-slate-800">Payment Received</span>
+            <span className="text-[13px] font-bold text-slate-900">Payment Received</span>
           </div>
         </div>
-        <div className="p-4">
-          <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm text-center">
+        <div className="flex-1 p-4 flex flex-col">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm text-center flex-1 flex flex-col justify-center">
             <motion.div
-              className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4"
+              className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', delay: 0.2 }}
             >
-              <CheckCircle className="w-8 h-8 text-green-500" />
+              <CheckCircle className="w-7 h-7 text-green-500" />
             </motion.div>
-            <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">Payment Confirmed</p>
-            <p className="text-[28px] font-bold text-slate-800">$1,200.00</p>
-            <p className="text-[12px] text-slate-500 mt-2">From Acme Corp</p>
+            <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1 font-semibold">Payment Confirmed</p>
+            <p className="text-[24px] font-bold text-slate-900">$1,200.00</p>
+            <p className="text-[11px] text-slate-600 mt-1 font-medium">From Acme Corp</p>
             <div className="mt-4 pt-4 border-t border-slate-100">
               <div className="flex items-center justify-center gap-2 text-orange-500">
                 <Zap className="w-4 h-4" />
-                <span className="text-[12px] font-semibold">Instant Payout</span>
+                <span className="text-[11px] font-bold">Instant Payout</span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">Funds sent to your bank</p>
+              <p className="text-[10px] text-slate-500 mt-1">Funds sent to your bank</p>
+            </div>
+          </div>
+          <div className="mt-3 bg-orange-50 rounded-xl p-3 border border-orange-100">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-orange-700 font-medium">Today&apos;s payouts</span>
+              <span className="text-[12px] font-bold text-orange-700">$2,840</span>
             </div>
           </div>
         </div>
@@ -446,31 +464,31 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
   }
 
   return (
-    <div className="h-full bg-gradient-to-b from-purple-50 to-white">
-      <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+    <div className="h-full bg-gradient-to-b from-purple-50 to-white flex flex-col">
+      <div className="px-4 pt-4 pb-2 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-purple-500 flex items-center justify-center">
-            <BarChart3 className="w-4 h-4 text-white" />
+          <div className="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center">
+            <BarChart3 className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="text-[13px] font-bold text-slate-800">Analytics</span>
+          <span className="text-[12px] font-bold text-slate-900">Analytics</span>
         </div>
       </div>
-      <div className="p-4 space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl border border-slate-100 p-3 shadow-sm">
-            <p className="text-[10px] text-slate-500 uppercase">Revenue</p>
-            <p className="text-[18px] font-bold text-slate-800">$12.4k</p>
-            <p className="text-[10px] text-green-500">↑ 22%</p>
+      <div className="flex-1 p-3 space-y-2 overflow-hidden">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-sm">
+            <p className="text-[8px] text-slate-600 uppercase font-bold tracking-wide">Revenue</p>
+            <p className="text-[14px] font-black text-black leading-tight">$12.4k</p>
+            <p className="text-[9px] text-green-600 font-bold">↑ 22%</p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 p-3 shadow-sm">
-            <p className="text-[10px] text-slate-500 uppercase">Expenses</p>
-            <p className="text-[18px] font-bold text-slate-800">$3.2k</p>
-            <p className="text-[10px] text-red-500">↑ 8%</p>
+          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-sm">
+            <p className="text-[8px] text-slate-600 uppercase font-bold tracking-wide">Expenses</p>
+            <p className="text-[14px] font-black text-black leading-tight">$3.2k</p>
+            <p className="text-[9px] text-red-600 font-bold">↑ 8%</p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
-          <p className="text-[11px] text-slate-500 mb-3">Monthly Cash Flow</p>
-          <div className="flex items-end gap-1 h-20">
+        <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
+          <p className="text-[9px] text-slate-700 mb-2 font-bold">Monthly Cash Flow</p>
+          <div className="flex items-end gap-1 h-16">
             {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
               <motion.div
                 key={i}
@@ -482,7 +500,15 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             ))}
           </div>
         </div>
-        <button className="w-full h-10 bg-purple-500 rounded-xl text-white font-semibold text-[12px]">
+        <div className="bg-purple-100 rounded-lg p-2.5 border border-purple-200">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] text-purple-800 font-bold">Net profit</span>
+            <span className="text-[12px] font-black text-purple-800">$9.2k</span>
+          </div>
+        </div>
+      </div>
+      <div className="p-3 pt-1 pb-4">
+        <button className="w-full h-10 bg-purple-500 rounded-lg text-white font-bold text-[11px]">
           Export Tax Report
         </button>
       </div>
@@ -514,7 +540,7 @@ const StackedFeatureCard: React.FC<{
       style={{ zIndex: index + 1, y: clampedY }}
     >
       <div
-        className="relative w-full max-w-[1400px] h-[90vh] max-h-[780px] rounded-[32px] bg-[#f8f8f6] border border-black/[0.06] shadow-[0_8px_60px_-12px_rgba(0,0,0,0.25)] overflow-hidden"
+        className="relative w-full max-w-[1200px] h-[80vh] max-h-[680px] rounded-[28px] bg-[#f8f8f6] border border-black/[0.06] shadow-[0_8px_60px_-12px_rgba(0,0,0,0.25)] overflow-hidden"
       >
         <div className="absolute inset-0 flex flex-col lg:flex-row">
           <div className="absolute top-6 left-8 z-20 flex items-center gap-2.5">
@@ -564,33 +590,41 @@ const StackedFeatureCard: React.FC<{
 
           <div className="flex-1 relative flex items-center justify-center overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className={`absolute w-[500px] h-[500px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/20`} />
-              <div className={`absolute w-[380px] h-[380px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/15`} />
-              <div className={`absolute w-[260px] h-[260px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/10`} />
+              <div className={`absolute w-[400px] h-[400px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/20`} />
+              <div className={`absolute w-[300px] h-[300px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/15`} />
+              <div className={`absolute w-[200px] h-[200px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/10`} />
             </div>
 
             <motion.div
-              className="absolute top-[20%] left-[15%] w-12 h-12 rounded-2xl bg-white/90 backdrop-blur-sm border border-black/5 shadow-lg flex items-center justify-center"
-              animate={{ y: [0, -8, 0] }}
+              className="absolute top-[15%] left-[8%] w-14 h-14 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.15)] flex items-center justify-center"
+              animate={{ y: [0, -10, 0] }}
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <div className={`w-7 h-7 rounded-xl ${feature.bgColor} flex items-center justify-center`}>
-                {React.cloneElement(feature.categoryIcon as React.ReactElement, { className: `w-3.5 h-3.5 ${feature.labelColor}` })}
+              <div className={`w-9 h-9 rounded-xl ${feature.labelColor.replace('text-', 'bg-')} flex items-center justify-center`}>
+                {React.cloneElement(feature.categoryIcon as React.ReactElement, { className: 'w-5 h-5 text-white' })}
               </div>
             </motion.div>
 
             <motion.div
-              className={`absolute bottom-[30%] left-[10%] w-10 h-10 rounded-full shadow-lg flex items-center justify-center ${feature.bgColor}`}
-              animate={{ y: [0, 6, 0], x: [0, 3, 0] }}
+              className={`absolute bottom-[25%] left-[5%] w-12 h-12 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.2)] flex items-center justify-center ${feature.labelColor.replace('text-', 'bg-')}`}
+              animate={{ y: [0, 8, 0], x: [0, 4, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
             >
-              <ArrowRight className={`w-4 h-4 -rotate-45 ${feature.labelColor.includes('emerald') || feature.labelColor.includes('orange') ? 'text-white' : 'text-white'}`} />
+              <ArrowRight className="w-5 h-5 -rotate-45 text-white" />
             </motion.div>
 
-            <div className="relative z-10 w-[260px] h-[540px]">
-              <div className="absolute inset-0 bg-[#1a1a1a] rounded-[40px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.4)]">
+            <motion.div
+              className="absolute top-[40%] right-[5%] w-10 h-10 rounded-full bg-white border-2 border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.15)] flex items-center justify-center"
+              animate={{ y: [0, 6, 0], rotate: [0, 10, 0] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+            >
+              <CheckCircle className={`w-5 h-5 ${feature.labelColor}`} />
+            </motion.div>
+
+            <div className="relative z-10 w-[220px] h-[460px]">
+              <div className="absolute inset-0 bg-[#1a1a1a] rounded-[36px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.4)]">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#1a1a1a] rounded-b-2xl z-20" />
-                <div className="absolute inset-[3px] bg-white rounded-[37px] overflow-hidden">
+                <div className="absolute inset-[3px] bg-white rounded-[33px] overflow-hidden">
                   <div className="flex items-center justify-between px-5 pt-2 pb-1">
                     <span className="text-[10px] font-semibold text-black">9:41</span>
                     <div className="flex items-center gap-1">

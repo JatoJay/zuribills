@@ -1,10 +1,10 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from '@tanstack/react-router';
-import { Invoice, InvoiceStatus } from '@/types';
-import { getInvoices, updateInvoiceStatus, transferInvoiceOwnership } from '@/services/storage';
+import { Invoice, InvoiceStatus, InvoiceTransfer } from '@/types';
+import { getInvoices, updateInvoiceStatus, transferInvoiceOwnership, getInvoiceLineage, getInvoiceTransfers } from '@/services/storage';
 import { Button, Card, Badge, Input, Select } from '@/components/ui';
-import { Plus, Eye, Copy, Send, Sparkles, X, CheckSquare, Square, Mail, DollarSign, Link as LinkIcon, ArrowRightLeft, Search, RotateCcw, ChevronLeft, ChevronRight, User, Building2 } from 'lucide-react';
+import { Plus, Eye, Copy, Send, Sparkles, X, CheckSquare, Square, Mail, DollarSign, Link as LinkIcon, ArrowRightLeft, Search, RotateCcw, ChevronLeft, ChevronRight, User, Building2, GitBranch, ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { sendInvoiceEmail } from '@/services/email';
 import { generateInvoiceEmailBody } from '@/services/geminiService';
 import { useAdminContext } from './AdminLayout';
@@ -76,6 +76,16 @@ const Invoices: React.FC = () => {
         'Ownership transferred successfully!',
         'Failed to transfer ownership.',
         'Please enter new owner name',
+        'New Price (Optional)',
+        'Leave empty to keep same price',
+        'View Lineage',
+        'Invoice Lineage',
+        'Transfer History',
+        'Original',
+        'Transferred',
+        'Price Change',
+        'Close',
+        'No transfer history',
     ]), []);
     const { t } = useTranslation(translationStrings);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -137,8 +147,15 @@ const Invoices: React.FC = () => {
     const [newOwnerName, setNewOwnerName] = useState('');
     const [newOwnerEmail, setNewOwnerEmail] = useState('');
     const [newOwnerCompany, setNewOwnerCompany] = useState('');
+    const [newOwnerTin, setNewOwnerTin] = useState('');
+    const [newPrice, setNewPrice] = useState('');
     const [transferReason, setTransferReason] = useState('');
     const [isTransferring, setIsTransferring] = useState(false);
+
+    const [lineageInvoice, setLineageInvoice] = useState<Invoice | null>(null);
+    const [lineageData, setLineageData] = useState<Invoice[]>([]);
+    const [transferData, setTransferData] = useState<InvoiceTransfer[]>([]);
+    const [isLoadingLineage, setIsLoadingLineage] = useState(false);
 
     const loadInvoices = () => {
         if (org) getInvoices(org.id).then(setInvoices);
@@ -245,19 +262,24 @@ const Invoices: React.FC = () => {
         }
         setIsTransferring(true);
         try {
+            const parsedPrice = newPrice ? parseFloat(newPrice) : undefined;
             await transferInvoiceOwnership(
                 transferringInvoice.id,
                 {
                     name: newOwnerName.trim(),
                     email: newOwnerEmail.trim() || transferringInvoice.clientEmail,
                     company: newOwnerCompany.trim() || undefined,
+                    tin: newOwnerTin.trim() || undefined,
                 },
-                transferReason.trim() || undefined
+                transferReason.trim() || undefined,
+                parsedPrice
             );
             setTransferringInvoice(null);
             setNewOwnerName('');
             setNewOwnerEmail('');
             setNewOwnerCompany('');
+            setNewOwnerTin('');
+            setNewPrice('');
             setTransferReason('');
             loadInvoices();
             prompt.alert({ message: t('Ownership transferred successfully!'), type: 'success' });
@@ -266,6 +288,26 @@ const Invoices: React.FC = () => {
             prompt.alert({ message: t('Failed to transfer ownership.'), type: 'error' });
         } finally {
             setIsTransferring(false);
+        }
+    };
+
+    const openLineageModal = async (invoice: Invoice) => {
+        setLineageInvoice(invoice);
+        setIsLoadingLineage(true);
+        try {
+            const rootId = invoice.rootInvoiceId || invoice.id;
+            const [lineage, transfers] = await Promise.all([
+                getInvoiceLineage(invoice.id),
+                getInvoiceTransfers(rootId),
+            ]);
+            setLineageData(lineage);
+            setTransferData(transfers);
+        } catch (error) {
+            console.error(error);
+            setLineageData([]);
+            setTransferData([]);
+        } finally {
+            setIsLoadingLineage(false);
         }
     };
 
@@ -421,7 +463,21 @@ const Invoices: React.FC = () => {
                                                 }
                                             </button>
                                         </td>
-                                        <td className="px-6 py-4 font-mono font-medium text-foreground">{invoice.invoiceNumber}</td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-mono font-medium text-foreground">{invoice.invoiceNumber}</span>
+                                                {(invoice.parentInvoiceId || invoice.rootInvoiceId) && (
+                                                    <button
+                                                        onClick={() => openLineageModal(invoice)}
+                                                        className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-purple-500/10 text-purple-500 rounded border border-purple-500/20 hover:bg-purple-500/20 transition-colors"
+                                                        title={t('View Lineage')}
+                                                    >
+                                                        <GitBranch className="w-3 h-3" />
+                                                        #{invoice.transferSequence || 1}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="font-medium text-foreground">{invoice.clientName}</div>
                                             <div className="text-xs text-muted">{invoice.clientEmail}</div>
@@ -466,6 +522,8 @@ const Invoices: React.FC = () => {
                                                         setNewOwnerName('');
                                                         setNewOwnerEmail('');
                                                         setNewOwnerCompany('');
+                                                        setNewOwnerTin('');
+                                                        setNewPrice('');
                                                         setTransferReason('');
                                                     }}
                                                 >
@@ -623,6 +681,14 @@ const Invoices: React.FC = () => {
                                     onChange={(e) => setNewOwnerCompany(e.target.value)}
                                     placeholder="Optional"
                                 />
+                                <Input
+                                    label={t('New Price (Optional)')}
+                                    type="number"
+                                    step="0.01"
+                                    value={newPrice}
+                                    onChange={(e) => setNewPrice(e.target.value)}
+                                    placeholder={t('Leave empty to keep same price')}
+                                />
                             </div>
                         </div>
 
@@ -648,6 +714,116 @@ const Invoices: React.FC = () => {
                             >
                                 <ArrowRightLeft className="w-4 h-4 mr-2" />
                                 {t('Transfer')}
+                            </Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {lineageInvoice && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <Card className="w-full max-w-2xl p-6 relative animate-fade-in-up max-h-[90vh] overflow-y-auto">
+                        <button
+                            onClick={() => setLineageInvoice(null)}
+                            className="absolute top-4 right-4 text-muted hover:text-foreground"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-foreground">
+                            <GitBranch className="w-5 h-5 text-purple-500" />
+                            {t('Invoice Lineage')}
+                        </h3>
+
+                        {isLoadingLineage ? (
+                            <div className="py-8 text-center text-muted">Loading...</div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="space-y-3">
+                                    {lineageData.map((inv, idx) => (
+                                        <div
+                                            key={inv.id}
+                                            className={`p-4 rounded-xl border transition-all ${
+                                                inv.id === lineageInvoice.id
+                                                    ? 'border-primary bg-primary/5'
+                                                    : 'border-border bg-surface'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                        idx === 0
+                                                            ? 'bg-green-500/20 text-green-500'
+                                                            : 'bg-purple-500/20 text-purple-500'
+                                                    }`}>
+                                                        {idx === 0 ? t('Original').charAt(0) : `#${inv.transferSequence || idx}`}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-mono font-medium text-sm">{inv.invoiceNumber}</div>
+                                                        <div className="text-xs text-muted">{inv.clientName}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-medium">{formatMoney(inv.total)}</div>
+                                                    <div className="text-xs text-muted">{new Date(inv.date).toLocaleDateString()}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {transferData.length > 0 && (
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                                            <ArrowRightLeft className="w-4 h-4 text-primary" />
+                                            {t('Transfer History')}
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {transferData.map((transfer) => (
+                                                <div key={transfer.id} className="p-3 rounded-lg bg-surface border border-border">
+                                                    <div className="flex items-center gap-2 text-sm mb-2">
+                                                        <span className="font-medium">{transfer.fromClientName}</span>
+                                                        <ArrowRight className="w-4 h-4 text-muted" />
+                                                        <span className="font-medium">{transfer.toClientName}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-xs">
+                                                        <span className="text-muted">
+                                                            {new Date(transfer.transferredAt).toLocaleDateString()}
+                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-muted">{formatMoney(transfer.originalAmount)}</span>
+                                                            <ArrowRight className="w-3 h-3 text-muted" />
+                                                            <span className="font-medium">{formatMoney(transfer.newAmount)}</span>
+                                                            {transfer.priceDelta !== 0 && (
+                                                                <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                                                    transfer.priceDelta > 0
+                                                                        ? 'bg-green-500/10 text-green-500'
+                                                                        : 'bg-red-500/10 text-red-500'
+                                                                }`}>
+                                                                    {transfer.priceDelta > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                                                    {transfer.priceDelta > 0 ? '+' : ''}{formatMoney(transfer.priceDelta)}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {transfer.reason && (
+                                                        <div className="text-xs text-muted mt-2 italic">"{transfer.reason}"</div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {transferData.length === 0 && lineageData.length <= 1 && (
+                                    <p className="text-center text-muted py-4">{t('No transfer history')}</p>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="mt-6 flex justify-end">
+                            <Button variant="outline" onClick={() => setLineageInvoice(null)}>
+                                {t('Close')}
                             </Button>
                         </div>
                     </Card>
