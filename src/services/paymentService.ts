@@ -96,7 +96,7 @@ export const initAfnexPayment = async (
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 invoiceId: config.invoiceId,
-                provider: provider,
+                // provider: omitted - let Afnex auto-select (Flutterwave by default)
                 payerPhone: config.payerPhone,
                 customerEmail: config.customerEmail,
                 customerName: config.customerName,
@@ -197,6 +197,14 @@ export const processPayment = async (
 ): Promise<PaymentResult> => initAfnexPayment(config);
 
 export const getRecommendedGateway = (currency: string): PaymentGateway => resolveAfnexProvider(currency);
+
+// Async version that uses dynamic providers from Afnex API
+export const getRecommendedGatewayAsync = async (currency: string): Promise<PaymentGateway> =>
+    resolveAfnexProviderAsync(currency);
+
+// Get all available gateways for a currency (for showing user options)
+export const getAvailableGateways = async (currency: string): Promise<AfnexProviderInfo[]> =>
+    getProvidersForCurrency(currency);
 
 export const isGatewayConfigured = (_gateway: PaymentGateway): boolean => true;
 
