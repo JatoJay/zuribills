@@ -83,6 +83,7 @@ create table if not exists invoices (
   client_name text not null,
   client_email text not null,
   client_company text,
+  client_tin text,
   items jsonb not null default '[]'::jsonb,
   subtotal double precision not null default 0,
   tax_rate double precision not null default 0,
@@ -91,7 +92,8 @@ create table if not exists invoices (
   status text not null,
   date timestamptz not null,
   due_date timestamptz not null,
-  notes text
+  notes text,
+  ownership_transfer jsonb
 );
 
 create table if not exists expenses (
