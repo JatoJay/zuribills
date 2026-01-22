@@ -83,8 +83,14 @@ export const initAfnexPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
-        // Let Afnex handle provider auto-selection
-        // Afnex will pick the best provider based on currency (Flutterwave is default)
+        const currency = String(config.currency || '').toUpperCase();
+        
+        // Resolve provider based on currency for Afnex
+        let provider = 'flutterwave';
+        if (currency === 'NGN') provider = 'paystack';
+        // Removed explicit overrides for MoMo to default to Flutterwave via Afnex
+
+
         const response = await apiFetch('/api/payments/afnex/charge', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

@@ -2,9 +2,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from '@tanstack/react-router';
 import { Invoice, InvoiceStatus } from '@/types';
-import { getInvoices, updateInvoiceStatus } from '@/services/storage';
-import { Button, Card, Badge } from '@/components/ui';
-import { Plus, Eye, Copy, Send, Sparkles, X, CheckSquare, Square, Mail, DollarSign, Link as LinkIcon } from 'lucide-react';
+import { getInvoices, updateInvoiceStatus, transferInvoiceOwnership } from '@/services/storage';
+import { Button, Card, Badge, Input, Select } from '@/components/ui';
+import { Plus, Eye, Copy, Send, Sparkles, X, CheckSquare, Square, Mail, DollarSign, Link as LinkIcon, ArrowRightLeft, Search, RotateCcw, ChevronLeft, ChevronRight, User, Building2 } from 'lucide-react';
 import { sendInvoiceEmail } from '@/services/email';
 import { generateInvoiceEmailBody } from '@/services/geminiService';
 import { useAdminContext } from './AdminLayout';
@@ -49,9 +49,79 @@ const Invoices: React.FC = () => {
         'Send emails for invoices?',
         'Failed to send email.',
         'Some emails failed to send.',
+        'Search by client or invoice #',
+        'All Statuses',
+        'Filter by Status',
+        'From Date',
+        'To Date',
+        'Clear Filters',
+        'Showing',
+        'to',
+        'of',
+        'results',
+        'Previous',
+        'Next',
+        'Page',
+        'Transfer Ownership',
+        'Transfer this invoice to a new owner (resale)',
+        'Current Owner',
+        'New Owner Details',
+        'New Owner Name',
+        'New Owner Email',
+        'New Owner Company',
+        'Transfer Reason',
+        'e.g. Item resold to new owner',
+        'Transfer',
+        'Previously owned by',
+        'Ownership transferred successfully!',
+        'Failed to transfer ownership.',
+        'Please enter new owner name',
     ]), []);
     const { t } = useTranslation(translationStrings);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
+
+    // Filter State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [dateRange, setDateRange] = useState({ start: '', end: '' });
+
+    const filteredInvoices = useMemo(() => {
+        return invoices.filter(invoice => {
+            const matchesSearch = !searchQuery || (
+                (invoice.clientName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (invoice.invoiceNumber || '').toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            
+            const matchesStatus = statusFilter === 'ALL' || invoice.status === statusFilter;
+            
+            let matchesDate = true;
+            if (dateRange.start) {
+                matchesDate = matchesDate && new Date(invoice.date) >= new Date(dateRange.start);
+            }
+            if (dateRange.end) {
+                const end = new Date(dateRange.end);
+                end.setHours(23, 59, 59, 999);
+                matchesDate = matchesDate && new Date(invoice.date) <= end;
+            }
+
+            return matchesSearch && matchesStatus && matchesDate;
+        });
+    }, [invoices, searchQuery, statusFilter, dateRange]);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // Reset page on filter change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, statusFilter, dateRange]);
+
+    const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
+    const paginatedInvoices = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return filteredInvoices.slice(start, start + itemsPerPage);
+    }, [filteredInvoices, currentPage]);
 
     // Bulk Selection State
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -63,6 +133,13 @@ const Invoices: React.FC = () => {
     const [isSending, setIsSending] = useState(false);
     const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
+    const [transferringInvoice, setTransferringInvoice] = useState<Invoice | null>(null);
+    const [newOwnerName, setNewOwnerName] = useState('');
+    const [newOwnerEmail, setNewOwnerEmail] = useState('');
+    const [newOwnerCompany, setNewOwnerCompany] = useState('');
+    const [transferReason, setTransferReason] = useState('');
+    const [isTransferring, setIsTransferring] = useState(false);
+
     const loadInvoices = () => {
         if (org) getInvoices(org.id).then(setInvoices);
     };
@@ -73,10 +150,10 @@ const Invoices: React.FC = () => {
 
     // Bulk Selection Handlers
     const toggleSelectAll = () => {
-        if (selectedIds.size === invoices.length) {
+        if (selectedIds.size === filteredInvoices.length && filteredInvoices.length > 0) {
             setSelectedIds(new Set());
         } else {
-            setSelectedIds(new Set(invoices.map(i => i.id)));
+            setSelectedIds(new Set(filteredInvoices.map(i => i.id)));
         }
     };
 
@@ -161,6 +238,37 @@ const Invoices: React.FC = () => {
         }
     };
 
+    const handleTransferOwnership = async () => {
+        if (!transferringInvoice || !newOwnerName.trim()) {
+            prompt.alert({ message: t('Please enter new owner name'), type: 'warning' });
+            return;
+        }
+        setIsTransferring(true);
+        try {
+            await transferInvoiceOwnership(
+                transferringInvoice.id,
+                {
+                    name: newOwnerName.trim(),
+                    email: newOwnerEmail.trim() || transferringInvoice.clientEmail,
+                    company: newOwnerCompany.trim() || undefined,
+                },
+                transferReason.trim() || undefined
+            );
+            setTransferringInvoice(null);
+            setNewOwnerName('');
+            setNewOwnerEmail('');
+            setNewOwnerCompany('');
+            setTransferReason('');
+            loadInvoices();
+            prompt.alert({ message: t('Ownership transferred successfully!'), type: 'success' });
+        } catch (error) {
+            console.error(error);
+            prompt.alert({ message: t('Failed to transfer ownership.'), type: 'error' });
+        } finally {
+            setIsTransferring(false);
+        }
+    };
+
     const getDueAlert = (invoice: Invoice) => {
         if (invoice.status === InvoiceStatus.PAID) return null;
         if (!invoice.dueDate) return null;
@@ -231,6 +339,53 @@ const Invoices: React.FC = () => {
                 </div>
             )}
 
+            {/* Filters */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6 items-end">
+                <div className="relative flex-1 w-full md:max-w-md">
+                    <Input
+                        placeholder={t('Search by client or invoice #')}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 border border-border text-sm placeholder:text-xs"
+                    />
+                    <div className="absolute top-1/2 left-3 -translate-y-1/2 text-muted pointer-events-none">
+                        <Search className="w-4 h-4" />
+                    </div>
+                </div>
+                <div className="w-full md:w-48">
+                    <Select
+                        options={[
+                            { label: t('All Statuses'), value: 'ALL' },
+                            { label: t('Paid'), value: 'PAID' },
+                            { label: t('Sent'), value: 'SENT' },
+                            { label: t('Draft'), value: 'DRAFT' },
+                            { label: t('Overdue'), value: 'OVERDUE' },
+                        ]}
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    />
+                </div>
+                <div className="w-full md:w-auto flex gap-2">
+                   <div className="w-full md:w-40">
+                        <Input 
+                            type="date" 
+                            value={dateRange.start}
+                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                        />
+                   </div>
+                   <div className="w-full md:w-40">
+                        <Input 
+                            type="date" 
+                            value={dateRange.end}
+                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                        />
+                   </div>
+                </div>
+                <Button variant="ghost" onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); setDateRange({ start: '', end: '' }); }} title={t('Clear Filters')}>
+                    <RotateCcw className="w-4 h-4" />
+                </Button>
+            </div>
+
             <Card className="overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
@@ -238,7 +393,7 @@ const Invoices: React.FC = () => {
                             <tr>
                                 <th className="px-6 py-4 w-10">
                                     <button onClick={toggleSelectAll} className="flex items-center text-muted hover:text-foreground">
-                                        {invoices.length > 0 && selectedIds.size === invoices.length ?
+                                        {filteredInvoices.length > 0 && selectedIds.size === filteredInvoices.length ?
                                             <CheckSquare className="w-4 h-4 text-primary" /> :
                                             <Square className="w-4 h-4" />
                                         }
@@ -253,10 +408,10 @@ const Invoices: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                            {invoices.length === 0 ? (
+                            {filteredInvoices.length === 0 ? (
                                 <tr><td colSpan={7} className="text-center py-8 text-muted">{t('No invoices found.')}</td></tr>
                             ) : (
-                                invoices.map(invoice => (
+                                paginatedInvoices.map(invoice => (
                                     <tr key={invoice.id} className={`hover:bg-surface/50 ${selectedIds.has(invoice.id) ? 'bg-primary/5' : ''}`}>
                                         <td className="px-6 py-4">
                                             <button onClick={() => toggleSelect(invoice.id)} className="flex items-center text-muted hover:text-foreground">
@@ -304,6 +459,20 @@ const Invoices: React.FC = () => {
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
+                                                    className="h-8 w-8 p-0 border-border hover:border-primary/50 text-foreground"
+                                                    title={t('Transfer Ownership')}
+                                                    onClick={() => {
+                                                        setTransferringInvoice(invoice);
+                                                        setNewOwnerName('');
+                                                        setNewOwnerEmail('');
+                                                        setNewOwnerCompany('');
+                                                        setTransferReason('');
+                                                    }}
+                                                >
+                                                    <ArrowRightLeft className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
                                                     className="h-8 w-8 p-0 border-border hover:border-foreground/50 text-foreground"
                                                     title={t('Duplicate')}
                                                     onClick={() => navigate({ to: '/org/$slug/invoices/create', params: { slug: org.slug }, state: { duplicateInvoice: invoice } as any })}
@@ -324,6 +493,36 @@ const Invoices: React.FC = () => {
                     </table>
                 </div>
             </Card>
+
+            {/* Pagination */}
+            {filteredInvoices.length > 0 && (
+                <div className="flex items-center justify-between px-2">
+                    <div className="text-sm text-muted">
+                        {t('Showing')} <span className="font-medium text-foreground">{Math.min(filteredInvoices.length, (currentPage - 1) * itemsPerPage + 1)}</span> {t('to')} <span className="font-medium text-foreground">{Math.min(filteredInvoices.length, currentPage * itemsPerPage)}</span> {t('of')} <span className="font-medium text-foreground">{filteredInvoices.length}</span> {t('results')}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <div className="text-sm font-medium">
+                            {t('Page')} {currentPage} / {totalPages}
+                        </div>
+                        <Button
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {/* Send Email Modal */}
             {sendingInvoice && (
@@ -361,6 +560,95 @@ const Invoices: React.FC = () => {
                         <div className="flex gap-3 justify-end">
                             <Button variant="outline" onClick={() => setSendingInvoice(null)}>{t('Cancel')}</Button>
                             <Button onClick={confirmSend} isLoading={isSending}>{t('Send Email')}</Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {transferringInvoice && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <Card className="w-full max-w-lg p-6 relative animate-fade-in-up">
+                        <button
+                            onClick={() => setTransferringInvoice(null)}
+                            className="absolute top-4 right-4 text-muted hover:text-foreground"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-foreground">
+                            <ArrowRightLeft className="w-5 h-5 text-primary" />
+                            {t('Transfer Ownership')}
+                        </h3>
+                        <p className="text-sm text-muted mb-6">{t('Transfer this invoice to a new owner (resale)')}</p>
+
+                        <div className="mb-5 p-4 rounded-xl bg-primary/10 border border-primary/20">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <User className="w-5 h-5 text-primary" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-xs text-primary font-semibold uppercase tracking-wide">{t('Current Owner')}</p>
+                                    <p className="text-sm font-bold text-foreground">{transferringInvoice.clientName}</p>
+                                    <p className="text-xs text-muted">{transferringInvoice.clientEmail}</p>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs text-muted">{t('Invoice #')}</div>
+                                    <div className="font-mono font-bold text-sm text-foreground">{transferringInvoice.invoiceNumber}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mb-5 p-4 rounded-xl bg-surface border border-border">
+                            <p className="text-xs text-foreground font-semibold uppercase tracking-wide mb-3 flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-primary" />
+                                {t('New Owner Details')}
+                            </p>
+                            <div className="space-y-3">
+                                <Input
+                                    label={t('New Owner Name')}
+                                    value={newOwnerName}
+                                    onChange={(e) => setNewOwnerName(e.target.value)}
+                                    placeholder="John Doe"
+                                />
+                                <Input
+                                    label={t('New Owner Email')}
+                                    type="email"
+                                    value={newOwnerEmail}
+                                    onChange={(e) => setNewOwnerEmail(e.target.value)}
+                                    placeholder="john@example.com"
+                                />
+                                <Input
+                                    label={t('New Owner Company')}
+                                    value={newOwnerCompany}
+                                    onChange={(e) => setNewOwnerCompany(e.target.value)}
+                                    placeholder="Optional"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                                {t('Transfer Reason')}
+                            </label>
+                            <textarea
+                                className="w-full h-16 resize-none rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
+                                value={transferReason}
+                                onChange={(e) => setTransferReason(e.target.value)}
+                                placeholder={t('e.g. Item resold to new owner')}
+                            />
+                        </div>
+
+                        <div className="flex gap-3 justify-end">
+                            <Button variant="outline" onClick={() => setTransferringInvoice(null)}>{t('Cancel')}</Button>
+                            <Button
+                                onClick={handleTransferOwnership}
+                                isLoading={isTransferring}
+                                disabled={!newOwnerName.trim()}
+                                className="bg-primary hover:bg-primary/90 text-white border-none"
+                            >
+                                <ArrowRightLeft className="w-4 h-4 mr-2" />
+                                {t('Transfer')}
+                            </Button>
                         </div>
                     </Card>
                 </div>

@@ -924,9 +924,10 @@ export class AppController {
             },
         };
 
-        if (payload.provider === 'mtn_momo' || payload.provider === 'mpesa') {
+        if (payerPhone) {
             payload.phone = payerPhone;
-        } else {
+        }
+        if (customerEmail || invoice.client_email) {
             payload.email = customerEmail || invoice.client_email;
         }
 
@@ -1861,10 +1862,6 @@ export class AppController {
 
     @Post('translate')
     async translate(@Req() req: Request, @Res() res: Response) {
-        if (!googleTranslateApiKey) {
-            return res.status(500).json({ error: 'Google Translate API key is not configured.' });
-        }
-
         const { texts, targetLanguage, sourceLanguage } = req.body || {};
         if (!Array.isArray(texts) || texts.length === 0) {
             return res.status(400).json({ error: 'Texts array is required.' });
@@ -1873,43 +1870,95 @@ export class AppController {
             return res.status(400).json({ error: 'Target language is required.' });
         }
 
-        const target = resolveGoogleLanguageCode(targetLanguage, 'en');
-        const source = sourceLanguage ? resolveGoogleLanguageCode(sourceLanguage, '') : '';
-        const payload = {
-            q: texts.map((text: string) => String(text)),
-            target,
-            format: 'text',
-            ...(source ? { source } : {}),
+        const translateWithGoogle = async (): Promise<string[] | null> => {
+            if (!googleTranslateApiKey) return null;
+            const target = resolveGoogleLanguageCode(targetLanguage, 'en');
+            const source = sourceLanguage ? resolveGoogleLanguageCode(sourceLanguage, '') : '';
+            const payload = {
+                q: texts.map((text: string) => String(text)),
+                target,
+                format: 'text',
+                ...(source ? { source } : {}),
+            };
+
+            try {
+                const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${googleTranslateApiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    console.warn('Google Translate response not ok:', response.status);
+                    return null;
+                }
+
+                const data: any = await response.json();
+                const translations = Array.isArray(data?.data?.translations)
+                    ? data.data.translations.map((item: any) => item.translatedText || '')
+                    : [];
+
+                if (translations.length === texts.length) {
+                    return translations;
+                }
+                return null;
+            } catch (error) {
+                console.warn('Google Translate API error, falling back to Gemini:', error);
+                return null;
+            }
         };
 
-        try {
-            const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${googleTranslateApiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
+        const translateWithGemini = async (): Promise<string[] | null> => {
+            if (!geminiApiKey) return null;
+            const srcLang = sourceLanguage || 'English';
+            const prompt = `Translate the following texts from ${srcLang} to ${targetLanguage}. Return ONLY a JSON array of translated strings, maintaining the exact same order and count as the input. Do not include any explanation or markdown formatting.
 
-            if (!response.ok) {
-                const errData: any = await response.json().catch(() => ({}));
-                return res.status(response.status).json({
-                    error: errData.error?.message || 'Google Translate request failed.',
+Input texts:
+${JSON.stringify(texts)}
+
+Output (JSON array only):`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { temperature: 0.1 },
+                    }),
                 });
+
+                if (!response.ok) {
+                    console.warn('Gemini translation response not ok:', response.status);
+                    return null;
+                }
+
+                const data: any = await response.json();
+                const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+                if (!jsonMatch) return null;
+
+                const parsed = JSON.parse(jsonMatch[0]);
+                if (Array.isArray(parsed) && parsed.length === texts.length) {
+                    return parsed.map((item: any) => String(item));
+                }
+                return null;
+            } catch (error) {
+                console.error('Gemini translation error:', error);
+                return null;
             }
+        };
 
-            const data: any = await response.json();
-            const translations = Array.isArray(data?.data?.translations)
-                ? data.data.translations.map((item: any) => item.translatedText || '')
-                : [];
-
-            if (!translations.length) {
-                return res.status(500).json({ error: 'No translations returned.' });
-            }
-
-            return res.json({ translations });
-        } catch (error) {
-            console.error('Google Translate API error', error);
-            return res.status(500).json({ error: 'Google Translate request failed.' });
+        let translations = await translateWithGoogle();
+        if (!translations) {
+            translations = await translateWithGemini();
         }
+
+        if (!translations || translations.length !== texts.length) {
+            return res.status(500).json({ error: 'Translation failed. Please try again.' });
+        }
+
+        return res.json({ translations });
     }
 
     @Get('auth/google/start')

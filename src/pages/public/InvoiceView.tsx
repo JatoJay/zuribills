@@ -4,7 +4,7 @@ import { Invoice, Organization, InvoiceStatus } from '@/types';
 import { getOrganizationBySlug, getInvoices } from '@/services/storage';
 import { apiFetch } from '@/services/apiClient';
 import { Button, formatCurrency, Badge, Card, Input } from '@/components/ui';
-import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw, ArrowRight, ArrowRightLeft, Calendar } from 'lucide-react';
 import { processPayment, requiresAfnexPhone } from '@/services/paymentService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { resolvePayoutProvider } from '@/services/paymentRouting';
@@ -66,6 +66,11 @@ const InvoiceView: React.FC = () => {
         'Mobile money number',
         'Enter your mobile money number to receive the payment prompt.',
         'Payment cancelled.',
+        'Transferred from',
+        'Original Owner',
+        'Transfer Date',
+        'Transfer Reason',
+        'TIN:',
     ]), []);
     const { t } = useTranslation(translationStrings);
     const [data, setData] = useState<{ invoice: Invoice, org: Organization } | null>(null);
@@ -395,6 +400,33 @@ const InvoiceView: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* Ownership Transfer Banner */}
+                    {invoice.ownershipTransfer && (
+                        <div className="mb-8 p-4 rounded-xl bg-primary/10 border border-primary/20 print:bg-primary/10">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <ArrowRightLeft className="w-5 h-5 text-primary" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-primary font-semibold uppercase tracking-wide">{t('Previously owned by')}</p>
+                                    <p className="text-sm font-bold text-slate-900">{invoice.ownershipTransfer.previousClientName}</p>
+                                    <p className="text-xs text-slate-600">{invoice.ownershipTransfer.previousClientEmail}</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-4 text-xs">
+                                <div className="flex items-center gap-2 text-slate-700">
+                                    <Calendar className="w-3.5 h-3.5 text-primary" />
+                                    <span>{t('Transfer Date')}: {new Date(invoice.ownershipTransfer.transferredAt).toLocaleDateString()}</span>
+                                </div>
+                                {invoice.ownershipTransfer.reason && (
+                                    <div className="text-slate-600 italic">
+                                        "{invoice.ownershipTransfer.reason}"
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Client Info */}
                     <div className="grid grid-cols-2 gap-12 mb-12">
                         <div>
@@ -402,6 +434,7 @@ const InvoiceView: React.FC = () => {
                             <h3 className="font-bold text-slate-900">{invoice.clientName}</h3>
                             {invoice.clientCompany && <p className="text-slate-600">{invoice.clientCompany}</p>}
                             <p className="text-slate-500 text-sm">{invoice.clientEmail}</p>
+                            {invoice.clientTin && <p className="text-slate-500 text-sm mt-1">{t('TIN:')} {invoice.clientTin}</p>}
                         </div>
                         <div className="text-right text-slate-900">
                             <div className="space-y-1">

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, createContext, useContext } from 'react';
 import { Outlet, useParams, Link, useNavigate } from '@tanstack/react-router';
-import { LayoutDashboard, FileText, Settings as SettingsIcon, Users, ShoppingBag, LogOut, ShieldCheck, ExternalLink, Wallet, BarChart3, Building2, Sparkles, CheckCircle, Lock, Landmark, Menu, X as CloseIcon } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings as SettingsIcon, Users, ShoppingBag, LogOut, ShieldCheck, ExternalLink, Wallet, BarChart3, Building2, Sparkles, CheckCircle, Lock, Landmark, Menu, X as CloseIcon, Globe } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import BusinessChatWidget from '@/components/BusinessChatWidget';
 import { Button, Card } from '@/components/ui';
@@ -10,6 +10,7 @@ import { clearCurrentAccountId, clearCurrentUserId, getAccountById, getCurrentUs
 import { Account, Organization } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
+import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 
 interface AdminContextType {
   org: Organization;
@@ -99,7 +100,7 @@ const AdminLayout: React.FC = () => {
     'Authentication failed. Please try again.',
     'Close',
   ]), []);
-  const { t, setLanguage } = useTranslation(translationStrings);
+  const { t, setLanguage, language } = useTranslation(translationStrings);
 
   const refreshOrg = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -497,8 +498,23 @@ const AdminLayout: React.FC = () => {
         </nav>
 
         <div className="p-4 border-t border-border space-y-2 bg-surface/30">
-          <div className="px-4 py-2">
+          <div className="px-4 py-2 flex items-center justify-between gap-2">
             <ThemeToggle />
+            <div className="relative">
+              <Globe className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted pointer-events-none" />
+              <select
+                value={language}
+                onChange={(e) => {
+                  localStorage.setItem(LANGUAGE_SOURCE_KEY, 'user');
+                  setLanguage(e.target.value);
+                }}
+                className="appearance-none pl-7 pr-6 py-1.5 text-xs rounded-md border border-border bg-surface text-foreground cursor-pointer hover:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+              >
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <Link
             to="/catalog/$slug"

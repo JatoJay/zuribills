@@ -1,8 +1,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
-import { Service, InvoiceItem, InvoiceStatus, Invoice } from '@/types';
-import { getServices, createInvoice } from '@/services/storage';
+import { Service, InvoiceItem, InvoiceStatus, Invoice, Client } from '@/types';
+import { getServices, createInvoice, getClients, updateInvoice } from '@/services/storage';
 import { Button, Input, Card, formatCurrency } from '@/components/ui';
 import { Trash2, Plus, ArrowLeft, Sparkles, Shield } from 'lucide-react';
 import { parseInvoicePrompt, validateInvoiceCompliance, ComplianceResult } from '@/services/geminiService';
@@ -28,6 +28,7 @@ const InvoiceCreate: React.FC = () => {
         'Client Name',
         'Client Email',
         'Company Name',
+        'TIN (Tax ID)',
         'Invoice Settings',
         'Due Date',
         'Notes / Terms',
@@ -46,10 +47,18 @@ const InvoiceCreate: React.FC = () => {
         'Please fill client info and add items',
         'AI Error:',
         'e.g. Bill Acme Corp $500 for Web Design and $150 for Hosting',
+        'Select Existing Client',
+        'Choose a client...',
+        'Or enter details manually below',
+        'Edit Invoice',
+        'Update Invoice',
     ]), []);
     const { t } = useTranslation(translationStrings);
     const [services, setServices] = useState<Service[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     // AI State
     const [aiPrompt, setAiPrompt] = useState('');
@@ -59,6 +68,7 @@ const InvoiceCreate: React.FC = () => {
         clientName: '',
         clientEmail: '',
         clientCompany: '',
+        clientTin: '',
         dueDate: '',
         notes: '',
         vatRate: 0,
@@ -75,14 +85,17 @@ const InvoiceCreate: React.FC = () => {
         let isActive = true;
         if (!org?.id) {
             setServices([]);
+            setClients([]);
             return () => {
                 isActive = false;
             };
         }
         setServices([]);
-        getServices(org.id).then((data) => {
+        setClients([]);
+        Promise.all([getServices(org.id), getClients(org.id)]).then(([sData, cData]) => {
             if (isActive) {
-                setServices(data.filter(service => service.organizationId === org.id));
+                setServices(sData.filter(service => service.organizationId === org.id));
+                setClients(cData.filter(client => client.organizationId === org.id));
             }
         });
         return () => {
@@ -98,6 +111,7 @@ const InvoiceCreate: React.FC = () => {
                 clientName: source.clientName,
                 clientEmail: source.clientEmail,
                 clientCompany: source.clientCompany || '',
+                clientTin: source.clientTin || '',
                 dueDate: '',
                 notes: source.notes || '',
                 vatRate: Number.isFinite(source.taxRate) ? source.taxRate : 0,
@@ -107,6 +121,20 @@ const InvoiceCreate: React.FC = () => {
                 ...item,
                 id: crypto.randomUUID()
             })));
+        } else if (state?.editInvoice) {
+            const source: Invoice = state.editInvoice;
+            setIsEditMode(true);
+            setEditingId(source.id);
+            setFormData({
+                clientName: source.clientName,
+                clientEmail: source.clientEmail,
+                clientCompany: source.clientCompany || '',
+                clientTin: source.clientTin || '',
+                dueDate: source.dueDate ? new Date(source.dueDate).toISOString().split('T')[0] : '',
+                notes: source.notes || '',
+                vatRate: Number.isFinite(source.taxRate) ? source.taxRate : 0,
+            });
+            setItems(source.items); // Keep original Item IDs if we want to track them, or gen new ones? Usually keep for edit.
         }
     }, [location.state]);
 
@@ -198,11 +226,12 @@ const InvoiceCreate: React.FC = () => {
             return;
         }
         setLoading(true);
-        await createInvoice({
+        const invoiceData = {
             organizationId: org.id,
             clientName: formData.clientName,
             clientEmail: formData.clientEmail,
             clientCompany: formData.clientCompany,
+            clientTin: formData.clientTin || undefined,
             items,
             subtotal,
             taxRate: vatRate,
@@ -212,7 +241,24 @@ const InvoiceCreate: React.FC = () => {
             date: new Date().toISOString(),
             dueDate: formData.dueDate || new Date().toISOString(),
             notes: formData.notes,
-        });
+        };
+
+        if (isEditMode && editingId) {
+            // Retrieve original invoice to keep invoiceNumber and ID
+            const state = location.state as any;
+            const original = state?.editInvoice as Invoice;
+             // Ensure we don't change the ID or Number on update unless intended. 
+             // We pass the full object to update.
+             await updateInvoice({
+                 ...invoiceData,
+                 id: editingId,
+                 invoiceNumber: original.invoiceNumber, // Keep original number
+                 status: original.status, // Keep original status? Or reset? Usually keep.
+                 date: original.date, // Keep creation date?
+             });
+        } else {
+             await createInvoice(invoiceData);
+        }
         setLoading(false);
         navigate({ to: '/org/$slug/invoices', params: { slug: org.slug } });
     };
@@ -224,12 +270,12 @@ const InvoiceCreate: React.FC = () => {
                 <ArrowLeft className="w-4 h-4 mr-1" /> {t('Back to Invoices')}
             </button>
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">{t('New Invoice')}</h2>
+                <h2 className="text-2xl font-bold">{isEditMode ? t('Edit Invoice') : t('New Invoice')}</h2>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={handleAudit} className="flex items-center gap-2 text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
                         <Shield className="w-4 h-4" /> {t('Audit')}
                     </Button>
-                    <Button onClick={handleSubmit} isLoading={loading}>{t('Save & Send')}</Button>
+                    <Button onClick={handleSubmit} isLoading={loading}>{isEditMode ? t('Update Invoice') : t('Save & Send')}</Button>
                 </div>
             </div>
 
@@ -265,9 +311,36 @@ const InvoiceCreate: React.FC = () => {
                 <Card className="p-6">
                     <h3 className="font-bold mb-4">{t('Client Details')}</h3>
                     <div className="space-y-4">
+                        {clients.length > 0 && (
+                            <div>
+                                <label className="text-sm font-medium leading-none mb-2 block">{t('Select Existing Client')}</label>
+                                <select
+                                    className="w-full h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
+                                    onChange={(e) => {
+                                        const client = clients.find(c => c.id === e.target.value);
+                                        if (client) {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                clientName: client.name,
+                                                clientEmail: client.email,
+                                                clientCompany: client.company || '',
+                                            }));
+                                        }
+                                    }}
+                                    defaultValue=""
+                                >
+                                    <option value="" disabled>{t('Choose a client...')}</option>
+                                    {clients.map(client => (
+                                        <option key={client.id} value={client.id}>{client.name} {client.company ? `(${client.company})` : ''}</option>
+                                    ))}
+                                </select>
+                                <div className="text-xs text-muted mt-1">{t('Or enter details manually below')}</div>
+                            </div>
+                        )}
                         <Input label={t('Client Name')} value={formData.clientName} onChange={e => setFormData({ ...formData, clientName: e.target.value })} />
                         <Input label={t('Client Email')} type="email" value={formData.clientEmail} onChange={e => setFormData({ ...formData, clientEmail: e.target.value })} />
                         <Input label={t('Company Name')} value={formData.clientCompany} onChange={e => setFormData({ ...formData, clientCompany: e.target.value })} />
+                        <Input label={t('TIN (Tax ID)')} value={formData.clientTin} onChange={e => setFormData({ ...formData, clientTin: e.target.value })} placeholder="Optional" />
                     </div>
                 </Card>
                 <Card className="p-6">

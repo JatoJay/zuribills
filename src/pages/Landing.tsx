@@ -6,6 +6,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useParallax } from '@/hooks/useParallax';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
+import { motion, useScroll, useTransform, MotionValue } from 'framer-motion';
 import {
   CheckCircle,
   Zap,
@@ -319,125 +320,346 @@ const ZoomCanvasPreview: React.FC<{ t: (text: string) => string }> = ({ t }) => 
   </div>
 );
 
-const StackedFeatureCard: React.FC<{ feature: typeof PRODUCT_FEATURES[0]; index: number; scrollProgress: number; t: any }> = ({ feature, index, scrollProgress, t }) => {
-  const count = PRODUCT_FEATURES.length;
-  
-  // arrival starts slightly before its segment and completes at the start of its segment
-  const segmentSize = 1 / count;
-  const startAt = index * segmentSize;
-  
-  // Progress of this card coming onto the screen (0 to 1)
-  const arrival = Math.max(0, Math.min(1, (scrollProgress - (startAt - 0.1)) / 0.1));
-  
-  // Progress of this card being covered by the NEXT card (0 to 1)
-  const nextStart = (index + 1) * segmentSize;
-  const recession = Math.max(0, Math.min(1, (scrollProgress - nextStart) / 0.1));
-  
-  const style: React.CSSProperties = {
-    transform: `translateY(${(1 - arrival) * 60}vh) scale(${1 - (recession * 0.05)})`,
-    opacity: arrival - (recession * 0.6),
-    zIndex: 10 + index,
-    visibility: arrival > 0 ? 'visible' : 'hidden',
-    transition: 'transform 0.05s linear, opacity 0.05s linear'
-  };
+const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featureIndex, t }) => {
+  if (featureIndex === 0) {
+    return (
+      <div className="h-full bg-gradient-to-b from-slate-50 to-white">
+        <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
+              <Zap className="w-4 h-4 text-black" />
+            </div>
+            <span className="text-[13px] font-bold text-slate-800">My Catalog</span>
+          </div>
+        </div>
+        <div className="p-4 space-y-3">
+          {[
+            { name: 'Brand Strategy', price: '$2,400', color: 'bg-emerald-500' },
+            { name: 'Web Design', price: '$1,800', color: 'bg-blue-500' },
+            { name: 'SEO Audit', price: '$500', color: 'bg-purple-500' },
+          ].map((item, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.15 }}
+              className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl ${item.color} flex items-center justify-center`}>
+                  <Layers className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[13px] font-semibold text-slate-800">{item.name}</p>
+                  <p className="text-[11px] text-slate-500">Service Package</p>
+                </div>
+                <span className="text-[14px] font-bold text-slate-800">{item.price}</span>
+              </div>
+            </motion.div>
+          ))}
+          <button className="w-full h-12 bg-primary rounded-xl text-black font-bold text-[13px] mt-4">
+            Share Catalog Link
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (featureIndex === 1) {
+    return (
+      <div className="h-full bg-gradient-to-b from-blue-50 to-white">
+        <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-[13px] font-bold text-slate-800">AI Agent</span>
+          </div>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                <Bot className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-[12px] text-slate-700 leading-relaxed">
+                  <span className="font-semibold">Invoice #1042</span> from Acme Corp is 3 days overdue.
+                  <span className="text-blue-600 font-medium"> Want me to send a reminder?</span>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button className="flex-1 h-10 bg-blue-500 rounded-xl text-white font-semibold text-[12px]">
+              Send Reminder
+            </button>
+            <button className="flex-1 h-10 bg-slate-100 rounded-xl text-slate-600 font-semibold text-[12px]">
+              View Invoice
+            </button>
+          </div>
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-4 text-white">
+            <p className="text-[11px] opacity-80 mb-1">This Week&apos;s Revenue</p>
+            <p className="text-[24px] font-bold">$3,450.00</p>
+            <p className="text-[11px] opacity-80 mt-1">↑ 15% vs last week</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (featureIndex === 2) {
+    return (
+      <div className="h-full bg-gradient-to-b from-orange-50 to-white">
+        <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center">
+              <Zap className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-[13px] font-bold text-slate-800">Payment Received</span>
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm text-center">
+            <motion.div
+              className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', delay: 0.2 }}
+            >
+              <CheckCircle className="w-8 h-8 text-green-500" />
+            </motion.div>
+            <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">Payment Confirmed</p>
+            <p className="text-[28px] font-bold text-slate-800">$1,200.00</p>
+            <p className="text-[12px] text-slate-500 mt-2">From Acme Corp</p>
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-center gap-2 text-orange-500">
+                <Zap className="w-4 h-4" />
+                <span className="text-[12px] font-semibold">Instant Payout</span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">Funds sent to your bank</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="absolute inset-0 w-full h-full flex items-center justify-center px-4" style={style}>
-      <div className="bg-white/95 rounded-[48px] border border-black/[0.05] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] backdrop-blur-xl overflow-hidden min-h-[580px] w-full max-w-6xl flex flex-col lg:flex-row items-center group">
-        {/* Content Side */}
-        <div className="p-12 lg:p-20 flex-1 relative z-10 text-left">
-          <div className="flex items-center gap-3 mb-8">
-            <div className={`w-10 h-10 rounded-xl ${feature.bgColor} flex items-center justify-center shadow-sm border border-black/[0.03]`}>
-              {feature.categoryIcon}
-            </div>
-            <span className={`text-[13px] font-black uppercase tracking-[0.2em] ${feature.labelColor}`}>
-              {t(feature.category)}
-            </span>
+    <div className="h-full bg-gradient-to-b from-purple-50 to-white">
+      <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-purple-500 flex items-center justify-center">
+            <BarChart3 className="w-4 h-4 text-white" />
           </div>
-          
-          <h3 className="text-primary font-display font-bold text-2xl mb-6 tracking-tight">{t(feature.brand)}</h3>
-          <h2 className="text-[40px] lg:text-[56px] font-display font-medium tracking-tight leading-[1.05] mb-10 text-[#0b0b0b]">
-            {t(feature.title)}
-          </h2>
-          <p className="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">
-            {t(feature.description)}
-          </p>
-
-          <Button variant="primary" className="mt-12 rounded-2xl h-14 px-10 text-base">
-             {t('Learn more')}
-          </Button>
+          <span className="text-[13px] font-bold text-slate-800">Analytics</span>
         </div>
-
-        {/* Visual Side (Mockup) */}
-        <div className="flex-1 w-full h-full relative p-12 lg:p-0 flex justify-center items-center bg-[#fcfcfc] border-l border-black/[0.03]">
-          <div className="absolute inset-0 bg-grid-slate-200/40 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
-          
-          {/* Animated Mobile Mockup */}
-          <div className="relative z-10 w-[290px] h-[580px] bg-[#000000] rounded-[48px] border-[10px] border-[#121212] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden transform lg:translate-y-20 lg:translate-x-12 lg:-rotate-[8deg] transition-all duration-700">
-             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#121212] rounded-b-2xl z-20" />
-             
-             <div className="p-6 pt-16 space-y-8 text-center">
-                <div className="h-12 w-full bg-white/5 rounded-2xl animate-pulse" />
-                <div className="space-y-3">
-                   <div className="h-2 w-2/3 bg-white/10 rounded-full mx-auto" />
-                   <div className="h-2 w-full bg-white/5 rounded-full mx-auto" />
-                </div>
-                <div className="aspect-[4/5] w-full bg-gradient-to-tr from-primary/20 via-teal-500/5 to-transparent rounded-[36px] border border-white/5 flex items-center justify-center shadow-inner overflow-hidden">
-                   <feature.categoryIcon.type className="w-14 h-14 text-primary opacity-80" />
-                </div>
-                <div className="h-14 w-full bg-primary rounded-2xl flex items-center justify-center font-bold text-[#000000] text-sm shadow-xl shadow-primary/30">
-                   {t('Confirm')}
-                </div>
-             </div>
+      </div>
+      <div className="p-4 space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-2xl border border-slate-100 p-3 shadow-sm">
+            <p className="text-[10px] text-slate-500 uppercase">Revenue</p>
+            <p className="text-[18px] font-bold text-slate-800">$12.4k</p>
+            <p className="text-[10px] text-green-500">↑ 22%</p>
           </div>
-
-          {/* Decorative Orbits */}
-          <div className="absolute w-[450px] h-[450px] rounded-full border border-slate-200/50 -z-10" />
-          <div className="absolute w-[600px] h-[600px] rounded-full border border-slate-200/30 -z-10" />
+          <div className="bg-white rounded-2xl border border-slate-100 p-3 shadow-sm">
+            <p className="text-[10px] text-slate-500 uppercase">Expenses</p>
+            <p className="text-[18px] font-bold text-slate-800">$3.2k</p>
+            <p className="text-[10px] text-red-500">↑ 8%</p>
+          </div>
         </div>
+        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+          <p className="text-[11px] text-slate-500 mb-3">Monthly Cash Flow</p>
+          <div className="flex items-end gap-1 h-20">
+            {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
+              <motion.div
+                key={i}
+                className="flex-1 bg-purple-500 rounded-t"
+                initial={{ height: 0 }}
+                animate={{ height: `${h}%` }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+              />
+            ))}
+          </div>
+        </div>
+        <button className="w-full h-10 bg-purple-500 rounded-xl text-white font-semibold text-[12px]">
+          Export Tax Report
+        </button>
       </div>
     </div>
   );
 };
 
-const FeatureSlider: React.FC<{ t: any }> = ({ t }) => {
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+const StackedFeatureCard: React.FC<{
+  feature: typeof PRODUCT_FEATURES[0];
+  index: number;
+  totalCards: number;
+  scrollProgress: MotionValue<number>;
+  t: any
+}> = ({ feature, index, totalCards, scrollProgress, t }) => {
+  const segmentSize = 1 / totalCards;
+  const cardStart = index * segmentSize;
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      
-      // Calculate how far through the section we are
-      // 0 = section top at viewport top
-      // 1 = section bottom at viewport top
-      const totalScrollableHeight = rect.height - viewportHeight;
-      const currentScroll = -rect.top;
-      const progress = Math.max(0, Math.min(1, currentScroll / totalScrollableHeight));
-      
-      setScrollProgress(progress);
-    };
+  const y = useTransform(
+    scrollProgress,
+    [cardStart - segmentSize * 0.8, cardStart],
+    [100, 0]
+  );
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const clampedY = useTransform(y, (value) => `${Math.max(0, value)}%`);
 
   return (
-    <section ref={containerRef} className="relative h-[400vh] bg-transparent">
-      <div className="sticky top-0 h-screen overflow-hidden flex items-center justify-center">
-        <div className="max-w-7xl mx-auto w-full h-full relative">
-           {PRODUCT_FEATURES.map((feature, index) => (
-             <StackedFeatureCard 
-               key={feature.brand} 
-               feature={feature} 
-               index={index} 
-               scrollProgress={scrollProgress}
-               t={t}
-             />
-           ))}
+    <motion.div
+      className="absolute top-0 left-0 w-full h-full flex items-center justify-center px-4 md:px-8"
+      style={{ zIndex: index + 1, y: clampedY }}
+    >
+      <div
+        className="relative w-full max-w-[1400px] h-[90vh] max-h-[780px] rounded-[32px] bg-[#f8f8f6] border border-black/[0.06] shadow-[0_8px_60px_-12px_rgba(0,0,0,0.25)] overflow-hidden"
+      >
+        <div className="absolute inset-0 flex flex-col lg:flex-row">
+          <div className="absolute top-6 left-8 z-20 flex items-center gap-2.5">
+            <div className={`w-5 h-5 rounded-md ${feature.bgColor} flex items-center justify-center`}>
+              {React.cloneElement(feature.categoryIcon as React.ReactElement, { className: 'w-3 h-3' })}
+            </div>
+            <span className="text-[12px] font-semibold text-slate-500 tracking-wide">
+              {t(feature.category)}
+            </span>
+          </div>
+
+          <div className="flex-1 flex flex-col justify-center px-8 lg:px-14 pt-20 pb-10 lg:pt-10 lg:pb-10 relative z-10">
+            <div className="max-w-lg">
+              <div className="bg-white rounded-[24px] border border-black/[0.04] p-8 lg:p-10 shadow-[0_16px_48px_-16px_rgba(0,0,0,0.1)]">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className={`w-6 h-6 rounded-lg ${feature.bgColor} flex items-center justify-center`}>
+                    {React.cloneElement(feature.categoryIcon as React.ReactElement, { className: `w-3.5 h-3.5 ${feature.labelColor}` })}
+                  </div>
+                  <span className={`text-[12px] font-semibold ${feature.labelColor}`}>
+                    {t(feature.category)}
+                  </span>
+                </div>
+
+                <h3 className={`font-display font-bold text-xl lg:text-2xl mb-4 tracking-tight ${feature.labelColor}`}>
+                  {t(feature.brand)}
+                </h3>
+
+                <h2 className="text-[28px] lg:text-[36px] font-display font-semibold tracking-[-0.02em] leading-[1.15] mb-5 text-[#0b0b0b]">
+                  {t(feature.title)}
+                </h2>
+
+                <p className="text-[15px] text-slate-500 leading-relaxed mb-6">
+                  {t(feature.description)}
+                </p>
+
+                <a href="#" className={`inline-flex items-center gap-2 font-semibold text-[14px] hover:gap-3 transition-all group/link ${feature.labelColor}`}>
+                  {t('Learn more')}
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover/link:translate-x-1" />
+                </a>
+              </div>
+
+              <button className="mt-6 h-12 px-7 bg-[#0b0b0b] text-white rounded-xl font-semibold text-[14px] hover:bg-[#1a1a1a] transition-colors shadow-lg">
+                {t(`Start with ${feature.brand}`)}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className={`absolute w-[500px] h-[500px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/20`} />
+              <div className={`absolute w-[380px] h-[380px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/15`} />
+              <div className={`absolute w-[260px] h-[260px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/10`} />
+            </div>
+
+            <motion.div
+              className="absolute top-[20%] left-[15%] w-12 h-12 rounded-2xl bg-white/90 backdrop-blur-sm border border-black/5 shadow-lg flex items-center justify-center"
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <div className={`w-7 h-7 rounded-xl ${feature.bgColor} flex items-center justify-center`}>
+                {React.cloneElement(feature.categoryIcon as React.ReactElement, { className: `w-3.5 h-3.5 ${feature.labelColor}` })}
+              </div>
+            </motion.div>
+
+            <motion.div
+              className={`absolute bottom-[30%] left-[10%] w-10 h-10 rounded-full shadow-lg flex items-center justify-center ${feature.bgColor}`}
+              animate={{ y: [0, 6, 0], x: [0, 3, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+            >
+              <ArrowRight className={`w-4 h-4 -rotate-45 ${feature.labelColor.includes('emerald') || feature.labelColor.includes('orange') ? 'text-white' : 'text-white'}`} />
+            </motion.div>
+
+            <div className="relative z-10 w-[260px] h-[540px]">
+              <div className="absolute inset-0 bg-[#1a1a1a] rounded-[40px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.4)]">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#1a1a1a] rounded-b-2xl z-20" />
+                <div className="absolute inset-[3px] bg-white rounded-[37px] overflow-hidden">
+                  <div className="flex items-center justify-between px-5 pt-2 pb-1">
+                    <span className="text-[10px] font-semibold text-black">9:41</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3.5 h-2 rounded-sm border border-black/80 relative">
+                        <div className="absolute inset-[1px] right-[1px] bg-black rounded-[1px]" />
+                      </div>
+                    </div>
+                  </div>
+                  <PhoneMockupContent featureIndex={index} t={t} />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div className="absolute bottom-6 left-8 right-8 flex items-center justify-between z-30">
+          <div className="flex items-center gap-2">
+            {Array.from({ length: totalCards }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  i === index
+                    ? 'bg-[#0b0b0b] scale-125'
+                    : 'bg-slate-300'
+                }`}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button className="w-10 h-10 rounded-full border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center transition-colors">
+              <ArrowRight className="w-4 h-4 text-slate-400 rotate-180" />
+            </button>
+            <button className="w-10 h-10 rounded-full bg-[#0b0b0b] hover:bg-[#1a1a1a] flex items-center justify-center transition-colors">
+              <ArrowRight className="w-4 h-4 text-white" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const FeatureSlider: React.FC<{ t: any }> = ({ t }) => {
+  const totalCards = PRODUCT_FEATURES.length;
+  const containerRef = useRef<HTMLElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ['start start', 'end end'],
+  });
+
+  return (
+    <section
+      ref={containerRef as React.RefObject<HTMLElement>}
+      className="relative"
+      style={{ height: `${totalCards * 100}vh` }}
+    >
+      <div className="sticky top-0 h-screen overflow-hidden">
+        {PRODUCT_FEATURES.map((feature, index) => (
+          <StackedFeatureCard
+            key={feature.brand}
+            feature={feature}
+            index={index}
+            totalCards={totalCards}
+            scrollProgress={scrollYProgress}
+            t={t}
+          />
+        ))}
       </div>
     </section>
   );
@@ -829,7 +1051,8 @@ const Landing: React.FC = () => {
     'Automation',
     'Intelligence',
     'Confirm',
-    'Learn more'
+    'Learn more',
+    'Get started'
   ]), []);
   const { t, language, setLanguage } = useTranslation(translationStrings);
   const languageOptions = useMemo(() => {
@@ -867,8 +1090,8 @@ const Landing: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-black overflow-x-hidden"
-      style={LIGHT_THEME}
+      className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-black"
+      style={{ ...LIGHT_THEME, overflowX: 'clip' } as React.CSSProperties}
     >
       <NavBar
         t={t}
@@ -958,10 +1181,10 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <section id="product" className="py-24 bg-transparent relative overflow-hidden">
-        <div className="absolute -top-20 right-8 w-64 h-64 bg-primary/10 blur-[120px]" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-24">
+      <section id="product" className="bg-transparent relative">
+        <div className="absolute -top-20 right-8 w-64 h-64 bg-primary/10 blur-[120px] pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative py-24">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
             <div>
               <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('Product')}</div>
               <h2 className="text-4xl md:text-5xl font-display font-semibold">
@@ -972,9 +1195,8 @@ const Landing: React.FC = () => {
               {t('Replace scattered tools with a focused experience. Your catalog, invoices, expenses, and payments live in one place.')}
             </p>
           </div>
-
-          <FeatureSlider t={t} />
         </div>
+        <FeatureSlider t={t} />
       </section>
 
       <section id="how-it-works" className="py-24 bg-transparent relative overflow-hidden">
@@ -1278,7 +1500,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           
           <div className="max-w-7xl mx-auto px-10 md:px-16">
             {/* Top Integrated Header Row */}
-            <div className="py-12 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="py-12 flex flex-col md:flex-row justify-between items-center gap-6 text-left">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-[6px] bg-white flex items-center justify-center">
