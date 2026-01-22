@@ -13,7 +13,7 @@ import {
   UserRole,
   TrialInfo,
   AgentLog,
-  OwnershipTransfer,
+  InvoiceTransfer,
 } from '../types';
 import { getSupabaseClient } from './supabaseClient';
 import { resolveCountryCode, resolveDefaultCurrency, resolvePayoutProvider } from './paymentRouting';
@@ -248,6 +248,9 @@ const mapInvoiceFromDb = (row: any): Invoice => ({
   dueDate: row.due_date,
   notes: row.notes ?? undefined,
   ownershipTransfer: row.ownership_transfer ?? undefined,
+  parentInvoiceId: row.parent_invoice_id ?? undefined,
+  rootInvoiceId: row.root_invoice_id ?? undefined,
+  transferSequence: row.transfer_sequence ?? 0,
 });
 
 const mapInvoiceToDb = (invoice: Invoice) => ({
@@ -268,6 +271,9 @@ const mapInvoiceToDb = (invoice: Invoice) => ({
   due_date: invoice.dueDate,
   notes: toNullable(invoice.notes),
   ownership_transfer: invoice.ownershipTransfer ?? null,
+  parent_invoice_id: toNullable(invoice.parentInvoiceId),
+  root_invoice_id: toNullable(invoice.rootInvoiceId),
+  transfer_sequence: invoice.transferSequence ?? 0,
 });
 
 const mapExpenseFromDb = (row: any): Expense => ({
@@ -863,11 +869,50 @@ export const updateInvoiceStatus = async (id: string, status: InvoiceStatus): Pr
   if (error) throw error;
 };
 
+const mapInvoiceTransferFromDb = (row: any): InvoiceTransfer => ({
+  id: row.id,
+  fromInvoiceId: row.from_invoice_id,
+  toInvoiceId: row.to_invoice_id,
+  rootInvoiceId: row.root_invoice_id,
+  fromClientName: row.from_client_name,
+  fromClientEmail: row.from_client_email,
+  fromClientCompany: row.from_client_company ?? undefined,
+  toClientName: row.to_client_name,
+  toClientEmail: row.to_client_email,
+  toClientCompany: row.to_client_company ?? undefined,
+  originalAmount: row.original_amount,
+  newAmount: row.new_amount,
+  priceDelta: row.price_delta,
+  reason: row.reason ?? undefined,
+  transferredAt: row.transferred_at,
+  transferSequence: row.transfer_sequence,
+});
+
+const mapInvoiceTransferToDb = (transfer: InvoiceTransfer) => ({
+  id: transfer.id,
+  from_invoice_id: transfer.fromInvoiceId,
+  to_invoice_id: transfer.toInvoiceId,
+  root_invoice_id: transfer.rootInvoiceId,
+  from_client_name: transfer.fromClientName,
+  from_client_email: transfer.fromClientEmail,
+  from_client_company: toNullable(transfer.fromClientCompany),
+  to_client_name: transfer.toClientName,
+  to_client_email: transfer.toClientEmail,
+  to_client_company: toNullable(transfer.toClientCompany),
+  original_amount: transfer.originalAmount,
+  new_amount: transfer.newAmount,
+  price_delta: transfer.priceDelta,
+  reason: toNullable(transfer.reason),
+  transferred_at: transfer.transferredAt,
+  transfer_sequence: transfer.transferSequence,
+});
+
 export const transferInvoiceOwnership = async (
   invoiceId: string,
-  newClient: { name: string; email: string; company?: string },
-  reason?: string
-): Promise<Invoice> => {
+  newClient: { name: string; email: string; company?: string; tin?: string },
+  reason?: string,
+  newTotal?: number
+): Promise<{ originalInvoice: Invoice; newInvoice: Invoice; transfer: InvoiceTransfer }> => {
   const supabase = getSupabaseClient();
 
   const { data: invoiceRow, error: fetchError } = await supabase
@@ -878,31 +923,126 @@ export const transferInvoiceOwnership = async (
   if (fetchError) throw fetchError;
   if (!invoiceRow) throw new Error('Invoice not found');
 
-  const invoice = mapInvoiceFromDb(invoiceRow);
+  const originalInvoice = mapInvoiceFromDb(invoiceRow);
+  const now = new Date().toISOString();
+  const rootInvoiceId = originalInvoice.rootInvoiceId || originalInvoice.id;
+  const nextSequence = (originalInvoice.transferSequence ?? 0) + 1;
+  const finalTotal = newTotal ?? originalInvoice.total;
 
-  const ownershipTransfer: OwnershipTransfer = {
-    previousClientName: invoice.clientName,
-    previousClientEmail: invoice.clientEmail,
-    previousClientCompany: invoice.clientCompany,
-    transferredAt: new Date().toISOString(),
-    reason,
-  };
+  const { count, error: countError } = await supabase
+    .from('invoices')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', originalInvoice.organizationId);
+  if (countError) throw countError;
 
-  const updatedInvoice: Invoice = {
-    ...invoice,
+  const newInvoiceNumber = `INV-${String((count || 0) + 1).padStart(4, '0')}`;
+
+  const newInvoice: Invoice = {
+    id: crypto.randomUUID(),
+    organizationId: originalInvoice.organizationId,
+    invoiceNumber: newInvoiceNumber,
     clientName: newClient.name,
     clientEmail: newClient.email,
     clientCompany: newClient.company,
-    ownershipTransfer,
+    clientTin: newClient.tin,
+    items: originalInvoice.items.map((item) => ({
+      ...item,
+      id: crypto.randomUUID(),
+    })),
+    subtotal: finalTotal / (1 + (originalInvoice.taxRate || 0) / 100),
+    taxRate: originalInvoice.taxRate,
+    taxAmount: finalTotal - finalTotal / (1 + (originalInvoice.taxRate || 0) / 100),
+    total: finalTotal,
+    status: InvoiceStatus.DRAFT,
+    date: now,
+    dueDate: originalInvoice.dueDate,
+    notes: originalInvoice.notes,
+    ownershipTransfer: {
+      previousClientName: originalInvoice.clientName,
+      previousClientEmail: originalInvoice.clientEmail,
+      previousClientCompany: originalInvoice.clientCompany,
+      previousClientTin: originalInvoice.clientTin,
+      previousTotal: originalInvoice.total,
+      transferredAt: now,
+      reason,
+    },
+    parentInvoiceId: originalInvoice.id,
+    rootInvoiceId,
+    transferSequence: nextSequence,
   };
 
-  const { error: updateError } = await supabase
-    .from('invoices')
-    .update(mapInvoiceToDb(updatedInvoice))
-    .eq('id', invoiceId);
-  if (updateError) throw updateError;
+  const { error: insertError } = await supabase.from('invoices').insert(mapInvoiceToDb(newInvoice));
+  if (insertError) throw insertError;
 
-  return updatedInvoice;
+  if (!originalInvoice.rootInvoiceId) {
+    const { error: updateRootError } = await supabase
+      .from('invoices')
+      .update({ root_invoice_id: originalInvoice.id })
+      .eq('id', originalInvoice.id);
+    if (updateRootError) throw updateRootError;
+    originalInvoice.rootInvoiceId = originalInvoice.id;
+  }
+
+  const transfer: InvoiceTransfer = {
+    id: crypto.randomUUID(),
+    fromInvoiceId: originalInvoice.id,
+    toInvoiceId: newInvoice.id,
+    rootInvoiceId,
+    fromClientName: originalInvoice.clientName,
+    fromClientEmail: originalInvoice.clientEmail,
+    fromClientCompany: originalInvoice.clientCompany,
+    toClientName: newClient.name,
+    toClientEmail: newClient.email,
+    toClientCompany: newClient.company,
+    originalAmount: originalInvoice.total,
+    newAmount: finalTotal,
+    priceDelta: finalTotal - originalInvoice.total,
+    reason,
+    transferredAt: now,
+    transferSequence: nextSequence,
+  };
+
+  const { error: transferError } = await supabase
+    .from('invoice_transfers')
+    .insert(mapInvoiceTransferToDb(transfer));
+  if (transferError) throw transferError;
+
+  return { originalInvoice, newInvoice, transfer };
+};
+
+export const getInvoiceLineage = async (invoiceId: string): Promise<Invoice[]> => {
+  const supabase = getSupabaseClient();
+
+  const { data: invoiceRow, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+  if (!invoiceRow) return [];
+
+  const invoice = mapInvoiceFromDb(invoiceRow);
+  const rootId = invoice.rootInvoiceId || invoice.id;
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('*')
+    .or(`id.eq.${rootId},root_invoice_id.eq.${rootId}`)
+    .order('transfer_sequence', { ascending: true });
+  if (error) throw error;
+
+  return (data || []).map(mapInvoiceFromDb);
+};
+
+export const getInvoiceTransfers = async (rootInvoiceId: string): Promise<InvoiceTransfer[]> => {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('invoice_transfers')
+    .select('*')
+    .eq('root_invoice_id', rootInvoiceId)
+    .order('transfer_sequence', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapInvoiceTransferFromDb);
 };
 
 // --- Expenses ---

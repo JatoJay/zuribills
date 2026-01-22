@@ -93,7 +93,29 @@ create table if not exists invoices (
   date timestamptz not null,
   due_date timestamptz not null,
   notes text,
-  ownership_transfer jsonb
+  ownership_transfer jsonb,
+  parent_invoice_id text,
+  root_invoice_id text,
+  transfer_sequence integer default 0
+);
+
+create table if not exists invoice_transfers (
+  id text primary key,
+  from_invoice_id text not null,
+  to_invoice_id text not null,
+  root_invoice_id text not null,
+  from_client_name text not null,
+  from_client_email text not null,
+  from_client_company text,
+  to_client_name text not null,
+  to_client_email text not null,
+  to_client_company text,
+  original_amount double precision not null,
+  new_amount double precision not null,
+  price_delta double precision not null,
+  reason text,
+  transferred_at timestamptz not null default now(),
+  transfer_sequence integer not null default 1
 );
 
 create table if not exists expenses (
@@ -152,6 +174,15 @@ create index if not exists idx_invoices_org_id on invoices (organization_id);
 create index if not exists idx_expenses_org_id on expenses (organization_id);
 create index if not exists idx_payments_invoice_id on payments (invoice_id);
 create index if not exists idx_agent_logs_org_id on agent_logs (organization_id);
+create index if not exists idx_invoice_transfers_from on invoice_transfers (from_invoice_id);
+create index if not exists idx_invoice_transfers_to on invoice_transfers (to_invoice_id);
+create index if not exists idx_invoice_transfers_root on invoice_transfers (root_invoice_id);
+create index if not exists idx_invoices_parent on invoices (parent_invoice_id);
+create index if not exists idx_invoices_root on invoices (root_invoice_id);
+
+alter table public.invoices add column if not exists parent_invoice_id text;
+alter table public.invoices add column if not exists root_invoice_id text;
+alter table public.invoices add column if not exists transfer_sequence integer default 0;
 
 alter table public.payments add column if not exists currency text;
 alter table public.payments add column if not exists status text;
@@ -173,6 +204,7 @@ alter table public.invoices enable row level security;
 alter table public.expenses enable row level security;
 alter table public.payments enable row level security;
 alter table public.agent_logs enable row level security;
+alter table public.invoice_transfers enable row level security;
 
 create or replace function public.current_user_email()
 returns text
@@ -593,6 +625,30 @@ drop policy if exists agent_logs_delete on public.agent_logs;
 create policy agent_logs_delete on public.agent_logs
   for delete
   using (public.is_org_member(organization_id));
+
+drop policy if exists invoice_transfers_select on public.invoice_transfers;
+create policy invoice_transfers_select on public.invoice_transfers
+  for select
+  using (
+    exists (
+      select 1
+      from public.invoices i
+      where (i.id = from_invoice_id or i.id = to_invoice_id)
+        and public.is_org_member(i.organization_id)
+    )
+  );
+
+drop policy if exists invoice_transfers_insert on public.invoice_transfers;
+create policy invoice_transfers_insert on public.invoice_transfers
+  for insert
+  with check (
+    exists (
+      select 1
+      from public.invoices i
+      where i.id = from_invoice_id
+        and public.is_org_member(i.organization_id)
+    )
+  );
 
 create or replace function public.handle_new_auth_user()
 returns trigger

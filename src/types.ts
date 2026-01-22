@@ -138,6 +138,8 @@ export interface OwnershipTransfer {
   previousClientName: string;
   previousClientEmail: string;
   previousClientCompany?: string;
+  previousClientTin?: string;
+  previousTotal?: number;
   transferredAt: string;
   reason?: string;
 }
@@ -160,6 +162,9 @@ export interface Invoice {
   dueDate: string;
   notes?: string;
   ownershipTransfer?: OwnershipTransfer;
+  parentInvoiceId?: string;
+  rootInvoiceId?: string;
+  transferSequence?: number;
 }
 
 export interface CartItem extends Service {
@@ -256,6 +261,25 @@ export interface AgentLog {
   details: string;
   relatedId?: string; // e.g. invoice id
   type: 'INFO' | 'WARNING' | 'SUCCESS';
+}
+
+export interface InvoiceTransfer {
+  id: string;
+  fromInvoiceId: string;
+  toInvoiceId: string;
+  rootInvoiceId: string;
+  fromClientName: string;
+  fromClientEmail: string;
+  fromClientCompany?: string;
+  toClientName: string;
+  toClientEmail: string;
+  toClientCompany?: string;
+  originalAmount: number;
+  newAmount: number;
+  priceDelta: number;
+  reason?: string;
+  transferredAt: string;
+  transferSequence: number;
 }
 
 export interface Notification {

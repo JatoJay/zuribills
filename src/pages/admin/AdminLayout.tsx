@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, createContext, useContext } from 'react';
 import { Outlet, useParams, Link, useNavigate } from '@tanstack/react-router';
-import { LayoutDashboard, FileText, Settings as SettingsIcon, Users, ShoppingBag, LogOut, ShieldCheck, ExternalLink, Wallet, BarChart3, Building2, Sparkles, CheckCircle, Lock, Landmark, Menu, X as CloseIcon, Globe } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings as SettingsIcon, Users, ShoppingBag, LogOut, ShieldCheck, ExternalLink, Wallet, BarChart3, Building2, Sparkles, CheckCircle, Lock, Landmark, Menu, X as CloseIcon, Globe, HelpCircle } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import BusinessChatWidget from '@/components/BusinessChatWidget';
 import { Button, Card } from '@/components/ui';
@@ -327,6 +327,7 @@ const AdminLayout: React.FC = () => {
     { label: t('Team'), path: 'team', icon: ShieldCheck },
     { label: t('Payouts'), path: 'payouts', icon: Landmark },
     { label: t('Settings'), path: 'settings', icon: SettingsIcon },
+    { label: t('Help & Support'), path: 'help', icon: HelpCircle },
   ];
 
   const upgradeFeatures = [
