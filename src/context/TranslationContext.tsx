@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { translateBatch } from '@/services/geminiService';
+import { detectLocationLanguage } from '@/services/geolocation';
 
 type TranslationContextType = {
     language: string;
@@ -14,6 +15,7 @@ const TranslationContext = createContext<TranslationContextType | undefined>(und
 const LANGUAGE_KEY = 'invoiceflow:language';
 const CACHE_PREFIX = 'invoiceflow:translations:';
 export const LANGUAGE_SOURCE_KEY = 'invoiceflow:language:source';
+const LOCATION_DETECTION_KEY = 'invoiceflow:language:location_detected';
 
 const normalizeLanguage = (language: string) => {
     const trimmed = language.trim();
@@ -36,6 +38,9 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         const stored = localStorage.getItem(LANGUAGE_KEY);
         return stored || 'English';
     });
+    const [locationDetectionDone, setLocationDetectionDone] = useState(() => {
+        return localStorage.getItem(LOCATION_DETECTION_KEY) === 'true';
+    });
     const [translations, setTranslations] = useState<Record<string, string>>(() => loadCachedTranslations(language));
     const [isTranslating, setIsTranslating] = useState(false);
 
@@ -55,6 +60,21 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
         setTranslations(loadCachedTranslations(normalizedLanguage));
     }, [normalizedLanguage, isEnglish]);
+
+    useEffect(() => {
+        const source = localStorage.getItem(LANGUAGE_SOURCE_KEY);
+        if (source === 'user' || locationDetectionDone) return;
+
+        detectLocationLanguage().then((result) => {
+            if (result && result.language) {
+                localStorage.setItem(LANGUAGE_KEY, result.language);
+                localStorage.setItem(LANGUAGE_SOURCE_KEY, 'location');
+                setLanguageState(result.language);
+            }
+            localStorage.setItem(LOCATION_DETECTION_KEY, 'true');
+            setLocationDetectionDone(true);
+        });
+    }, [locationDetectionDone]);
 
     const t = useCallback((text: string) => {
         if (isEnglish) return text;

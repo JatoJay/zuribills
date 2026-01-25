@@ -2,13 +2,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Organization } from '@/types';
-import { updateOrganization } from '@/services/storage';
+import { updateOrganization, rotateSecurityStamp, getCurrentUserId } from '@/services/storage';
+import { getSupabaseClient } from '@/services/supabaseClient';
 import { Button, Input, Card, Select } from '@/components/ui';
-import { Upload, ImageIcon, X, AlertCircle } from 'lucide-react';
+import { Upload, ImageIcon, X, AlertCircle, ShieldAlert, MapPin } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
+import { detectLocationLanguage } from '@/services/geolocation';
 
 const PLATFORM_FEE_PERCENT = 1.5;
 
@@ -51,6 +53,17 @@ const Settings: React.FC = () => {
         'Language & Localization',
         'Preferred Language',
         'Used by Gemini to translate onboarding and customer communications.',
+        'Use My Location',
+        'Detecting location...',
+        'Set language based on your current location.',
+        'Location detected:',
+        'Could not detect location.',
+        'Security',
+        'Sign Out All Devices',
+        'Invalidate all active sessions. You will need to sign in again on all devices.',
+        'Revoking sessions...',
+        'All sessions have been revoked. Please sign in again.',
+        'Failed to revoke sessions.',
         'Save Changes',
         'Settings saved successfully.',
         'Failed to save settings.',
@@ -68,6 +81,8 @@ const Settings: React.FC = () => {
     ]), []);
     const { t, setLanguage } = useTranslation(translationStrings);
     const [loading, setLoading] = useState(false);
+    const [revokingSession, setRevokingSession] = useState(false);
+    const [detectingLocation, setDetectingLocation] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [formData, setFormData] = useState<Organization>({
         id: '',
@@ -414,25 +429,99 @@ const Settings: React.FC = () => {
 
                     <div className="pt-4 border-t border-slate-100">
                         <h3 className="text-lg font-medium mb-4">{t('Language & Localization')}</h3>
-                        <Input
-                            label={t('Preferred Language')}
-                            list="language-options"
-                            value={formData.preferredLanguage || ''}
-                            onChange={e => {
-                                const nextLanguage = e.target.value;
-                                localStorage.setItem(LANGUAGE_SOURCE_KEY, 'user');
-                                setLanguage(nextLanguage);
-                                setFormData({ ...formData, preferredLanguage: nextLanguage });
-                            }}
-                        />
-                        <datalist id="language-options">
-                            {SUPPORTED_LANGUAGES.map(option => (
-                                <option key={option} value={option} />
-                            ))}
-                        </datalist>
+                        <div className="flex flex-col md:flex-row gap-4 md:items-end">
+                            <div className="flex-1">
+                                <Input
+                                    label={t('Preferred Language')}
+                                    list="language-options"
+                                    value={formData.preferredLanguage || ''}
+                                    onChange={e => {
+                                        const nextLanguage = e.target.value;
+                                        localStorage.setItem(LANGUAGE_SOURCE_KEY, 'user');
+                                        setLanguage(nextLanguage);
+                                        setFormData({ ...formData, preferredLanguage: nextLanguage });
+                                    }}
+                                />
+                                <datalist id="language-options">
+                                    {SUPPORTED_LANGUAGES.map(option => (
+                                        <option key={option} value={option} />
+                                    ))}
+                                </datalist>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="h-10 whitespace-nowrap"
+                                isLoading={detectingLocation}
+                                onClick={async () => {
+                                    setDetectingLocation(true);
+                                    try {
+                                        const result = await detectLocationLanguage();
+                                        if (result && result.language) {
+                                            localStorage.setItem(LANGUAGE_SOURCE_KEY, 'location');
+                                            setLanguage(result.language);
+                                            setFormData(prev => ({ ...prev, preferredLanguage: result.language }));
+                                            setMessage({ type: 'success', text: `${t('Location detected:')} ${result.countryCode} → ${result.language}` });
+                                        } else {
+                                            setMessage({ type: 'error', text: t('Could not detect location.') });
+                                        }
+                                    } catch {
+                                        setMessage({ type: 'error', text: t('Could not detect location.') });
+                                    } finally {
+                                        setDetectingLocation(false);
+                                    }
+                                }}
+                            >
+                                <MapPin className="w-4 h-4 mr-2" />
+                                {detectingLocation ? t('Detecting location...') : t('Use My Location')}
+                            </Button>
+                        </div>
                         <p className="text-xs text-slate-500 mt-2">
-                            {t('Used by Gemini to translate onboarding and customer communications.')}
+                            {t('Set language based on your current location.')}
                         </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100">
+                        <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                            <ShieldAlert className="w-5 h-5 text-red-500" />
+                            {t('Security')}
+                        </h3>
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-4 rounded-lg border border-red-200 bg-red-50">
+                            <div>
+                                <div className="text-sm font-medium text-red-900">{t('Sign Out All Devices')}</div>
+                                <div className="text-xs text-red-700 mt-1">
+                                    {t('Invalidate all active sessions. You will need to sign in again on all devices.')}
+                                </div>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="border-red-300 text-red-700 hover:bg-red-100"
+                                isLoading={revokingSession}
+                                onClick={async () => {
+                                    setRevokingSession(true);
+                                    try {
+                                        const userId = getCurrentUserId();
+                                        if (userId) {
+                                            await rotateSecurityStamp(userId);
+                                        }
+                                        const supabase = getSupabaseClient();
+                                        await supabase.auth.signOut();
+                                        setMessage({ type: 'success', text: t('All sessions have been revoked. Please sign in again.') });
+                                        setTimeout(() => {
+                                            navigate({ to: '/login', search: { slug: org.slug } as any });
+                                        }, 1500);
+                                    } catch (err) {
+                                        console.error(err);
+                                        setMessage({ type: 'error', text: t('Failed to revoke sessions.') });
+                                    } finally {
+                                        setRevokingSession(false);
+                                    }
+                                }}
+                            >
+                                {t('Sign Out All Devices')}
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100 flex justify-end">
