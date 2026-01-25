@@ -33,6 +33,8 @@
 - **Supabase** - PostgreSQL database with Row Level Security (RLS)
 - **Resend** - Email delivery
 - **Google Gemini** - AI features
+- **class-validator** - Request validation with decorators
+- **class-transformer** - DTO transformation
 
 ### Payment Providers
 - **Afnex** - Unified payment gateway (wraps Flutterwave/Paystack)
@@ -99,9 +101,11 @@
 │   └── index.css            # Global styles and CSS variables
 ├── backend/                 # NestJS API server
 │   └── src/
-│       ├── main.ts          # Server bootstrap
+│       ├── main.ts          # Server bootstrap with ValidationPipe
 │       ├── app.module.ts    # NestJS module
-│       └── app.controller.ts # All API endpoints
+│       ├── app.controller.ts # All API endpoints
+│       └── dto/
+│           └── index.ts     # DTO classes with class-validator decorators
 ├── supabase/
 │   └── schema.sql           # Database schema with RLS policies
 ├── public/                  # Static assets
@@ -208,7 +212,32 @@ Primary interface to Supabase. Handles all CRUD operations:
 
 ## Backend API
 
-The NestJS backend (`/backend`) exposes REST endpoints under `/api`:
+The NestJS backend (`/backend`) exposes REST endpoints under `/api`.
+
+### Request Validation
+
+All POST endpoints use **class-validator** DTOs for schema validation:
+
+```typescript
+// Example DTO from backend/src/dto/index.ts
+export class SendInvoiceEmailDto {
+    @IsEmail({}, { message: 'Recipient email must be a valid email address' })
+    @IsNotEmpty({ message: 'Recipient email is required' })
+    to: string;
+
+    @IsString()
+    @IsOptional()
+    subject?: string;
+}
+```
+
+The global `ValidationPipe` in `main.ts` automatically:
+- Validates incoming requests against DTOs
+- Returns 400 errors with descriptive messages for invalid input
+- Strips unknown properties (`whitelist: true`)
+- Rejects requests with extra properties (`forbidNonWhitelisted: true`)
+
+### Endpoints
 
 ### Authentication
 - `GET /api/auth/google` - Initiate Google OAuth

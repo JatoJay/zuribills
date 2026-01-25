@@ -1,8 +1,22 @@
-import { Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res, Body, Query } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
+import {
+    SendInvoiceEmailDto,
+    ProvisionTeamMemberDto,
+    SendAuthEmailDto,
+    TranslateDto,
+    AiGenerateDto,
+    AfnexChargeDto,
+    AfnexVerifyDto,
+    FlutterwavePayoutDto,
+    BillingInitializeDto,
+    MomoInitializeDto,
+    MomoPayoutDto,
+    SubscriptionStartDto,
+} from './dto';
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const fromEmail = process.env.RESEND_FROM_EMAIL;
@@ -612,7 +626,7 @@ export class AppController {
     }
 
     @Post('email/send-invoice')
-    async sendInvoice(@Req() req: Request, @Res() res: Response) {
+    async sendInvoice(@Body() dto: SendInvoiceEmailDto, @Res() res: Response) {
         if (!resend || !resendApiKey) {
             return res.status(500).json({ error: 'RESEND_API_KEY is not configured.' });
         }
@@ -620,11 +634,7 @@ export class AppController {
             return res.status(500).json({ error: 'RESEND_FROM_EMAIL is not configured.' });
         }
 
-        const { to, subject, body, invoiceNumber, clientName } = req.body || {};
-
-        if (!to) {
-            return res.status(400).json({ error: 'Recipient email is required.' });
-        }
+        const { to, subject, body, invoiceNumber, clientName } = dto;
 
         const defaultSubject = invoiceNumber ? `Invoice ${invoiceNumber}` : 'Invoice';
         const textBody = body?.trim()
@@ -649,7 +659,7 @@ export class AppController {
     }
 
     @Post('team/provision')
-    async provisionTeamMember(@Req() req: Request, @Res() res: Response) {
+    async provisionTeamMember(@Body() dto: ProvisionTeamMemberDto, @Req() req: Request, @Res() res: Response) {
         if (!supabaseAdmin) {
             return res.status(500).json({ error: 'Supabase admin is not configured.' });
         }
@@ -659,10 +669,7 @@ export class AppController {
             return res.status(401).json({ error: authError || 'Unauthorized.' });
         }
 
-        const { email, name, role, organizationId, permissions, pin } = req.body || {};
-        if (!email || !name || !organizationId) {
-            return res.status(400).json({ error: 'Email, name, and organizationId are required.' });
-        }
+        const { email, name, role, organizationId, permissions, pin } = dto;
 
         // 1. Verify inviter has access to the org
         const { data: org, error: orgError } = await supabaseAdmin
@@ -748,7 +755,7 @@ export class AppController {
     }
 
     @Post('email/auth')
-    async sendAuthEmail(@Req() req: Request, @Res() res: Response) {
+    async sendAuthEmail(@Body() dto: SendAuthEmailDto, @Res() res: Response) {
         if (!resend || !resendApiKey) {
             return res.status(500).json({ error: 'RESEND_API_KEY is not configured.' });
         }
@@ -756,10 +763,7 @@ export class AppController {
             return res.status(500).json({ error: 'RESEND_FROM_EMAIL is not configured.' });
         }
 
-        const { to, type, data } = req.body || {};
-        if (!to || !type) {
-            return res.status(400).json({ error: 'to and type are required.' });
-        }
+        const { to, type, data } = dto;
 
         let subject = '';
         let body = '';
@@ -884,15 +888,12 @@ export class AppController {
     }
 
     @Post('payments/afnex/charge')
-    async chargeAfnex(@Req() req: Request, @Res() res: Response) {
+    async chargeAfnex(@Body() dto: AfnexChargeDto, @Res() res: Response) {
         if (!supabaseAdmin) {
             return res.status(500).json({ error: 'Supabase admin is not configured.' });
         }
 
-        const { invoiceId, provider, payerPhone, customerEmail } = req.body || {};
-        if (!invoiceId) {
-            return res.status(400).json({ error: 'invoiceId is required.' });
-        }
+        const { invoiceId, provider, payerPhone, customerEmail } = dto;
 
         const { data: invoice, error: invoiceError } = await supabaseAdmin
             .from('invoices')
@@ -955,15 +956,12 @@ export class AppController {
     }
 
     @Post('payments/afnex/verify')
-    async verifyAfnex(@Req() req: Request, @Res() res: Response) {
+    async verifyAfnex(@Body() dto: AfnexVerifyDto, @Res() res: Response) {
         if (!supabaseAdmin) {
             return res.status(500).json({ error: 'Supabase admin is not configured.' });
         }
 
-        const { reference, provider, invoiceId } = req.body || {};
-        if (!reference || !provider || !invoiceId) {
-            return res.status(400).json({ error: 'reference, provider, and invoiceId are required.' });
-        }
+        const { reference, provider, invoiceId } = dto;
 
         try {
             const response = await fetch(`${afnexDemoBaseUrl}/verify`, {
@@ -1000,7 +998,7 @@ export class AppController {
     }
 
     @Post('payments/flutterwave/payouts')
-    async createFlutterwavePayout(@Req() req: Request, @Res() res: Response) {
+    async createFlutterwavePayout(@Body() dto: FlutterwavePayoutDto, @Req() req: Request, @Res() res: Response) {
         if (!flutterwaveSecretKey) {
             return res.status(500).json({ error: 'FLUTTERWAVE_SECRET_KEY is not configured.' });
         }
@@ -1013,29 +1011,12 @@ export class AppController {
             return res.status(401).json({ error: authError || 'Unauthorized.' });
         }
 
-        const {
-            orgId,
-            bankCode,
-            bankName,
-            accountNumber,
-            accountName,
-            bankCountry,
-        } = req.body || {};
+        const { orgId, bankCode, bankName, accountNumber, accountName, bankCountry } = dto;
 
-        const bankCodeValue = String(bankCode || '').trim();
-        const accountNumberValue = String(accountNumber || '').trim();
-        const accountNameValue = String(accountName || '').trim();
-        const bankCountryValue = String(bankCountry || '').trim().toUpperCase();
-
-        if (!orgId) {
-            return res.status(400).json({ error: 'orgId is required.' });
-        }
-        if (!bankCountryValue || !bankCodeValue || !accountNumberValue || !accountNameValue) {
-            return res.status(400).json({ error: 'Bank country, bank, account number, and account name are required.' });
-        }
-        if (!/^\d+$/.test(accountNumberValue)) {
-            return res.status(400).json({ error: 'Account number must be numeric.' });
-        }
+        const bankCodeValue = bankCode.trim();
+        const accountNumberValue = accountNumber.trim();
+        const accountNameValue = accountName.trim();
+        const bankCountryValue = bankCountry.trim().toUpperCase();
 
         const { data: org, error: orgError } = await supabaseAdmin
             .from('organizations')
@@ -1163,7 +1144,7 @@ export class AppController {
     }
 
     @Post('billing/flutterwave/initialize')
-    async initializeFlutterwaveBilling(@Req() req: Request, @Res() res: Response) {
+    async initializeFlutterwaveBilling(@Body() dto: BillingInitializeDto, @Req() req: Request, @Res() res: Response) {
         if (!flutterwaveSecretKey) {
             return res.status(500).json({ error: 'FLUTTERWAVE_SECRET_KEY is not configured.' });
         }
@@ -1176,10 +1157,7 @@ export class AppController {
             return res.status(401).json({ error: authError || 'Unauthorized.' });
         }
 
-        const { orgId, billingCycle } = req.body || {};
-        if (!orgId) {
-            return res.status(400).json({ error: 'orgId is required.' });
-        }
+        const { orgId, billingCycle } = dto;
 
         const { data: org, error: orgError } = await supabaseAdmin
             .from('organizations')
@@ -1253,7 +1231,7 @@ export class AppController {
     }
 
     @Post('payments/momo/initialize')
-    async initializeMomo(@Req() req: Request, @Res() res: Response) {
+    async initializeMomo(@Body() dto: MomoInitializeDto, @Res() res: Response) {
         if (!flutterwaveSecretKey) {
             return res.status(500).json({ error: 'FLUTTERWAVE_SECRET_KEY is not configured.' });
         }
@@ -1261,12 +1239,9 @@ export class AppController {
             return res.status(500).json({ error: 'Supabase admin is not configured.' });
         }
 
-        const { invoiceId, payerPhone, payerNetwork } = req.body || {};
-        const trimmedPhone = String(payerPhone || '').replace(/\s+/g, '').trim();
-        const trimmedNetwork = String(payerNetwork || '').trim().toUpperCase();
-        if (!invoiceId || !trimmedPhone) {
-            return res.status(400).json({ error: 'invoiceId and payerPhone are required.' });
-        }
+        const { invoiceId, payerPhone, payerNetwork } = dto;
+        const trimmedPhone = payerPhone.replace(/\s+/g, '').trim();
+        const trimmedNetwork = (payerNetwork || '').trim().toUpperCase();
 
         const { data: invoice, error: invoiceError } = await supabaseAdmin
             .from('invoices')
@@ -1810,15 +1785,12 @@ export class AppController {
     }
 
     @Post('ai/generate')
-    async generateAi(@Req() req: Request, @Res() res: Response) {
+    async generateAi(@Body() dto: AiGenerateDto, @Res() res: Response) {
         if (!geminiApiKey) {
             return res.status(500).json({ error: 'Gemini API key is not configured.' });
         }
 
-        const { prompt, schema } = req.body || {};
-        if (!prompt || typeof prompt !== 'string') {
-            return res.status(400).json({ error: 'Prompt is required.' });
-        }
+        const { prompt, schema } = dto;
 
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`;
@@ -1861,14 +1833,8 @@ export class AppController {
     }
 
     @Post('translate')
-    async translate(@Req() req: Request, @Res() res: Response) {
-        const { texts, targetLanguage, sourceLanguage } = req.body || {};
-        if (!Array.isArray(texts) || texts.length === 0) {
-            return res.status(400).json({ error: 'Texts array is required.' });
-        }
-        if (!targetLanguage) {
-            return res.status(400).json({ error: 'Target language is required.' });
-        }
+    async translate(@Body() dto: TranslateDto, @Res() res: Response) {
+        const { texts, targetLanguage, sourceLanguage } = dto;
 
         const translateWithGoogle = async (): Promise<string[] | null> => {
             if (!googleTranslateApiKey) return null;
