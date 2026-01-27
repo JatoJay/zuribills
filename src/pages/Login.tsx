@@ -386,22 +386,6 @@ const Login: React.FC = () => {
                     </p>
                   </div>
 
-                <div className="flex items-center flex-nowrap rounded-full border border-border bg-surface p-1">
-                  <button
-                    type="button"
-                    onClick={() => setMode('signin')}
-                    className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all whitespace-nowrap ${mode === 'signin' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground'}`}
-                  >
-                    {t('Sign in')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMode('signup')}
-                    className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all whitespace-nowrap ${mode === 'signup' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground'}`}
-                  >
-                    {t('Create account')}
-                  </button>
-                </div>
               </div>
 
               {message && (

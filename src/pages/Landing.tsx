@@ -62,13 +62,13 @@ const PRODUCT_FEATURES = [
   },
   {
     category: 'Intelligence',
-    categoryIcon: <BarChart3 className="w-4 h-4 text-purple-500" />,
+    categoryIcon: <BarChart3 className="w-4 h-4 text-teal-500" />,
     brand: 'Deep Analytics',
     title: 'Understand your cash flow with tax-ready reporting',
     description: 'Get a clear view of your business health. Generate monthly or yearly inflow/outflow reports that make tax season a breeze and auditing effortless.',
     image: '/features/analytics-mock.png',
-    bgColor: 'bg-purple-500/5',
-    labelColor: 'text-purple-500',
+    bgColor: 'bg-teal-500/5',
+    labelColor: 'text-teal-500',
   },
 ];
 
@@ -464,10 +464,10 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
   }
 
   return (
-    <div className="h-full bg-gradient-to-b from-purple-50 to-white flex flex-col">
+    <div className="h-full bg-gradient-to-b from-teal-50 to-white flex flex-col">
       <div className="px-4 pt-4 pb-2 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-teal-500 flex items-center justify-center">
             <BarChart3 className="w-3.5 h-3.5 text-white" />
           </div>
           <span className="text-[12px] font-bold text-slate-900">Analytics</span>
@@ -492,7 +492,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
               <motion.div
                 key={i}
-                className="flex-1 bg-purple-500 rounded-t"
+                className="flex-1 bg-teal-500 rounded-t"
                 initial={{ height: 0 }}
                 animate={{ height: `${h}%` }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
@@ -500,15 +500,15 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             ))}
           </div>
         </div>
-        <div className="bg-purple-100 rounded-lg p-2.5 border border-purple-200">
+        <div className="bg-teal-100 rounded-lg p-2.5 border border-teal-200">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] text-purple-800 font-bold">Net profit</span>
-            <span className="text-[12px] font-black text-purple-800">$9.2k</span>
+            <span className="text-[9px] text-teal-800 font-bold">Net profit</span>
+            <span className="text-[12px] font-black text-teal-800">$9.2k</span>
           </div>
         </div>
       </div>
       <div className="p-3 pt-1 pb-4">
-        <button className="w-full h-10 bg-purple-500 rounded-lg text-white font-bold text-[11px]">
+        <button className="w-full h-10 bg-teal-500 rounded-lg text-white font-bold text-[11px]">
           Export Tax Report
         </button>
       </div>
@@ -1351,44 +1351,6 @@ const Landing: React.FC = () => {
       </section>
 
       <section className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[760px] h-[760px] bg-primary/10 rounded-full blur-[140px] -z-10" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row items-center gap-16">
-            <div className="lg:w-1/2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-foreground/10 text-xs uppercase tracking-widest text-muted mb-6">
-                <BarChart3 className="w-4 h-4 text-primary" /> {t('Analytics')}
-              </div>
-              <h2 className="text-3xl md:text-4xl font-display font-semibold mb-6">
-                {t('Everything you need to run the back office.')}
-              </h2>
-              <p className="text-lg text-muted mb-8">
-                {t('Track revenue, manage expenses, and export tax-ready cash-flow reports with a dashboard designed for clarity.')}
-              </p>
-
-              <div className="space-y-4">
-                {ANALYTICS_BULLETS.map((item) => (
-                  <div key={item} className="flex items-center gap-3 text-muted">
-                    <CheckCircle className="w-5 h-5 text-primary" /> {t(item)}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="lg:w-1/2">
-              <div className="relative shadow-lift rounded-3xl border border-white/40 overflow-hidden bg-white/60 backdrop-blur-xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent" />
-                <img
-                  src="/dashboard_sync.svg"
-                  alt={t('Admin Dashboard Interface')}
-                  className="relative w-full h-full object-cover"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-10" />
         <div className="absolute -top-24 right-8 w-72 h-72 bg-primary/10 blur-[140px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
@@ -1535,14 +1497,11 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           <div className="max-w-7xl mx-auto px-10 md:px-16">
             {/* Top Integrated Header Row */}
             <div className="py-12 flex flex-col md:flex-row justify-between items-center gap-6 text-left">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-[6px] bg-white flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-black fill-current" />
-                  </div>
-                  <span className="font-display font-bold text-[22px] tracking-tight text-white">InvoiceFlow</span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-[6px] bg-white flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-black fill-current" />
                 </div>
-                <span className="text-[13px] text-white/30 pt-1 font-medium tracking-wide ml-2 italic">a Flutterwave company</span>
+                <span className="font-display font-bold text-[22px] tracking-tight text-white">InvoiceFlow</span>
               </div>
               <div className="text-[11px] uppercase tracking-[0.25em] text-white/30 font-bold">
                 2026 © InvoiceFlow Technologies Nigeria Limited
@@ -1553,14 +1512,10 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
             <div className="py-24">
               {/* Nav Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-12 gap-y-24 text-left">
-                
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-24 text-left">
+
                 {/* Brand/Social Column */}
-                <div className="col-span-2 lg:col-span-1">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary to-[#2DD4BF] p-3.5 mb-12 shadow-[0_10px_30px_rgba(14,165,164,0.3)] flex items-center justify-center">
-                     <Zap className="w-full h-full text-black fill-current" />
-                  </div>
-                  
+                <div>
                   <div className="space-y-10">
                     <div>
                       <h4 className="text-[10px] uppercase tracking-[0.3em] text-white/25 font-black mb-6">Get Started</h4>
@@ -1580,26 +1535,6 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
                   </div>
                 </div>
 
-                {/* Products */}
-                <div>
-                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Products')}</h4>
-                  <ul className="space-y-5 text-[15px] font-semibold text-white/70">
-                    {['Data', 'Payments', 'Statements Pages', 'Payment Pages', 'Prove', 'Lookup', 'Portal', 'Pricing', 'Demo'].map(item => (
-                      <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Use Cases */}
-                <div>
-                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Use Cases')}</h4>
-                  <ul className="space-y-5 text-[15px] font-semibold text-white/70">
-                    {['Customer Onboarding', 'Credit Risk Assessment', 'Payment Collection', 'Personal Finance Insights'].map(item => (
-                      <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
-                    ))}
-                  </ul>
-                </div>
-
                 {/* Company */}
                 <div>
                   <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Company')}</h4>
@@ -1610,44 +1545,17 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
                   </ul>
                 </div>
 
-                {/* Developers */}
+                {/* Legal */}
                 <div>
-                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Developers')}</h4>
+                  <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Legal')}</h4>
                   <ul className="space-y-5 text-[15px] font-semibold text-white/70">
-                    {['Documentation', 'API Reference', 'SDKs'].map(item => (
+                    {['Developer Policy', 'Terms of Use', 'Disclaimer', 'Cookies', 'Security'].map(item => (
                       <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
                     ))}
                   </ul>
-                  <div className="mt-20">
-                     <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Resources')}</h4>
-                      <ul className="space-y-5 text-[15px] font-semibold text-white/70">
-                        {['Blog', "Partners' Stories", 'Support', 'Consumers'].map(item => (
-                          <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
-                        ))}
-                      </ul>
-                  </div>
-                </div>
-
-                {/* Legal */}
-                <div className="flex flex-col justify-between">
-                  <div>
-                    <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Legal')}</h4>
-                    <ul className="space-y-5 text-[15px] font-semibold text-white/70">
-                      {["End Users' Policy", 'Developer Policy', 'IMS Policy', 'Terms of Use', 'Disclaimer', 'Cookies', 'Security'].map(item => (
-                        <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
-                      ))}
-                    </ul>
-                  </div>
                 </div>
               </div>
 
-              {/* Disclaimer Section */}
-              <div className="mt-32 pt-12 border-t border-white/[0.03] text-left">
-                 <p className="text-[11px] leading-[1.8] text-white/20 max-w-5xl tracking-wide">
-                   <span className="font-black text-white/30 mr-2 uppercase tracking-widest text-white/40">{t('Disclaimer:')}</span>
-                   {t('The information provided on this website is intended for general informational purposes only and does not constitute financial, legal, or professional advice. While we strive to ensure that the content presented is accurate and up-to-date, we make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability. Our platform is designed to ensure secure access to financial accounts for the purposes of retrieving statements, monitoring transactions in real-time, and verifying customer identities.')}
-                 </p>
-              </div>
             </div>
           </div>
         </div>
