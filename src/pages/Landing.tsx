@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input } from '../components/ui';
 import { askBusinessAnalyst } from '@/services/geminiService';
@@ -135,7 +135,6 @@ const PRICING_FEATURES = [
   'Advanced Analytics',
   'Priority Support',
   'Custom Branding',
-  'API Access',
 ];
 
 type ThemeVars = React.CSSProperties &
@@ -167,19 +166,19 @@ const OWNER_STORIES = [
     name: 'Amina Yusuf',
     role: 'Boutique Owner - Lagos',
     quote: 'InvoiceFlow keeps my catalog polished and payments predictable without extra admin work.',
-    image: '/owners/owner-1.jpg',
+    image: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=400&h=500&fit=crop',
   },
   {
-    name: 'Daniel Brooks',
+    name: 'Daniel Okonkwo',
     role: 'Creative Studio Lead - Nairobi',
     quote: 'We send a shareable link and get paid faster. The reports are ready for tax time.',
-    image: '/owners/owner-2.jpg',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop',
   },
   {
     name: 'Priya Shah',
     role: 'Consulting Partner - London',
     quote: 'The AI insights save hours each week. Everything feels calm and organized.',
-    image: '/owners/owner-3.jpg',
+    image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=500&fit=crop',
   },
 ];
 
@@ -329,7 +328,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
               <Layers className="w-4 h-4 text-white" />
             </div>
-            <span className="text-[13px] font-bold text-slate-900">My Catalog</span>
+            <span className="text-[13px] font-bold text-black">My Catalog</span>
           </div>
         </div>
         <div className="flex-1 p-4 space-y-3 overflow-hidden">
@@ -376,7 +375,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <span className="text-[13px] font-bold text-slate-900">AI Agent</span>
+            <span className="text-[13px] font-bold text-black">AI Agent</span>
           </div>
         </div>
         <div className="flex-1 p-4 space-y-3 overflow-hidden">
@@ -386,7 +385,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
                 <Bot className="w-4 h-4 text-blue-600" />
               </div>
               <div>
-                <p className="text-[11px] text-slate-800 leading-relaxed font-medium">
+                <p className="text-[11px] text-black leading-relaxed font-medium">
                   <span className="font-bold">Invoice #1042</span> from Acme Corp is 3 days overdue.
                 </p>
                 <p className="text-[11px] text-blue-600 font-semibold mt-1">Want me to send a reminder?</p>
@@ -428,7 +427,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" />
             </div>
-            <span className="text-[13px] font-bold text-slate-900">Payment Received</span>
+            <span className="text-[13px] font-bold text-black">Payment Received</span>
           </div>
         </div>
         <div className="flex-1 p-4 flex flex-col">
@@ -470,7 +469,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
           <div className="w-7 h-7 rounded-lg bg-teal-500 flex items-center justify-center">
             <BarChart3 className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="text-[12px] font-bold text-slate-900">Analytics</span>
+          <span className="text-[12px] font-bold text-black">Analytics</span>
         </div>
       </div>
       <div className="flex-1 p-3 space-y-2 overflow-hidden">
@@ -871,6 +870,43 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
 const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
+  const [localCurrency, setLocalCurrency] = useState<{ code: string; symbol: string }>({ code: 'USD', symbol: '$' });
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const [loadingRate, setLoadingRate] = useState(true);
+
+  useEffect(() => {
+    const loadCurrencyData = async () => {
+      try {
+        const { detectLocationLanguage, fetchExchangeRate } = await import('@/services/geolocation');
+        const geoResult = await detectLocationLanguage();
+        if (geoResult && geoResult.currency.code !== 'USD') {
+          setLocalCurrency(geoResult.currency);
+          const rate = await fetchExchangeRate('USD', geoResult.currency.code);
+          if (rate) {
+            setExchangeRate(rate);
+          } else {
+            setLocalCurrency({ code: 'USD', symbol: '$' });
+            setExchangeRate(1);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load currency data:', error);
+        setLocalCurrency({ code: 'USD', symbol: '$' });
+        setExchangeRate(1);
+      } finally {
+        setLoadingRate(false);
+      }
+    };
+    loadCurrencyData();
+  }, []);
+
+  const formatPrice = (usdPrice: number) => {
+    const localPrice = usdPrice * exchangeRate;
+    const formatted = localPrice >= 1000
+      ? localPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })
+      : localPrice.toFixed(2);
+    return `${localCurrency.symbol}${formatted}`;
+  };
 
   const handleSelectPlan = (planId: string) => {
     navigate({
@@ -911,7 +947,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           <h3 className="text-xl font-display font-semibold mb-2">{t('Monthly Plan')}</h3>
           <p className={`text-sm mb-6 ${billingCycle === 'monthly' ? 'text-white/80' : 'text-muted'}`}>{t('Perfect for short-term projects and starters.')}</p>
           <div className="flex items-baseline gap-1 mb-6">
-            <span className="text-4xl font-display font-semibold">$4.99</span>
+            <span className="text-4xl font-display font-semibold">{loadingRate ? '$4.99' : formatPrice(4.99)}</span>
             <span className={`text-sm ${billingCycle === 'monthly' ? 'text-white/70' : 'text-muted'}`}>/mo</span>
           </div>
           <ul className="space-y-4 mb-8">
@@ -943,11 +979,13 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           )}
           <h3 className="text-xl font-display font-semibold mb-2">{t('Yearly Plan')}</h3>
           <p className={`text-sm mb-6 ${billingCycle === 'yearly' ? 'text-white/80' : 'text-muted'}`}>{t('Best value for growing businesses.')}</p>
-          <div className="flex items-baseline gap-1 mb-6">
-            <span className="text-4xl font-display font-semibold">$4.50</span>
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className="text-4xl font-display font-semibold">{loadingRate ? '$4.50' : formatPrice(4.50)}</span>
             <span className={`text-sm ${billingCycle === 'yearly' ? 'text-white/70' : 'text-muted'}`}>/mo</span>
           </div>
-          <p className={`text-xs -mt-4 mb-6 ${billingCycle === 'yearly' ? 'text-white/80' : 'text-muted'}`}>{t('Billed $54 yearly')}</p>
+          <p className={`text-xs mb-6 ${billingCycle === 'yearly' ? 'text-white/80' : 'text-muted'}`}>
+            {loadingRate ? t('Billed $54 yearly') : `${t('Billed')} ${formatPrice(54)} ${t('yearly')}`}
+          </p>
           <ul className="space-y-4 mb-8">
             {PRICING_FEATURES.map((feat, i) => (
               <li key={i} className={`flex items-center gap-3 text-sm ${billingCycle === 'yearly' ? 'text-white/90' : 'text-foreground'}`}>
@@ -1012,6 +1050,8 @@ const Landing: React.FC = () => {
     'Yearly Plan',
     'Best value for growing businesses.',
     'Billed $54 yearly',
+    'Billed',
+    'yearly',
     'MOST POPULAR',
     'Choose Monthly',
     'Choose Yearly',

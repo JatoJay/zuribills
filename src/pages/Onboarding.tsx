@@ -597,20 +597,21 @@ const Onboarding: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <Input
-                                        label={t('Preferred Language')}
-                                        list="language-options"
+                                    <label className="block text-sm font-medium text-foreground mb-2">
+                                        {t('Preferred Language')}
+                                    </label>
+                                    <select
                                         value={language}
                                         onChange={(e) => {
                                             localStorage.setItem(LANGUAGE_SOURCE_KEY, 'user');
                                             setLanguage(e.target.value);
                                         }}
-                                    />
-                                    <datalist id="language-options">
+                                        className="w-full h-11 px-4 rounded-xl border border-border bg-background text-foreground focus:border-primary focus:outline-none transition-colors"
+                                    >
                                         {SUPPORTED_LANGUAGES.map(option => (
-                                            <option key={option} value={option} />
+                                            <option key={option} value={option}>{option}</option>
                                         ))}
-                                    </datalist>
+                                    </select>
                                     {countryCode === 'NG' && (
                                         <p className="text-xs text-slate-500 mt-2">{t('Popular languages in Nigeria: Hausa, Yoruba, Igbo, Nigerian Pidgin.')}</p>
                                     )}
