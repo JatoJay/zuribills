@@ -205,7 +205,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How long is the free trial?',
-    answer: 'New workspaces get full access for 7 days, then you can choose a plan that fits your volume.',
+    answer: 'New workspaces get full access for 3 days, then you can choose a plan that fits your volume.',
   },
 ];
 
@@ -959,7 +959,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           </ul>
           <div className="mb-4">
             <span className={`text-xs ${billingCycle === 'monthly' ? 'text-white/60' : 'text-muted'}`}>
-              {t('14-day free trial included')}
+              {t('3-day free trial included')}
             </span>
           </div>
           <Button
@@ -995,7 +995,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           </ul>
           <div className="mb-4">
             <span className={`text-xs ${billingCycle === 'yearly' ? 'text-white/60' : 'text-muted'}`}>
-              {t('14-day free trial included')}
+              {t('3-day free trial included')}
             </span>
           </div>
           <Button

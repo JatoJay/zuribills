@@ -140,7 +140,7 @@ const Onboarding: React.FC = () => {
         'Monthly Plan',
         'Yearly Plan',
         '/mo',
-        '14-day free trial',
+        '3-day free trial',
         'You can cancel anytime during the trial period.',
         'Change plan',
         ...baseSlides.flatMap(slide => [slide.title, slide.description]),
@@ -589,7 +589,7 @@ const Onboarding: React.FC = () => {
                                     </div>
                                     <div className="flex items-center gap-2 mt-3">
                                         <CheckCircle className="w-4 h-4 text-primary" />
-                                        <span className="text-sm text-slate-600">{t('14-day free trial')}</span>
+                                        <span className="text-sm text-slate-600">{t('3-day free trial')}</span>
                                     </div>
                                     <p className="text-xs text-slate-500 mt-2">
                                         {t('You can cancel anytime during the trial period.')}

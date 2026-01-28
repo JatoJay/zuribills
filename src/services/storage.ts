@@ -33,8 +33,8 @@ const LEGACY_USERS_KEY = 'invoiceflow_users';
 const LEGACY_AGENT_LOGS_KEY = 'invoiceflow_agent_logs';
 
 const TRIAL_DAYS = (() => {
-  const parsed = Number.parseInt(import.meta.env.VITE_TRIAL_DAYS || '7', 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
+  const parsed = Number.parseInt(import.meta.env.VITE_TRIAL_DAYS || '3', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 3;
 })();
 
 const OFFLINE_CACHE_PREFIX = 'invoiceflow_offline_cache_';
@@ -105,6 +105,7 @@ const mapUserFromDb = (row: any): User => ({
   permissions: row.permissions || [],
   pin: row.pin ?? undefined,
   avatarUrl: row.avatar_url ?? undefined,
+  securityStamp: row.security_stamp || '',
   createdAt: row.created_at,
 });
 
@@ -117,6 +118,7 @@ const mapUserToDb = (user: User) => ({
   permissions: user.permissions || [],
   pin: toNullable(user.pin),
   avatar_url: toNullable(user.avatarUrl),
+  security_stamp: user.securityStamp,
   created_at: user.createdAt,
 });
 
@@ -420,6 +422,7 @@ export const ensureAuthUser = async (payload: {
     role: payload.role ?? UserRole.OWNER,
     permissions: payload.permissions ?? ['ALL'],
     avatarUrl: payload.avatarUrl,
+    securityStamp: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
   };
   const { error } = await supabase.from('users').insert(mapUserToDb(newUser));
@@ -427,12 +430,13 @@ export const ensureAuthUser = async (payload: {
   return newUser;
 };
 
-export const createUser = async (user: Omit<User, 'id' | 'createdAt'>): Promise<User> => {
+export const createUser = async (user: Omit<User, 'id' | 'createdAt' | 'securityStamp'>): Promise<User> => {
   const supabase = getSupabaseClient();
   const newUser: User = {
     ...user,
     email: user.email.trim().toLowerCase(),
     id: crypto.randomUUID(),
+    securityStamp: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
   };
   const { error } = await supabase.from('users').insert(mapUserToDb(newUser));
@@ -445,6 +449,28 @@ export const deleteUser = async (id: string): Promise<void> => {
   const { error } = await supabase.from('users').delete().eq('id', id);
   if (error) throw error;
   await supabase.from('org_memberships').delete().eq('user_id', id);
+};
+
+export const rotateSecurityStamp = async (userId: string): Promise<string> => {
+  const supabase = getSupabaseClient();
+  const newStamp = crypto.randomUUID();
+  const { error } = await supabase
+    .from('users')
+    .update({ security_stamp: newStamp })
+    .eq('id', userId);
+  if (error) throw error;
+  return newStamp;
+};
+
+export const verifySecurityStamp = async (userId: string, stamp: string): Promise<boolean> => {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('users')
+    .select('security_stamp')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.security_stamp === stamp;
 };
 
 // --- Organizations ---
@@ -1260,6 +1286,7 @@ export const seedDatabase = async () => {
     email: 'amina@acme.inc',
     role: UserRole.OWNER,
     permissions: ['ALL'],
+    securityStamp: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
   };
 

@@ -21,7 +21,7 @@ export const PRICING_PLANS: Record<string, PricingPlan> = {
         billingCycle: 'monthly',
         pricePerMonth: 4.99,
         priceTotal: 4.99,
-        trialDays: 14,
+        trialDays: 3,
         features: [
             'Unlimited invoices',
             'AI-powered insights',
@@ -36,7 +36,7 @@ export const PRICING_PLANS: Record<string, PricingPlan> = {
         billingCycle: 'yearly',
         pricePerMonth: 4.50,
         priceTotal: 54, // $4.50 x 12 months
-        trialDays: 14,
+        trialDays: 3,
         features: [
             'Unlimited invoices',
             'AI-powered insights',
@@ -47,7 +47,7 @@ export const PRICING_PLANS: Record<string, PricingPlan> = {
     },
 };
 
-export const TRIAL_DURATION_DAYS = 14;
+export const TRIAL_DURATION_DAYS = 3;
 
 /**
  * Calculate trial end date from start date
