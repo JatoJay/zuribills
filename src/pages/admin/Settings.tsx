@@ -12,7 +12,7 @@ import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 import { detectLocationLanguage } from '@/services/geolocation';
 
-const PLATFORM_FEE_PERCENT = 1.5;
+const PLATFORM_FEE_PERCENT = 0.7;
 
 const Settings: React.FC = () => {
     const { org, refreshOrg } = useAdminContext();

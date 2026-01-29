@@ -110,7 +110,7 @@ const Onboarding: React.FC = () => {
 
     const translationKeys = useMemo(() => ([
         'Set up your organization',
-        'Enter your business details to get started with InvoiceFlow.',
+        'Enter your business details to get started with ZuriBills.',
         'Business Name',
         'Contact Email',
         'Country',
@@ -347,7 +347,7 @@ const Onboarding: React.FC = () => {
                 paymentConfig: {
                     enabled: false,
                     provider: payoutProvider,
-                    platformFeePercent: 1.5,
+                    platformFeePercent: 0.7,
                     bankCountry: selectedCountry.code,
                 },
                 address: {
@@ -476,7 +476,7 @@ const Onboarding: React.FC = () => {
                         <div className="bg-white p-8 rounded-3xl shadow-soft border border-slate-200">
                             <div className="mt-6">
                                 <h1 className="text-3xl font-display font-semibold text-black">{t('Set up your organization')}</h1>
-                                <p className="mt-2 text-slate-600">{t('Enter your business details to get started with InvoiceFlow.')}</p>
+                                <p className="mt-2 text-slate-600">{t('Enter your business details to get started with ZuriBills.')}</p>
                             </div>
 
                             {showGoogleButton && (

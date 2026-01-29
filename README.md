@@ -17,7 +17,7 @@ Take full control of your business with Ogasir; share a beautiful catalog, get p
 3. (Optional) If using Flutterwave payments + webhooks, set server env vars in `.env.local` and run the NestJS API (lives in `backend/`, serves `/api/*` on port 8787):
    - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
    - `FLUTTERWAVE_SECRET_KEY` and `FLUTTERWAVE_WEBHOOK_SECRET`
-   - `PLATFORM_FEE_PERCENT` (defaults to 1.5)
+   - `PLATFORM_FEE_PERCENT` (defaults to 0.7)
    - Required for Flutterwave bank payout connection and webhooks
    - Run `npm run server`
 4. (Optional) If using MTN MoMo payments:

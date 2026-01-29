@@ -36,7 +36,7 @@ const flutterwaveEncryptionKey = process.env.FLUTTERWAVE_ENCRYPTION_KEY;
 const flutterwaveWebhookSecret = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const afnexDemoBaseUrl = process.env.AFNEX_DEMO_BASE_URL || 'https://afnex.dev/api/demo';
-const platformFeePercent = 1.5;
+const platformFeePercent = 0.7;
 
 const getFlutterwaveHeaders = () => {
     // Standard Flutterwave Authorization header format is 'Bearer SECRET_KEY'
@@ -176,7 +176,7 @@ const resolvePlatformFeePercent = (value: any) => {
     if (Number.isFinite(parsed) && parsed >= 0) {
         return parsed;
     }
-    return Number.isFinite(platformFeePercent) ? platformFeePercent : 1.5;
+    return Number.isFinite(platformFeePercent) ? platformFeePercent : 0.7;
 };
 
 const createAgentLog = async ({ organizationId, action, details, relatedId, type }: {

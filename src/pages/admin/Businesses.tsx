@@ -244,7 +244,7 @@ const Businesses: React.FC = () => {
         paymentConfig: {
           enabled: false,
           provider: payoutProvider,
-          platformFeePercent: 1.5,
+          platformFeePercent: 0.7,
           bankCountry: selectedCountry.code,
         },
         address: {

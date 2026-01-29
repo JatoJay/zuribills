@@ -588,7 +588,7 @@ export const createOrganization = async (org: Omit<Organization, 'id' | 'created
       enabled: false,
       provider,
       bankCountry: bankCountry || undefined,
-      platformFeePercent: 1.5,
+      platformFeePercent: 0.7,
     },
     subscription: org.subscription ?? activeSubscription,
     trial: org.trial ?? buildTrial(now),
@@ -1324,7 +1324,7 @@ export const seedDatabase = async () => {
       enabled: false,
       provider: 'stripe',
       bankCountry: 'US',
-      platformFeePercent: 1.5,
+      platformFeePercent: 0.7,
     },
     createdAt: new Date().toISOString(),
   };

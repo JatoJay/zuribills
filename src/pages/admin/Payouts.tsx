@@ -9,7 +9,7 @@ import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePrompt } from '@/context/PromptContext';
 
-const PLATFORM_FEE_PERCENT = 1.5;
+const PLATFORM_FEE_PERCENT = 0.7;
 const MOMO_MSISDN_RULES: Record<string, { countryCode: string; nationalLength: number; example: string }> = {
     RW: { countryCode: '250', nationalLength: 9, example: '+2507XXXXXXXX' },
     GH: { countryCode: '233', nationalLength: 9, example: '+2335XXXXXXX' },
@@ -106,7 +106,7 @@ const Payouts: React.FC = () => {
         'Required to receive payments directly into your bank account.',
         'Payments enabled',
         'Platform fee',
-        'InvoiceFlow fee per transaction.',
+        'ZuriBills fee per transaction.',
         'Payout status',
         'Latest payout',
         'Payout history',
@@ -874,7 +874,7 @@ const Payouts: React.FC = () => {
                         <span className="text-slate-600">{t('Platform fee')}</span>
                         <span className="font-semibold text-slate-900">{PLATFORM_FEE_PERCENT}%</span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-2">{t('InvoiceFlow fee per transaction.')}</p>
+                    <p className="text-xs text-slate-500 mt-2">{t('ZuriBills fee per transaction.')}</p>
 
                     <div className="mt-4 rounded-lg border border-slate-100 bg-white px-4 py-3 text-sm">
                         <div className="flex items-center justify-between">
