@@ -1,6 +1,6 @@
 /**
  * Payment Gateway Service
- * Uses Afnex for unified payment initialization.
+ * Uses Flutterwave for payment initialization.
  */
 
 import { getSupabaseClient } from './supabaseClient';
@@ -60,14 +60,6 @@ export interface ProviderRateResult {
 
 export type PaymentGateway = 'flutterwave';
 
-export const resolveAfnexProvider = (_currency: string): PaymentGateway => {
-    return 'flutterwave';
-};
-
-export const requiresAfnexPhone = (currency: string) => {
-    const normalized = String(currency || '').trim().toUpperCase();
-    return ['RWF', 'GHS', 'KES', 'ZAR'].includes(normalized);
-};
 
 const getAccessToken = async (): Promise<string | null> => {
     const supabase = getSupabaseClient();
@@ -76,22 +68,18 @@ const getAccessToken = async (): Promise<string | null> => {
 };
 
 // ============================================
-// AFNEX INTEGRATION
+// FLUTTERWAVE PAYMENT INITIALIZATION
 // ============================================
 
-export const initAfnexPayment = async (
+export const initFlutterwavePayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
-        const response = await apiFetch('/api/payments/afnex/charge', {
+        const response = await apiFetch('/api/payments/flutterwave/initialize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 invoiceId: config.invoiceId,
-                // provider: omitted - let Afnex auto-select (Flutterwave by default)
-                payerPhone: config.payerPhone,
-                customerEmail: config.customerEmail,
-                customerName: config.customerName,
             }),
         });
 
@@ -104,10 +92,10 @@ export const initAfnexPayment = async (
         return {
             success: true,
             reference: data.reference,
-            redirectUrl: data.paymentUrl || data.payment_url || data.link,
+            redirectUrl: data.link,
         };
     } catch (error: any) {
-        console.error('Afnex payment error:', error);
+        console.error('Flutterwave payment error:', error);
         return { success: false, error: error.message || 'Failed to initialize payment.' };
     }
 };
@@ -186,11 +174,10 @@ export const createFlutterwavePayoutAccount = async (
 export const processPayment = async (
     _gateway: PaymentGateway,
     config: PaymentConfig
-): Promise<PaymentResult> => initAfnexPayment(config);
+): Promise<PaymentResult> => initFlutterwavePayment(config);
 
-export const getRecommendedGateway = (currency: string): PaymentGateway => resolveAfnexProvider(currency);
+export const getRecommendedGateway = (_currency: string): PaymentGateway => 'flutterwave';
 
-// Async version that uses dynamic providers from Afnex API
 export const getRecommendedGatewayAsync = async (_currency: string): Promise<PaymentGateway> =>
     Promise.resolve('flutterwave');
 

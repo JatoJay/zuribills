@@ -38,15 +38,51 @@ const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const afnexDemoBaseUrl = process.env.AFNEX_DEMO_BASE_URL || 'https://afnex.dev/api/demo';
 const platformFeePercent = 0.7;
 
-const getFlutterwaveHeaders = () => {
-    // Standard Flutterwave Authorization header format is 'Bearer SECRET_KEY'
-    // Even for V4 keys, this is the most common format.
+let flutterwaveAccessToken: string | null = null;
+let flutterwaveTokenExpiry = 0;
+
+const getFlutterwaveAccessToken = async (): Promise<string | null> => {
+    if (flutterwaveAccessToken && Date.now() < flutterwaveTokenExpiry) {
+        return flutterwaveAccessToken;
+    }
+    if (!flutterwaveClientId || !flutterwaveSecretKey) {
+        return null;
+    }
+    try {
+        const response = await fetch('https://api.flutterwave.com/v4/auth/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                client_id: flutterwaveClientId,
+                client_secret: flutterwaveSecretKey,
+            }),
+        });
+        const data: any = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            console.error('Flutterwave token fetch failed', data);
+            return null;
+        }
+        flutterwaveAccessToken = data?.data?.access_token || data?.access_token;
+        const expiresIn = data?.data?.expires_in || data?.expires_in || 3600;
+        flutterwaveTokenExpiry = Date.now() + (expiresIn - 60) * 1000;
+        return flutterwaveAccessToken;
+    } catch (error) {
+        console.error('Flutterwave token error', error);
+        return null;
+    }
+};
+
+const getFlutterwaveHeaders = async () => {
     const headers: Record<string, string> = {
-        Authorization: `Bearer ${flutterwaveSecretKey}`,
         'Content-Type': 'application/json',
     };
-    if (flutterwaveClientId) {
-        headers['client-id'] = flutterwaveClientId;
+    if (flutterwaveClientId && flutterwaveSecretKey) {
+        const token = await getFlutterwaveAccessToken();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+    } else if (flutterwaveSecretKey) {
+        headers['Authorization'] = `Bearer ${flutterwaveSecretKey}`;
     }
     return headers;
 };
@@ -220,7 +256,7 @@ const hasPayoutLog = async (organizationId: string, relatedId: string) => {
 const createFlutterwaveTransfer = async (payload: any) => {
     const response = await fetch('https://api.flutterwave.com/v3/transfers', {
         method: 'POST',
-        headers: getFlutterwaveHeaders(),
+        headers: await getFlutterwaveHeaders(),
         body: JSON.stringify(payload),
     });
     const data: any = await response.json().catch(() => ({}));
@@ -589,7 +625,7 @@ const fetchStripeRate = async (from: string, to: string) => {
 const fetchFlutterwaveRate = async (from: string, to: string, amount = 1) => {
     if (!flutterwaveSecretKey) return null;
     const response = await fetch(`https://api.flutterwave.com/v3/rates?from=${from}&to=${to}&amount=${amount}`, {
-        headers: getFlutterwaveHeaders(),
+        headers: await getFlutterwaveHeaders(),
     });
     const data: any = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -809,7 +845,7 @@ export class AppController {
         const country = String(req.query.country || 'NG').toUpperCase();
         try {
             const response = await fetch(`https://api.flutterwave.com/v3/banks/${country}`, {
-                headers: getFlutterwaveHeaders(),
+                headers: await getFlutterwaveHeaders(),
             });
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -1063,7 +1099,7 @@ export class AppController {
         try {
             const response = await fetch('https://api.flutterwave.com/v3/subaccounts', {
                 method: 'POST',
-                headers: getFlutterwaveHeaders(),
+                headers: await getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
             const data: any = await response.json().catch(() => ({}));
@@ -1077,7 +1113,7 @@ export class AppController {
                 if (errorMsg.toLowerCase().includes('already exists')) {
                     try {
                         const listResponse = await fetch('https://api.flutterwave.com/v3/subaccounts', {
-                            headers: getFlutterwaveHeaders(),
+                            headers: await getFlutterwaveHeaders(),
                         });
                         const listData: any = await listResponse.json();
                         const existing = listData?.data?.find(
@@ -1210,7 +1246,7 @@ export class AppController {
         try {
             const response = await fetch('https://api.flutterwave.com/v3/payments', {
                 method: 'POST',
-                headers: getFlutterwaveHeaders(),
+                headers: await getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
 
@@ -1315,7 +1351,7 @@ export class AppController {
             console.log('Payload:', JSON.stringify(payload));
             const response = await fetch(`https://api.flutterwave.com/v3/charges?type=${encodeURIComponent(chargeType)}`, {
                 method: 'POST',
-                headers: getFlutterwaveHeaders(),
+                headers: await getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
 
@@ -1343,7 +1379,7 @@ export class AppController {
                     };
                     const linkResponse = await fetch('https://api.flutterwave.com/v4/payments', {
                         method: 'POST',
-                        headers: getFlutterwaveHeaders(),
+                        headers: await getFlutterwaveHeaders(),
                         body: JSON.stringify(linkPayload),
                     });
                     const linkData: any = await linkResponse.json().catch(() => ({}));
@@ -1399,7 +1435,7 @@ export class AppController {
                 ? `https://api.flutterwave.com/v3/transactions/${encodeURIComponent(reference)}/verify`
                 : `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`;
             const response = await fetch(endpoint, {
-                headers: getFlutterwaveHeaders(),
+                headers: await getFlutterwaveHeaders(),
             });
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -1408,7 +1444,7 @@ export class AppController {
                     if (isIdReference && txRef) {
                         const fallbackResponse = await fetch(
                             `https://api.flutterwave.com/v4/transactions/verify_by_reference?tx_ref=${encodeURIComponent(txRef)}`,
-                            { headers: getFlutterwaveHeaders() }
+                            { headers: await getFlutterwaveHeaders() }
                         );
 
                         const fallbackData: any = await fallbackResponse.json().catch(() => ({}));
@@ -1591,7 +1627,7 @@ export class AppController {
         try {
             const response = await fetch('https://api.flutterwave.com/v3/payments', {
                 method: 'POST',
-                headers: getFlutterwaveHeaders(),
+                headers: await getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
 

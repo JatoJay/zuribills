@@ -325,8 +325,8 @@ const Login: React.FC = () => {
             <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center shadow-sm">
               <Sparkles className="w-4 h-4" />
             </div>
-            <span className="font-display text-lg font-semibold tracking-tight text-foreground">
-              Invoice<span className="text-primary">Flow</span>
+            <span className="font-display text-lg font-semibold tracking-tight">
+              <span className="text-black">Zuri</span><span className="text-primary">Bills</span>
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -505,13 +505,12 @@ const Login: React.FC = () => {
                 {mode === 'signin' ? (
                   <span>
                     {t('Need an account?')}{' '}
-                    <button
-                      type="button"
-                      onClick={() => { setMode('signup'); resetState(); }}
+                    <a
+                      href="/onboarding"
                       className="text-foreground underline decoration-primary/60 underline-offset-4"
                     >
                       {t('Create account')}
-                    </button>
+                    </a>
                   </span>
                 ) : mode === 'signup' ? (
                   <span>

@@ -5,17 +5,15 @@ import { getOrganizationBySlug, getInvoices } from '@/services/storage';
 import { apiFetch } from '@/services/apiClient';
 import { Button, formatCurrency, Badge, Card, Input } from '@/components/ui';
 import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw, ArrowRight, ArrowRightLeft, Calendar } from 'lucide-react';
-import { processPayment, requiresAfnexPhone } from '@/services/paymentService';
+import { processPayment } from '@/services/paymentService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { resolvePayoutProvider } from '@/services/paymentRouting';
 
-const AFNEX_PROVIDER_DETAILS: Record<string, { name: string; icon: React.ElementType; description: string; color: string }> = {
-    flutterwave: {
-        name: 'Secure Payment',
-        icon: CreditCard,
-        description: 'Pay via Card, Bank or Mobile Money',
-        color: 'bg-orange-500',
-    },
+const PAYMENT_PROVIDER_DETAILS = {
+    name: 'Secure Payment',
+    icon: CreditCard,
+    description: 'Pay via Card, Bank or Mobile Money',
+    color: 'bg-orange-500',
 };
 
 const PENDING_PAYMENT_KEY = 'invoiceflow_pending_payment';
@@ -53,10 +51,7 @@ const InvoiceView: React.FC = () => {
         'Close',
         'Try Again',
         'Secured with 256-bit SSL encryption',
-        'Processed by Afnex (Paystack)',
-        'Processed by Afnex (Flutterwave)',
-        'Processed by Afnex (Pesapal)',
-        'Pay with mobile money via Afnex',
+        'Processed by Flutterwave',
         'Payments unavailable',
         'This business needs to connect a payout account before it can accept payments.',
         'Redirecting to secure checkout...',
@@ -323,14 +318,12 @@ const InvoiceView: React.FC = () => {
             || (paymentProvider === 'stripe' && paymentConfig?.accountId)
         )
     );
-    const afnexProvider = 'flutterwave';
-    const afnexDetails = AFNEX_PROVIDER_DETAILS[afnexProvider];
-    const requiresPhone = requiresAfnexPhone(org.currency);
+    const requiresPhone = false;
     const isPaid = invoice.status === InvoiceStatus.PAID;
     const vatRate = Number.isFinite(invoice.taxRate) ? Math.max(0, invoice.taxRate) : 0;
     const vatAmount = Number.isFinite(invoice.taxAmount) ? invoice.taxAmount : 0;
     const vatLabel = `${t('VAT')} (${vatRate}%)`;
-    const AfnexIcon = afnexDetails.icon;
+    const PaymentIcon = PAYMENT_PROVIDER_DETAILS.icon;
 
     return (
         <div className="min-h-screen bg-slate-100 p-4 sm:p-8 dark:bg-background transition-colors duration-300 print:p-0 print:bg-white flex justify-center">
@@ -593,12 +586,12 @@ const InvoiceView: React.FC = () => {
                                         : 'border-border hover:border-primary/50 hover:bg-primary/5'
                                         }`}
                                 >
-                                    <div className={`w-12 h-12 ${afnexDetails.color} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
-                                        <AfnexIcon className="w-6 h-6" />
+                                    <div className={`w-12 h-12 ${PAYMENT_PROVIDER_DETAILS.color} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
+                                        <PaymentIcon className="w-6 h-6" />
                                     </div>
                                     <div className="flex-1 text-left">
-                                        <p className="font-bold text-foreground">{afnexDetails.name}</p>
-                                        <p className="text-xs text-muted leading-relaxed">{t(afnexDetails.description)}</p>
+                                        <p className="font-bold text-foreground">{PAYMENT_PROVIDER_DETAILS.name}</p>
+                                        <p className="text-xs text-muted leading-relaxed">{t(PAYMENT_PROVIDER_DETAILS.description)}</p>
                                     </div>
                                     {isProcessing ? (
                                         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
