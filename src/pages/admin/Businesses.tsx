@@ -239,7 +239,7 @@ const Businesses: React.FC = () => {
         contactEmail: formData.contactEmail.trim(),
         currency: resolvedCurrency,
         primaryColor: org.primaryColor || '#0EA5A4',
-        catalogEnabled: false,
+        catalogEnabled: true,
         preferredLanguage: formData.preferredLanguage.trim() || 'English',
         paymentConfig: {
           enabled: false,

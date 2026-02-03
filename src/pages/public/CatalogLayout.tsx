@@ -93,10 +93,15 @@ const CatalogLayout: React.FC = () => {
 
     if (!org) return <div className="p-8 text-center text-foreground">{t('Loading...')}</div>;
 
+    const brandColor = org.primaryColor || '#0EA5A4';
+
     return (
         <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, isCartOpen, setIsCartOpen }}>
             <CatalogContext.Provider value={{ org }}>
-                <div className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col">
+                <div
+                    className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col"
+                    style={{ '--primary': brandColor } as React.CSSProperties}
+                >
                     {/* Header */}
                     <header className="bg-surface/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
                         <div className="w-full px-4 h-16 flex items-center justify-between">

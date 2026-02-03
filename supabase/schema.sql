@@ -17,6 +17,7 @@ create table if not exists users (
   permissions jsonb not null default '[]'::jsonb,
   pin text,
   avatar_url text,
+  security_stamp text not null default gen_random_uuid()::text,
   created_at timestamptz not null default now()
 );
 
@@ -29,11 +30,12 @@ create table if not exists organizations (
   logo_url text,
   primary_color text not null,
   currency text not null,
-  catalog_enabled boolean not null default false,
+  catalog_enabled boolean not null default true,
   preferred_language text,
   contact_email text not null,
   contact_phone text,
   tax_id text,
+  vat_rate double precision default 0,
   signatory_name text,
   signatory_title text,
   address jsonb,
@@ -183,6 +185,11 @@ create index if not exists idx_invoices_root on invoices (root_invoice_id);
 alter table public.invoices add column if not exists parent_invoice_id text;
 alter table public.invoices add column if not exists root_invoice_id text;
 alter table public.invoices add column if not exists transfer_sequence integer default 0;
+
+alter table public.users add column if not exists security_stamp text;
+update public.users set security_stamp = gen_random_uuid()::text where security_stamp is null;
+alter table public.users alter column security_stamp set not null;
+alter table public.users alter column security_stamp set default gen_random_uuid()::text;
 
 alter table public.payments add column if not exists currency text;
 alter table public.payments add column if not exists status text;

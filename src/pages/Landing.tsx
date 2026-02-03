@@ -165,7 +165,7 @@ const OWNER_STORIES = [
   {
     name: 'Amina Yusuf',
     role: 'Boutique Owner - Lagos',
-    quote: 'InvoiceFlow keeps my catalog polished and payments predictable without extra admin work.',
+    quote: 'ZuriBills keeps my catalog polished and payments predictable without extra admin work.',
     image: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=400&h=500&fit=crop',
   },
   {
@@ -185,7 +185,7 @@ const OWNER_STORIES = [
 const FAQ_ITEMS = [
   {
     question: 'How do I accept payments from clients?',
-    answer: 'Send your catalog or invoice link. Clients pay through Afnex providers and InvoiceFlow updates the invoice status automatically.',
+    answer: 'Send your catalog or invoice link. Clients pay through Afnex providers and ZuriBills updates the invoice status automatically.',
   },
   {
     question: 'Can I invite my team to collaborate?',
@@ -227,8 +227,8 @@ const NavBar: React.FC<{
             <div className="w-9 h-9 rounded-full bg-[#A9F5D9] text-black flex items-center justify-center shadow-soft ring-1 ring-black/10">
               <Zap className="w-4 h-4" />
             </div>
-            <span className="font-display text-lg font-semibold tracking-tight text-slate-900">
-              Invoice<span className="text-primary">Flow</span>
+            <span className="font-display text-lg font-semibold tracking-tight">
+              <span className="text-black">Zuri</span><span className="text-primary">Bills</span>
             </span>
           </div>
 
@@ -802,7 +802,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
             <Bot className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <div className="font-display text-sm font-semibold text-foreground">{t('InvoiceFlow AI')}</div>
+            <div className="font-display text-sm font-semibold text-foreground">{t('ZuriBills AI')}</div>
             <div className="text-[10px] text-primary flex items-center gap-1">
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
               {useRealAI ? t('Gemini Powered') : t('Demo Mode')}
@@ -947,7 +947,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           <h3 className="text-xl font-display font-semibold mb-2">{t('Monthly Plan')}</h3>
           <p className={`text-sm mb-6 ${billingCycle === 'monthly' ? 'text-white/80' : 'text-muted'}`}>{t('Perfect for short-term projects and starters.')}</p>
           <div className="flex items-baseline gap-1 mb-6">
-            <span className="text-4xl font-display font-semibold">{loadingRate ? '$4.99' : formatPrice(4.99)}</span>
+            <span className="text-4xl font-display font-semibold">{loadingRate ? '$2' : formatPrice(2)}</span>
             <span className={`text-sm ${billingCycle === 'monthly' ? 'text-white/70' : 'text-muted'}`}>/mo</span>
           </div>
           <ul className="space-y-4 mb-8">
@@ -980,11 +980,11 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           <h3 className="text-xl font-display font-semibold mb-2">{t('Yearly Plan')}</h3>
           <p className={`text-sm mb-6 ${billingCycle === 'yearly' ? 'text-white/80' : 'text-muted'}`}>{t('Best value for growing businesses.')}</p>
           <div className="flex items-baseline gap-1 mb-2">
-            <span className="text-4xl font-display font-semibold">{loadingRate ? '$4.50' : formatPrice(4.50)}</span>
+            <span className="text-4xl font-display font-semibold">{loadingRate ? '$1.67' : formatPrice(1.67)}</span>
             <span className={`text-sm ${billingCycle === 'yearly' ? 'text-white/70' : 'text-muted'}`}>/mo</span>
           </div>
           <p className={`text-xs mb-6 ${billingCycle === 'yearly' ? 'text-white/80' : 'text-muted'}`}>
-            {loadingRate ? t('Billed $54 yearly') : `${t('Billed')} ${formatPrice(54)} ${t('yearly')}`}
+            {loadingRate ? t('Billed $20 yearly') : `${t('Billed')} ${formatPrice(20)} ${t('yearly')}`}
           </p>
           <ul className="space-y-4 mb-8">
             {PRICING_FEATURES.map((feat, i) => (
@@ -1033,7 +1033,7 @@ const Landing: React.FC = () => {
     'Status',
     'Paid',
     'Cleared instantly',
-    'InvoiceFlow AI',
+    'ZuriBills AI',
     'Gemini Powered',
     'Demo Mode',
     'Using real Gemini AI',
@@ -1056,9 +1056,9 @@ const Landing: React.FC = () => {
     'Choose Monthly',
     'Choose Yearly',
     ...PRICING_FEATURES,
-    'Built for service teams',
-    'Zoom from services to',
-    'paid invoices',
+    'Built for growing businesses, freelancers & artisans',
+    'Be in control',
+    'from services to paid invoices',
     'One canvas for services, expenses, pricing, checkout, and follow-ups. Share a beautiful catalog, get paid faster, and file taxes with clean inflow/outflow reports.',
     'Watch demo',
     ...HERO_HIGHLIGHTS,
@@ -1084,7 +1084,7 @@ const Landing: React.FC = () => {
     'Try the AI demo',
     'Local languages',
     'Engage every business in their native language.',
-    'InvoiceFlow localizes catalogs, invoices, and payment prompts for every payout country, including Rwanda, Kenya, Ghana, South Africa, Nigeria, UK, US, and Canada.',
+    'ZuriBills localizes catalogs, invoices, and payment prompts for every payout country, including Rwanda, Kenya, Ghana, South Africa, Nigeria, UK, US, and Canada.',
     'Video overview',
     'Payout-ready languages',
     'Local language support preview',
@@ -1096,7 +1096,7 @@ const Landing: React.FC = () => {
     'Admin Dashboard Interface',
     'Business owners',
     'Built for small and medium teams.',
-    'Owners use InvoiceFlow to keep invoices, expenses, and payouts calm and ready for audit.',
+    'Owners use ZuriBills to keep invoices, expenses, and payouts calm and ready for audit.',
     ...OWNER_STORIES.flatMap(owner => [owner.name, owner.role, owner.quote]),
     'FAQ',
     'Answers for growing teams.',
@@ -1119,8 +1119,8 @@ const Landing: React.FC = () => {
     'Privacy Policy',
     'Security',
     'Cookies',
-    'Start building',
-    'with InvoiceFlow today',
+    'Take Control of your Business Finances.',
+    'Get Started With ZuriBills',
     'Sales & Branding',
     'Automation',
     'Intelligence',
@@ -1190,11 +1190,12 @@ const Landing: React.FC = () => {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-foreground/10 text-xs uppercase tracking-widest text-muted mb-6">
               <span className="w-2 h-2 rounded-full bg-primary"></span>
-              {t('Built for service teams')}
+              {t('Built for growing businesses, freelancers & artisans')}
             </div>
-            <h1 className="text-5xl md:text-6xl font-display font-semibold leading-tight mb-6">
-              {t('Zoom from services to')} <span className="text-gradient">{t('paid invoices')}</span>.
+            <h1 className="text-5xl md:text-6xl font-display font-semibold leading-tight mb-4">
+              {t('Be in control')} — <span className="text-gradient">{t('from services to paid invoices')}</span>
             </h1>
+            <p className="text-sm text-muted mb-6">{t('Built for growing businesses, freelancers & artisans')}</p>
             <p className="text-lg text-muted mb-8 max-w-xl">
               {t('One canvas for services, expenses, pricing, checkout, and follow-ups. Share a beautiful catalog, get paid faster, and file taxes with clean inflow/outflow reports.')}
             </p>
@@ -1350,7 +1351,7 @@ const Landing: React.FC = () => {
                   {t('Engage every business in their native language.')}
                 </h2>
                 <p className="text-lg text-white/80 leading-relaxed mb-8">
-                  {t('InvoiceFlow localizes catalogs, invoices, and payment prompts for every payout country, including Rwanda, Kenya, Ghana, South Africa, Nigeria, UK, US, and Canada.')}
+                  {t('ZuriBills localizes catalogs, invoices, and payment prompts for every payout country, including Rwanda, Kenya, Ghana, South Africa, Nigeria, UK, US, and Canada.')}
                 </p>
                 <div className="flex items-center gap-2 text-sm text-white/80">
                   <Play className="w-4 h-4" />
@@ -1401,7 +1402,7 @@ const Landing: React.FC = () => {
                 {t('Built for small and medium teams.')}
               </h2>
               <p className="text-muted text-lg leading-relaxed">
-                {t('Owners use InvoiceFlow to keep invoices, expenses, and payouts calm and ready for audit.')}
+                {t('Owners use ZuriBills to keep invoices, expenses, and payouts calm and ready for audit.')}
               </p>
             </div>
 
@@ -1488,23 +1489,23 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   return (
     <div className="relative bg-black">
       {/* SECTION 1: CTA WITH 3D VISUALS (Sticky Base - Reduced Height) */}
-      <div className="sticky top-0 h-[450px] flex items-center overflow-hidden bg-[#000000] z-10">
-        <div className="max-w-7xl mx-auto px-10 md:px-16 w-full relative flex items-center justify-between h-full">
+      <div className="sticky top-0 min-h-[450px] py-16 md:py-20 flex items-center overflow-hidden bg-[#000000] z-10">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10 md:px-16 w-full relative flex items-center justify-between">
           <div className="max-w-2xl relative z-20">
-            <h2 className="text-[40px] md:text-[52px] font-display font-medium tracking-[-0.03em] leading-[1.1] mb-10 text-white text-left">
-              {t('Start building')} <br />
-              {t('with InvoiceFlow today')}
+            <h2 className="text-[32px] sm:text-[40px] md:text-[52px] font-display font-medium tracking-[-0.03em] leading-[1.1] mb-8 md:mb-10 text-white text-left">
+              {t('Take Control of your Business Finances.')} <br />
+              {t('Get Started With ZuriBills')}
             </h2>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4">
               <Button
                 onClick={() => navigate({ to: '/onboarding' })}
-                className="h-[52px] px-8 rounded-full bg-primary text-black font-bold text-sm hover:opacity-90 transition-all border-none"
+                className="h-[52px] px-8 rounded-full bg-primary text-[#0b0b0b] font-bold text-sm hover:bg-primary/90 transition-all border-none shadow-lg"
               >
                 {t('Start for free')}
               </Button>
               <Button
                 variant="outline"
-                className="h-[52px] px-8 rounded-full border-white/40 text-white hover:bg-white/10 font-bold text-sm transition-all bg-white/5 backdrop-blur-sm"
+                className="h-[52px] px-8 rounded-full border-2 border-white/60 text-white hover:bg-white/20 font-bold text-sm transition-all bg-white/10 backdrop-blur-sm shadow-lg"
               >
                 {t('See a demo')} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -1541,10 +1542,10 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
                 <div className="w-7 h-7 rounded-[6px] bg-white flex items-center justify-center">
                   <Zap className="w-4 h-4 text-black fill-current" />
                 </div>
-                <span className="font-display font-bold text-[22px] tracking-tight text-white">InvoiceFlow</span>
+                <span className="font-display font-bold text-[22px] tracking-tight text-white">ZuriBills</span>
               </div>
               <div className="text-[11px] uppercase tracking-[0.25em] text-white/30 font-bold">
-                2026 © InvoiceFlow Technologies Nigeria Limited
+                2026 © ZuriBills From X-Labs
               </div>
             </div>
 

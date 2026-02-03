@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState, useContext } from 'react';
+import { Link } from '@tanstack/react-router';
 import { Service } from '@/types';
 import { getServices } from '@/services/storage';
 import { Button, Input, Card, formatCurrency } from '@/components/ui';
-import { Search, ShoppingCart, Check, Filter } from 'lucide-react';
+import { Search, ShoppingCart, Check, Filter, Zap, ArrowRight } from 'lucide-react';
 import { CartContext } from '@/context/CartContext';
 import { useCatalogContext } from './CatalogLayout';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -24,6 +25,8 @@ const Catalog: React.FC = () => {
         'Clear all filters',
         'Powered by',
         'All',
+        'Create your own catalog',
+        'Start free',
     ]), []);
     const { t } = useTranslation(translationStrings);
     const { addToCart, setIsCartOpen } = useContext(CartContext);
@@ -221,8 +224,39 @@ const Catalog: React.FC = () => {
             </div>
 
             {/* Visual Footer for Catalog */}
-            <div className="mt-12 pt-8 border-t border-border text-center text-muted text-sm">
-                {t('Powered by')} <span className="font-bold text-foreground">InvoiceFlow</span>
+            <div className="mt-16 pt-10 border-t border-border">
+                <div className="relative overflow-hidden rounded-2xl p-8 md:p-10" style={{ backgroundColor: '#0f172a' }}>
+                    <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" style={{ backgroundColor: 'rgba(14, 165, 164, 0.2)' }} />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" style={{ backgroundColor: 'rgba(14, 165, 164, 0.1)' }} />
+
+                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(14, 165, 164, 0.2)', border: '1px solid rgba(14, 165, 164, 0.3)' }}>
+                                <Zap className="w-6 h-6 text-primary" />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t('Powered by')}</p>
+                                <p className="font-bold text-lg tracking-tight" style={{ color: '#ffffff' }}>
+                                    Zuri<span className="text-primary">Bills</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                            <p className="text-sm font-medium" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                                {t('Create your own catalog')}
+                            </p>
+                            <Link
+                                to="/"
+                                className="group inline-flex items-center gap-2 bg-primary hover:bg-primary/90 font-bold text-sm px-5 py-2.5 rounded-full transition-all shadow-lg shadow-primary/25"
+                                style={{ color: '#0f172a' }}
+                            >
+                                {t('Start free')}
+                                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                            </Link>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

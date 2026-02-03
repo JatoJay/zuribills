@@ -163,7 +163,7 @@ const Payouts: React.FC = () => {
         logoUrl: '',
         primaryColor: '',
         currency: 'USD',
-        catalogEnabled: false,
+        catalogEnabled: true,
         preferredLanguage: 'English',
         contactEmail: '',
         contactPhone: '',

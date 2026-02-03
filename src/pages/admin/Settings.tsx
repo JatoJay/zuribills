@@ -37,6 +37,8 @@ const Settings: React.FC = () => {
         'Tip: You can keep the catalog private and still use invoices, expenses, and reports.',
         'Tax & Compliance',
         'Tax ID',
+        'VAT Rate',
+        'VAT rate applied to invoices (0-100%)',
         'Authorized Signatory',
         'Signatory Title',
         'Business Address',
@@ -93,11 +95,12 @@ const Settings: React.FC = () => {
         logoUrl: '',
         primaryColor: '',
         currency: 'USD',
-        catalogEnabled: false,
+        catalogEnabled: true,
         preferredLanguage: 'English',
         contactEmail: '',
         contactPhone: '',
         taxId: '',
+        vatRate: 0,
         signatoryName: '',
         signatoryTitle: '',
         address: {
@@ -126,6 +129,7 @@ const Settings: React.FC = () => {
                 ...org,
                 catalogEnabled: org.catalogEnabled ?? false,
                 preferredLanguage: org.preferredLanguage || 'English',
+                vatRate: org.vatRate ?? 0,
                 address: org.address || { street: '', city: '', state: '', zip: '', country: '' },
                 paymentConfig,
             });
@@ -334,6 +338,24 @@ const Settings: React.FC = () => {
                                 value={formData.taxId || ''}
                                 onChange={e => setFormData({ ...formData, taxId: e.target.value })}
                             />
+                            <div>
+                                <Input
+                                    label={t('VAT Rate')}
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.1"
+                                    placeholder="0"
+                                    value={formData.vatRate ?? 0}
+                                    onChange={e => {
+                                        const value = parseFloat(e.target.value) || 0;
+                                        setFormData({ ...formData, vatRate: Math.min(100, Math.max(0, value)) });
+                                    }}
+                                />
+                                <p className="text-xs text-slate-500 mt-1">{t('VAT rate applied to invoices (0-100%)')}</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                             <Input
                                 label={t('Authorized Signatory')}
                                 placeholder={t('Full name')}

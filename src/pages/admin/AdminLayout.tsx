@@ -5,6 +5,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import BusinessChatWidget from '@/components/BusinessChatWidget';
 import { Button, Card } from '@/components/ui';
 import { apiFetch } from '@/services/apiClient';
+import { fetchProviderRate } from '@/services/paymentService';
 import { getSupabaseClient } from '@/services/supabaseClient';
 import { clearCurrentAccountId, clearCurrentUserId, getAccountById, getCurrentUserId, getOrganizationBySlug, getUserByEmail, setCurrentAccountId, setCurrentUserId } from '@/services/storage';
 import { Account, Organization } from '@/types';
@@ -60,6 +61,7 @@ const AdminLayout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [authReady, setAuthReady] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const translationStrings = useMemo(() => ([
     'Loading...',
     'Admin Dashboard',
@@ -83,7 +85,7 @@ const AdminLayout: React.FC = () => {
     'Trial ended',
     'Upgrade your plan',
     'Upgrade to keep using invoices, payments, and reports.',
-    'Lock in uninterrupted access to all InvoiceFlow tools.',
+    'Lock in uninterrupted access to all ZuriBills tools.',
     'Choose your plan',
     'Monthly',
     'Yearly',
@@ -222,6 +224,39 @@ const AdminLayout: React.FC = () => {
     setLanguage(org.preferredLanguage);
   }, [org?.preferredLanguage, setLanguage]);
 
+  useEffect(() => {
+    if (!org?.currency || org.currency === 'USD') {
+      setExchangeRate(null);
+      return;
+    }
+    let cancelled = false;
+    fetchProviderRate('USD', org.currency)
+      .then(result => {
+        if (!cancelled && result?.rate) setExchangeRate(result.rate);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [org?.currency]);
+
+  const billingOptions = useMemo(() => {
+    const formatLocal = (usdAmount: number) => {
+      if (!exchangeRate || !org?.currency || org.currency === 'USD') return null;
+      const localAmount = Math.round(usdAmount * exchangeRate);
+      try {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: org.currency
+        }).format(localAmount).replace(/[\u00A0\u202F]/g, ' ');
+      } catch {
+        return `${org.currency} ${localAmount.toFixed(2)}`;
+      }
+    };
+    return [
+      { value: 'monthly' as const, label: 'Monthly', price: '$2', usdAmount: 2, localPrice: formatLocal(2), detail: 'Billed monthly' },
+      { value: 'yearly' as const, label: 'Yearly', price: '$20', usdAmount: 20, localPrice: formatLocal(20), detail: 'Billed yearly', badge: 'Best value' },
+    ];
+  }, [exchangeRate, org?.currency]);
+
   const formatMoney = (amount: number, currencyCode?: string) => {
     if (!org) return '';
     try {
@@ -337,10 +372,12 @@ const AdminLayout: React.FC = () => {
     t('AI insights'),
   ];
 
-  const billingOptions = [
-    { value: 'monthly' as const, label: t('Monthly'), price: '$4.99', detail: t('Billed monthly') },
-    { value: 'yearly' as const, label: t('Yearly'), price: '$54', detail: t('Billed yearly'), badge: t('Best value') },
-  ];
+  const translatedBillingOptions = billingOptions.map(opt => ({
+    ...opt,
+    label: t(opt.label),
+    detail: t(opt.detail),
+    badge: opt.badge ? t(opt.badge) : undefined,
+  }));
 
   const UpgradePanel = ({
     title,
@@ -370,7 +407,7 @@ const AdminLayout: React.FC = () => {
         <div className="space-y-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted">{t('Choose your plan')}</div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {billingOptions.map((option) => {
+            {translatedBillingOptions.map((option) => {
               const isSelected = billingCycle === option.value;
               return (
                 <button
@@ -387,7 +424,8 @@ const AdminLayout: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <div className="mt-2 text-2xl font-semibold text-foreground">{option.price}</div>
+                  <div className="mt-2 text-2xl font-semibold text-foreground">{option.localPrice || option.price}</div>
+                  {option.localPrice && <div className="text-xs text-muted">({option.price} USD)</div>}
                   <div className="text-xs text-muted mt-1">{option.detail}</div>
                 </button>
               );
@@ -594,7 +632,7 @@ const AdminLayout: React.FC = () => {
           <div className="w-full max-w-3xl">
             <UpgradePanel
               title={t('Upgrade your plan')}
-              subtitle={t('Lock in uninterrupted access to all InvoiceFlow tools.')}
+              subtitle={t('Lock in uninterrupted access to all ZuriBills tools.')}
               icon={Sparkles}
               showClose
               onClose={closeUpgradeModal}

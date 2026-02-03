@@ -22,6 +22,7 @@ export interface User {
   permissions: string[]; // 'VIEW_DASHBOARD', 'MANAGE_INVOICES', 'MANAGE_CLIENTS', 'MANAGE_SETTINGS'
   pin?: string; // Simple 4-digit numeric pin for login simulation
   avatarUrl?: string; // Optional avatar
+  securityStamp: string; // UUID rotated on password change/revocation to invalidate sessions
   createdAt: string;
 }
 
@@ -62,6 +63,7 @@ export interface Organization {
   contactEmail: string;
   contactPhone?: string;
   taxId?: string;
+  vatRate?: number;
   signatoryName?: string;
   signatoryTitle?: string;
   address?: {

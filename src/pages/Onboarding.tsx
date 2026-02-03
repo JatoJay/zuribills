@@ -132,7 +132,7 @@ const Onboarding: React.FC = () => {
         'Loading countries...',
         'Slug might already exist or invalid data.',
         'Translating...',
-        'By showing up, you agree to our Terms of Service and Privacy Policy.',
+        'By signing up, you agree to our Terms of Service and Privacy Policy.',
         '10-min setup',
         'Secure by default',
         'AI-assisted',
@@ -342,7 +342,7 @@ const Onboarding: React.FC = () => {
                 contactEmail,
                 currency: resolvedCurrency,
                 primaryColor: '#0EA5A4',
-                catalogEnabled: false,
+                catalogEnabled: true,
                 preferredLanguage: language.trim() || 'English',
                 paymentConfig: {
                     enabled: false,
@@ -625,7 +625,7 @@ const Onboarding: React.FC = () => {
                                 </Button>
 
                                 <p className="text-xs text-center text-slate-500">
-                                    {t('By showing up, you agree to our Terms of Service and Privacy Policy.')}
+                                    {t('By signing up, you agree to our Terms of Service and Privacy Policy.')}
                                 </p>
                             </form>
                         </div>
