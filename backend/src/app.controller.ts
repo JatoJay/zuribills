@@ -38,50 +38,11 @@ const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const afnexDemoBaseUrl = process.env.AFNEX_DEMO_BASE_URL || 'https://afnex.dev/api/demo';
 const platformFeePercent = 0.7;
 
-let flutterwaveAccessToken: string | null = null;
-let flutterwaveTokenExpiry = 0;
-
-const getFlutterwaveAccessToken = async (): Promise<string | null> => {
-    if (flutterwaveAccessToken && Date.now() < flutterwaveTokenExpiry) {
-        return flutterwaveAccessToken;
-    }
-    if (!flutterwaveClientId || !flutterwaveSecretKey) {
-        return null;
-    }
-    try {
-        const response = await fetch('https://api.flutterwave.com/v4/auth/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                client_id: flutterwaveClientId,
-                client_secret: flutterwaveSecretKey,
-            }),
-        });
-        const data: any = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            console.error('Flutterwave token fetch failed', data);
-            return null;
-        }
-        flutterwaveAccessToken = data?.data?.access_token || data?.access_token;
-        const expiresIn = data?.data?.expires_in || data?.expires_in || 3600;
-        flutterwaveTokenExpiry = Date.now() + (expiresIn - 60) * 1000;
-        return flutterwaveAccessToken;
-    } catch (error) {
-        console.error('Flutterwave token error', error);
-        return null;
-    }
-};
-
-const getFlutterwaveHeaders = async () => {
+const getFlutterwaveHeaders = () => {
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
     };
-    if (flutterwaveClientId && flutterwaveSecretKey) {
-        const token = await getFlutterwaveAccessToken();
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-    } else if (flutterwaveSecretKey) {
+    if (flutterwaveSecretKey) {
         headers['Authorization'] = `Bearer ${flutterwaveSecretKey}`;
     }
     return headers;
@@ -256,7 +217,7 @@ const hasPayoutLog = async (organizationId: string, relatedId: string) => {
 const createFlutterwaveTransfer = async (payload: any) => {
     const response = await fetch('https://api.flutterwave.com/v3/transfers', {
         method: 'POST',
-        headers: await getFlutterwaveHeaders(),
+        headers: getFlutterwaveHeaders(),
         body: JSON.stringify(payload),
     });
     const data: any = await response.json().catch(() => ({}));
@@ -625,7 +586,7 @@ const fetchStripeRate = async (from: string, to: string) => {
 const fetchFlutterwaveRate = async (from: string, to: string, amount = 1) => {
     if (!flutterwaveSecretKey) return null;
     const response = await fetch(`https://api.flutterwave.com/v3/rates?from=${from}&to=${to}&amount=${amount}`, {
-        headers: await getFlutterwaveHeaders(),
+        headers: getFlutterwaveHeaders(),
     });
     const data: any = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -843,13 +804,48 @@ export class AppController {
     @Get('payments/flutterwave/banks')
     async getFlutterwaveBanks(@Req() req: Request, @Res() res: Response) {
         const country = String(req.query.country || 'NG').toUpperCase();
+        const staticBanks: Record<string, { code: string; name: string }[]> = {
+            NG: [
+                { code: '044', name: 'Access Bank' },
+                { code: '023', name: 'Citibank Nigeria' },
+                { code: '063', name: 'Diamond Bank' },
+                { code: '050', name: 'Ecobank Nigeria' },
+                { code: '084', name: 'Enterprise Bank' },
+                { code: '070', name: 'Fidelity Bank' },
+                { code: '011', name: 'First Bank of Nigeria' },
+                { code: '214', name: 'First City Monument Bank' },
+                { code: '058', name: 'Guaranty Trust Bank' },
+                { code: '030', name: 'Heritage Bank' },
+                { code: '301', name: 'Jaiz Bank' },
+                { code: '082', name: 'Keystone Bank' },
+                { code: '526', name: 'Parallex Bank' },
+                { code: '076', name: 'Polaris Bank' },
+                { code: '101', name: 'Providus Bank' },
+                { code: '221', name: 'Stanbic IBTC Bank' },
+                { code: '068', name: 'Standard Chartered Bank' },
+                { code: '232', name: 'Sterling Bank' },
+                { code: '100', name: 'Suntrust Bank' },
+                { code: '032', name: 'Union Bank of Nigeria' },
+                { code: '033', name: 'United Bank For Africa' },
+                { code: '215', name: 'Unity Bank' },
+                { code: '035', name: 'Wema Bank' },
+                { code: '057', name: 'Zenith Bank' },
+                { code: '999992', name: 'Opay' },
+                { code: '999991', name: 'PalmPay' },
+                { code: '999993', name: 'Moniepoint' },
+                { code: '999994', name: 'Kuda Bank' },
+            ],
+        };
         try {
             const response = await fetch(`https://api.flutterwave.com/v3/banks/${country}`, {
-                headers: await getFlutterwaveHeaders(),
+                headers: getFlutterwaveHeaders(),
             });
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
                 console.error('Flutterwave bank list failed', data);
+                if (staticBanks[country]) {
+                    return res.json({ banks: staticBanks[country], source: 'static' });
+                }
                 return res.status(response.status).json({ error: data?.message || 'Failed to load banks.' });
             }
             const banks = (data?.data || [])
@@ -862,6 +858,9 @@ export class AppController {
             return res.json({ banks });
         } catch (error) {
             console.error('Flutterwave bank list error', error);
+            if (staticBanks[country]) {
+                return res.json({ banks: staticBanks[country], source: 'static' });
+            }
             return res.status(500).json({ error: 'Failed to load banks.' });
         }
     }
@@ -1097,23 +1096,30 @@ export class AppController {
         };
 
         try {
+            const accountNumberLast4 = accountNumberValue.slice(-4);
+            const localAccountId = `local_${org.id}_${Date.now()}`;
+            let subaccountId = localAccountId;
+            let subaccountBankName = bankName;
+
             const response = await fetch('https://api.flutterwave.com/v3/subaccounts', {
                 method: 'POST',
-                headers: await getFlutterwaveHeaders(),
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
             const data: any = await response.json().catch(() => ({}));
             let subaccount = data?.data;
 
-            if (!response.ok) {
+            if (response.ok && subaccount) {
+                subaccountId = subaccount?.id || subaccount?.subaccount_id || subaccount?.account_id || localAccountId;
+                subaccountBankName = bankName || subaccount.bank_name;
+            } else {
                 const errorMsg = data?.message || '';
-                console.error('Flutterwave subaccount failed', data);
+                console.error('Flutterwave subaccount failed, using local storage', data);
 
-                // Rescue Logic: If subaccount exists, fetch it and link it
                 if (errorMsg.toLowerCase().includes('already exists')) {
                     try {
                         const listResponse = await fetch('https://api.flutterwave.com/v3/subaccounts', {
-                            headers: await getFlutterwaveHeaders(),
+                            headers: getFlutterwaveHeaders(),
                         });
                         const listData: any = await listResponse.json();
                         const existing = listData?.data?.find(
@@ -1123,35 +1129,25 @@ export class AppController {
                         );
                         if (existing) {
                             subaccount = existing;
+                            subaccountId = existing.id || existing.subaccount_id || localAccountId;
+                            subaccountBankName = bankName || existing.bank_name;
                             console.log(`Rescued existing subaccount: ${existing.id}`);
-                        } else {
-                            return res.status(response.status).json({ error: 'Subaccount already exists on Flutterwave but could not be retrieved. Please contact support.' });
                         }
                     } catch (rescueError) {
-                        console.error('Failed to rescue existing subaccount', rescueError);
-                        return res.status(response.status).json({ error: 'Subaccount exists but retrieval failed.' });
+                        console.error('Failed to rescue existing subaccount, using local', rescueError);
                     }
-                } else {
-                    return res.status(response.status).json({ error: data?.message || 'Failed to create payout account.' });
                 }
             }
-
-            const subaccountId = subaccount?.id || subaccount?.subaccount_id || subaccount?.account_id;
-            if (!subaccountId) {
-                return res.status(500).json({ error: 'Flutterwave did not return a subaccount ID.' });
-            }
-
-            const accountNumberLast4 = accountNumberValue.slice(-4);
             const updatedPaymentConfig = {
                 ...(org.payment_config || {}),
                 enabled: true,
                 provider: 'flutterwave',
                 accountId: String(subaccountId),
-                bankName: bankName || subaccount.bank_name || null,
+                bankName: subaccountBankName || null,
                 bankCode: bankCodeValue,
                 bankCountry: country,
-                accountName: accountNameValue || subaccount.account_name || null,
-                accountNumber: accountNumberValue, // Storing full number for Instant Payouts
+                accountName: accountNameValue || subaccount?.account_name || null,
+                accountNumber: accountNumberValue,
                 accountNumberLast4,
                 platformFeePercent: feePercent,
             };
@@ -1246,7 +1242,7 @@ export class AppController {
         try {
             const response = await fetch('https://api.flutterwave.com/v3/payments', {
                 method: 'POST',
-                headers: await getFlutterwaveHeaders(),
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
 
@@ -1351,7 +1347,7 @@ export class AppController {
             console.log('Payload:', JSON.stringify(payload));
             const response = await fetch(`https://api.flutterwave.com/v3/charges?type=${encodeURIComponent(chargeType)}`, {
                 method: 'POST',
-                headers: await getFlutterwaveHeaders(),
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
 
@@ -1379,7 +1375,7 @@ export class AppController {
                     };
                     const linkResponse = await fetch('https://api.flutterwave.com/v4/payments', {
                         method: 'POST',
-                        headers: await getFlutterwaveHeaders(),
+                        headers: getFlutterwaveHeaders(),
                         body: JSON.stringify(linkPayload),
                     });
                     const linkData: any = await linkResponse.json().catch(() => ({}));
@@ -1435,7 +1431,7 @@ export class AppController {
                 ? `https://api.flutterwave.com/v3/transactions/${encodeURIComponent(reference)}/verify`
                 : `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`;
             const response = await fetch(endpoint, {
-                headers: await getFlutterwaveHeaders(),
+                headers: getFlutterwaveHeaders(),
             });
             const data: any = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -1444,7 +1440,7 @@ export class AppController {
                     if (isIdReference && txRef) {
                         const fallbackResponse = await fetch(
                             `https://api.flutterwave.com/v4/transactions/verify_by_reference?tx_ref=${encodeURIComponent(txRef)}`,
-                            { headers: await getFlutterwaveHeaders() }
+                            { headers: getFlutterwaveHeaders() }
                         );
 
                         const fallbackData: any = await fallbackResponse.json().catch(() => ({}));
@@ -1589,13 +1585,10 @@ export class AppController {
         }
 
         const paymentConfig = org.payment_config || {};
-        const payoutAccountId = paymentConfig.accountId;
-        const paymentsEnabled = paymentConfig.enabled === true && payoutAccountId;
+        const hasPayoutAccount = paymentConfig.accountId || paymentConfig.momoMsisdn;
+        const paymentsEnabled = paymentConfig.enabled === true && hasPayoutAccount;
         if (!paymentsEnabled) {
             return res.status(400).json({ error: 'Payments are not enabled for this organization.' });
-        }
-        if (paymentConfig.provider && paymentConfig.provider !== 'flutterwave') {
-            return res.status(400).json({ error: 'Flutterwave is not configured for this organization.' });
         }
 
         const feePercent = resolvePlatformFeePercent(paymentConfig.platformFeePercent);
@@ -1627,7 +1620,7 @@ export class AppController {
         try {
             const response = await fetch('https://api.flutterwave.com/v3/payments', {
                 method: 'POST',
-                headers: await getFlutterwaveHeaders(),
+                headers: getFlutterwaveHeaders(),
                 body: JSON.stringify(payload),
             });
 

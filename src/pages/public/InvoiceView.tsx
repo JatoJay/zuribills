@@ -313,9 +313,8 @@ const InvoiceView: React.FC = () => {
     const paymentsEnabled = Boolean(
         paymentConfig?.enabled
         && (
-            (paymentProvider === 'flutterwave' && paymentConfig?.accountId)
-            || (paymentProvider === 'momo' && paymentConfig?.momoMsisdn)
-            || (paymentProvider === 'stripe' && paymentConfig?.accountId)
+            paymentConfig?.accountId
+            || paymentConfig?.momoMsisdn
         )
     );
     const requiresPhone = false;
