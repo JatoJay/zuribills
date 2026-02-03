@@ -72,8 +72,8 @@ const MOMO_COUNTRY_BY_CURRENCY = {
 };
 
 const SUBSCRIPTION_PRICING = {
-    monthly: { amount: 4.99, label: 'Monthly' },
-    yearly: { amount: 54, label: 'Yearly' },
+    monthly: { amount: 2, label: 'Monthly' },
+    yearly: { amount: 20, label: 'Yearly' },
 };
 
 const SUBSCRIPTION_CURRENCY = 'USD';
