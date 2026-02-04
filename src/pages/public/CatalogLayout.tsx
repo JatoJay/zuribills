@@ -99,11 +99,11 @@ const CatalogLayout: React.FC = () => {
         <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, isCartOpen, setIsCartOpen }}>
             <CatalogContext.Provider value={{ org }}>
                 <div
-                    className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col"
+                    className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col print:block print:min-h-0"
                     style={{ '--primary': brandColor } as React.CSSProperties}
                 >
                     {/* Header */}
-                    <header className="bg-surface/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
+                    <header className="bg-surface/80 backdrop-blur-md border-b border-border sticky top-0 z-50 print:hidden">
                         <div className="w-full px-4 h-16 flex items-center justify-between">
                             <div className="font-bold text-xl text-foreground">{org.name}</div>
                             <div className="flex items-center gap-3">
@@ -113,10 +113,10 @@ const CatalogLayout: React.FC = () => {
                     </header>
 
                     {/* Main Layout Area */}
-                    <div className="flex flex-1 relative overflow-hidden">
+                    <div className="flex flex-1 relative overflow-hidden print:block print:overflow-visible">
                         {/* Content Scroll Area */}
-                        <div className="flex-1 overflow-y-auto h-[calc(100vh-4rem)]">
-                            <main className={isSuccessRoute ? "w-full max-w-none px-4 py-8 flex justify-center" : "max-w-7xl mx-auto px-4 py-8"}>
+                        <div className="flex-1 overflow-y-auto h-[calc(100vh-4rem)] print:h-auto print:overflow-visible">
+                            <main className={isSuccessRoute ? "w-full max-w-none px-4 py-8 flex justify-center print:block print:p-0" : "max-w-7xl mx-auto px-4 py-8 print:max-w-none print:p-0"}>
                                 <Outlet />
                             </main>
                         </div>

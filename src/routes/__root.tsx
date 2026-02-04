@@ -1,8 +1,16 @@
 import { createRootRoute, Outlet } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+import { lazy, Suspense } from 'react'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { TranslationProvider } from '@/context/TranslationContext'
 import { PromptProvider } from '@/context/PromptContext'
+
+const TanStackRouterDevtools = import.meta.env.DEV
+    ? lazy(() =>
+        import('@tanstack/router-devtools').then((res) => ({
+            default: res.TanStackRouterDevtools,
+        }))
+    )
+    : () => null
 
 export const Route = createRootRoute({
     component: () => (
@@ -10,7 +18,13 @@ export const Route = createRootRoute({
             <TranslationProvider>
                 <PromptProvider>
                     <Outlet />
-                    <TanStackRouterDevtools />
+                    {import.meta.env.DEV && (
+                        <Suspense>
+                            <div className="print:hidden">
+                                <TanStackRouterDevtools />
+                            </div>
+                        </Suspense>
+                    )}
                 </PromptProvider>
             </TranslationProvider>
         </ThemeProvider>

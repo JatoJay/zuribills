@@ -325,8 +325,31 @@ const InvoiceView: React.FC = () => {
     const PaymentIcon = PAYMENT_PROVIDER_DETAILS.icon;
 
     return (
-        <div className="min-h-screen bg-slate-100 p-4 sm:p-8 dark:bg-background transition-colors duration-300 print:p-0 print:bg-white flex justify-center">
-            <div className="w-full max-w-5xl print:max-w-none">
+        <div className="min-h-screen bg-slate-100 p-4 sm:p-8 dark:bg-background transition-colors duration-300 print:p-0 print:bg-white print:min-h-0 flex justify-center">
+            <style>{`
+                @media print {
+                    @page {
+                        size: A4;
+                        margin: 15mm;
+                    }
+                    html, body {
+                        height: auto !important;
+                        overflow: visible !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    * {
+                        overflow: visible !important;
+                    }
+                    .print-page-break {
+                        page-break-inside: avoid;
+                    }
+                    .print-break-before {
+                        page-break-before: auto;
+                    }
+                }
+            `}</style>
+            <div className="w-full max-w-5xl print:max-w-none print:w-full">
                 {paymentNotice && (
                     <div className="mb-4 rounded-lg border border-slate-200 bg-surface px-4 py-3 text-sm text-foreground shadow-sm animate-in slide-in-from-top duration-300">
                         {paymentNotice}
@@ -358,7 +381,7 @@ const InvoiceView: React.FC = () => {
                     </Button>
                 </div>
 
-                <div className="bg-white p-6 sm:p-12 shadow-sm rounded-lg print:shadow-none text-slate-900">
+                <div className="bg-white p-6 sm:p-12 shadow-sm rounded-lg print:shadow-none print:p-8 text-slate-900">
                     {/* Header */}
                     <div className="flex justify-between items-start border-b border-slate-100 pb-8 mb-8">
                         <div>
@@ -486,9 +509,9 @@ const InvoiceView: React.FC = () => {
 
                     {/* Notes Section */}
                     {invoice.notes && (
-                        <div className="mt-12 pt-6 border-t border-slate-100">
-                            <h4 className="font-bold text-sm mb-2 text-slate-700">{t('Notes & Terms')}</h4>
-                            <p className="text-slate-600 text-sm whitespace-pre-wrap">{invoice.notes}</p>
+                        <div className="mt-12 pt-6 border-t border-slate-100 print-break-before">
+                            <h4 className="font-bold text-sm mb-2 text-slate-700 print-page-break">{t('Notes & Terms')}</h4>
+                            <div className="text-slate-600 text-sm whitespace-pre-wrap">{invoice.notes}</div>
                         </div>
                     )}
 

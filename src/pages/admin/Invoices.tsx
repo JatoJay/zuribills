@@ -4,7 +4,7 @@ import { useNavigate, Link } from '@tanstack/react-router';
 import { Invoice, InvoiceStatus, InvoiceTransfer } from '@/types';
 import { getInvoices, updateInvoiceStatus, transferInvoiceOwnership, getInvoiceLineage, getInvoiceTransfers } from '@/services/storage';
 import { Button, Card, Badge, Input, Select } from '@/components/ui';
-import { Plus, Eye, Copy, Send, Sparkles, X, CheckSquare, Square, Mail, DollarSign, Link as LinkIcon, ArrowRightLeft, Search, RotateCcw, ChevronLeft, ChevronRight, User, Building2, GitBranch, ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Eye, Copy, Send, Sparkles, X, CheckSquare, Square, Mail, DollarSign, Link as LinkIcon, ArrowRightLeft, Search, RotateCcw, ChevronLeft, ChevronRight, User, Building2, GitBranch, ArrowRight, TrendingUp, TrendingDown, Pencil } from 'lucide-react';
 import { sendInvoiceEmail } from '@/services/email';
 import { generateInvoiceEmailBody } from '@/services/geminiService';
 import { useAdminContext } from './AdminLayout';
@@ -86,6 +86,7 @@ const Invoices: React.FC = () => {
         'Price Change',
         'Close',
         'No transfer history',
+        'Edit',
     ]), []);
     const { t } = useTranslation(translationStrings);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -528,6 +529,14 @@ const Invoices: React.FC = () => {
                                                     }}
                                                 >
                                                     <ArrowRightLeft className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    className="h-8 w-8 p-0 border-border hover:border-blue-500/50 text-foreground"
+                                                    title={t('Edit')}
+                                                    onClick={() => navigate({ to: '/org/$slug/invoices/create', params: { slug: org.slug }, state: { editInvoice: invoice } as any })}
+                                                >
+                                                    <Pencil className="w-4 h-4" />
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
