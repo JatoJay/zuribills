@@ -22,20 +22,22 @@ import {
   BarChart3,
   ShieldCheck,
   ChevronDown,
-  Bot
+  Bot,
+  Languages,
+  MessageSquare
 } from 'lucide-react';
 
-const NAV_ITEMS = ['Product', 'How it works', 'AI insights', 'FAQ', 'Pricing'];
+const NAV_ITEMS = ['Features', 'How it works', 'AI Assistant', 'FAQ', 'Pricing'];
 
-const HERO_HIGHLIGHTS = ['No credit card', 'Setup in minutes', 'Shareable link'];
+const HERO_HIGHLIGHTS = ['No credit card required', 'Setup in 2 minutes', 'Instant payment links'];
 
 const PRODUCT_FEATURES = [
   {
     category: 'Sales & Branding',
     categoryIcon: <Layers className="w-4 h-4 text-emerald-500" />,
     brand: 'Client Catalogs',
-    title: 'Showcase your services with high-fidelity catalogs',
-    description: 'Create a professional digital presence for your packages. Let clients explore your offerings through a zooming visual interface designed for clarity and conversion.',
+    title: 'Professional service catalogs that convert browsers to buyers',
+    description: 'Build stunning digital catalogs that showcase your services, packages, and pricing. Share a single link and let clients explore, select, and pay — all in one seamless experience.',
     image: '/features/catalog-mock.png',
     bgColor: 'bg-emerald-500/5',
     labelColor: 'text-emerald-500',
@@ -43,9 +45,9 @@ const PRODUCT_FEATURES = [
   {
     category: 'Automation',
     categoryIcon: <Bot className="w-4 h-4 text-blue-500" />,
-    brand: 'AI Agent',
-    title: 'Let the AI monitor and follow up on your behalf',
-    description: 'Our intelligent agent scans your invoices daily. It detects overdue payments and drafts context-aware reminders, ensuring you get paid without the manual admin work.',
+    brand: 'AI Payment Agent',
+    title: 'Automated follow-ups that recover 40% more overdue payments',
+    description: 'Your AI assistant monitors every invoice 24/7. It detects overdue payments, drafts personalized reminder emails, and helps you get paid faster — without lifting a finger.',
     image: '/features/ai-mock.png',
     bgColor: 'bg-blue-500/5',
     labelColor: 'text-blue-500',
@@ -54,8 +56,8 @@ const PRODUCT_FEATURES = [
     category: 'Payments',
     categoryIcon: <Zap className="w-4 h-4 text-orange-500" />,
     brand: 'Instant Payouts',
-    title: 'Receive funds in real-time with direct bank routing',
-    description: 'Bypass standard settlement delays. When a customer pays, our direct routing engine pushes the net amount to your bank account or mobile wallet instantly.',
+    title: 'Get paid instantly — no more waiting 3-5 business days',
+    description: 'Accept cards, bank transfers, and mobile money. When clients pay, funds hit your bank account or mobile wallet in real-time. No delays, no hassle.',
     image: '/features/payment-mock.png',
     bgColor: 'bg-orange-500/5',
     labelColor: 'text-orange-500',
@@ -63,9 +65,9 @@ const PRODUCT_FEATURES = [
   {
     category: 'Intelligence',
     categoryIcon: <BarChart3 className="w-4 h-4 text-teal-500" />,
-    brand: 'Deep Analytics',
-    title: 'Understand your cash flow with tax-ready reporting',
-    description: 'Get a clear view of your business health. Generate monthly or yearly inflow/outflow reports that make tax season a breeze and auditing effortless.',
+    brand: 'Business Intelligence',
+    title: 'Tax-ready reports and cash flow insights in one dashboard',
+    description: 'Track revenue, expenses, and profit margins at a glance. Generate professional financial reports for tax filing, audits, or investor meetings — all automatically.',
     image: '/features/analytics-mock.png',
     bgColor: 'bg-teal-500/5',
     labelColor: 'text-teal-500',
@@ -75,35 +77,35 @@ const PRODUCT_FEATURES = [
 const HOW_IT_WORKS_STEPS = [
   {
     step: '01',
-    title: 'Build your catalog',
-    description: 'Create service cards, bundles, and deposits in minutes.',
+    title: 'Create your service catalog',
+    description: 'Add your services, set pricing, and customize your brand in under 5 minutes.',
     icon: <Layers className="w-5 h-5" />,
   },
   {
     step: '02',
-    title: 'Share your link',
-    description: 'Send a sleek URL that feels like a presentation.',
+    title: 'Share & get paid instantly',
+    description: 'Send your catalog link via WhatsApp, email, or social media. Clients pay online.',
     icon: <MousePointer2 className="w-5 h-5" />,
   },
   {
     step: '03',
-    title: 'Track expenses & report',
-    description: 'Expense invoices plus inflow/outflow reports for tax time.',
+    title: 'Track everything automatically',
+    description: 'Monitor payments, expenses, and generate tax-ready reports effortlessly.',
     icon: <ShieldCheck className="w-5 h-5" />,
   },
 ];
 
 const AI_BULLETS = [
-  'Natural language reporting',
-  'Overdue invoice detection',
-  'Smart follow-up suggestions',
-  'Forecasting and trend alerts',
+  'Ask questions in plain English — get instant answers',
+  'Automatic overdue payment detection and alerts',
+  'AI-drafted follow-up emails that get responses',
+  'Revenue forecasting and business trend insights',
 ];
 
 const ANALYTICS_BULLETS = [
-  'Live revenue and pipeline metrics',
-  'Expense tracking with vendor history',
-  'Monthly and yearly cash-flow exports',
+  'Real-time revenue dashboard with visual charts',
+  'Expense tracking with receipt uploads and vendor history',
+  'One-click export for monthly and yearly tax reports',
 ];
 
 const LANGUAGE_WAVE_BARS = [
@@ -130,11 +132,11 @@ const LOCAL_LANGUAGES = [
 ];
 
 const PRICING_FEATURES = [
-  'Unlimited Invoices',
-  'Client Portal',
-  'Advanced Analytics',
-  'Priority Support',
-  'Custom Branding',
+  'Unlimited invoices & clients',
+  'AI-powered payment reminders',
+  'Professional client portal',
+  'Tax-ready financial reports',
+  'Custom branding & logo',
 ];
 
 type ThemeVars = React.CSSProperties &
@@ -161,51 +163,54 @@ const LIGHT_THEME: ThemeVars = {
   '--border': '#e6e6e6',
 };
 
-const OWNER_STORIES = [
+const AUDIENCE_CARDS = [
   {
-    name: 'Amina Yusuf',
-    role: 'Boutique Owner - Lagos',
-    quote: 'ZuriBills keeps my catalog polished and payments predictable without extra admin work.',
-    image: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=400&h=500&fit=crop',
+    icon: <Sparkles className="w-6 h-6" />,
+    title: 'Freelancers & Creatives',
+    description: 'Designers, photographers, writers, and consultants who need professional invoicing without the complexity.',
+    stat: 'Get paid 3x faster',
+    color: 'blue',
   },
   {
-    name: 'Daniel Okonkwo',
-    role: 'Creative Studio Lead - Nairobi',
-    quote: 'We send a shareable link and get paid faster. The reports are ready for tax time.',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop',
+    icon: <Layers className="w-6 h-6" />,
+    title: 'Small Business Owners',
+    description: 'Boutiques, salons, restaurants, and shops that want to track sales, expenses, and stay tax-ready.',
+    stat: 'Save 10+ hrs/month',
+    color: 'emerald',
   },
   {
-    name: 'Priya Shah',
-    role: 'Consulting Partner - London',
-    quote: 'The AI insights save hours each week. Everything feels calm and organized.',
-    image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=500&fit=crop',
+    icon: <Zap className="w-6 h-6" />,
+    title: 'Artisans & Makers',
+    description: 'Tailors, bakers, craftspeople who sell custom work and need simple catalog and payment tools.',
+    stat: 'Zero learning curve',
+    color: 'orange',
   },
 ];
 
 const FAQ_ITEMS = [
   {
-    question: 'How do I accept payments from clients?',
-    answer: 'Send your catalog or invoice link. Clients pay through Afnex providers and ZuriBills updates the invoice status automatically.',
+    question: 'How do clients pay my invoices?',
+    answer: 'Share your invoice or catalog link via WhatsApp, email, or SMS. Clients pay securely with cards, bank transfer, or mobile money. Payment status updates automatically.',
   },
   {
-    question: 'Can I invite my team to collaborate?',
-    answer: 'Yes. Add teammates to your workspace and control permissions for invoices, expenses, and reports.',
+    question: 'Can my team access the platform?',
+    answer: 'Yes! Invite unlimited team members with role-based permissions. Control who can view invoices, manage expenses, or access financial reports.',
   },
   {
-    question: 'What if my business operates in multiple countries?',
-    answer: 'Set your payout details per business and keep each region aligned with the right currency and provider.',
+    question: 'Do you support multiple currencies?',
+    answer: 'Absolutely. Bill clients in their local currency and receive payouts in yours. We support USD, NGN, GHS, KES, ZAR, GBP, EUR, and more.',
   },
   {
-    question: 'Is my data secure?',
-    answer: 'We use Supabase with row level security, encrypted connections, and audit logs so your data stays protected.',
+    question: 'How secure is my financial data?',
+    answer: 'Bank-level security with 256-bit encryption, row-level database security, and SOC 2 compliant infrastructure. Your data is never shared or sold.',
   },
   {
-    question: 'Do I need to be an accountant to use this?',
-    answer: 'No. The dashboard is designed for small teams, with guided flows and AI insights for quick decisions.',
+    question: 'Do I need accounting experience?',
+    answer: 'Not at all! ZuriBills is designed for non-accountants. Our AI assistant helps you understand your finances and generates professional reports automatically.',
   },
   {
-    question: 'How long is the free trial?',
-    answer: 'New workspaces get full access for 3 days, then you can choose a plan that fits your volume.',
+    question: 'Is there a free trial?',
+    answer: 'Yes! Start with a 3-day free trial with full access to all features. No credit card required. Cancel anytime.',
   },
 ];
 
@@ -217,14 +222,14 @@ const NavBar: React.FC<{
 }> = ({ t, language, languages, onLanguageChange }) => {
   const navigate = useNavigate();
   return (
-    <nav className="fixed w-full z-[100] bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-[0_10px_40px_-30px_rgba(15,23,42,0.45)]">
+    <nav className="fixed w-full z-[100] bg-white/80 backdrop-blur-2xl border-b border-black/[0.04] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div
             className="flex items-center gap-3 cursor-pointer"
             onClick={() => navigate({ to: '/' })}
           >
-            <div className="w-9 h-9 rounded-full bg-[#A9F5D9] text-black flex items-center justify-center shadow-soft ring-1 ring-black/10">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 text-white flex items-center justify-center shadow-lg shadow-primary/25">
               <Zap className="w-4 h-4" />
             </div>
             <span className="font-display text-lg font-semibold tracking-tight">
@@ -245,7 +250,7 @@ const NavBar: React.FC<{
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-full border border-foreground/10 bg-white/70 px-3 py-1.5 text-xs text-muted shadow-soft">
+            <div className="flex items-center gap-2 rounded-full border border-black/[0.06] bg-white/90 px-3 py-1.5 text-xs text-muted shadow-sm hover:shadow-md transition-shadow duration-300">
               <Globe className="w-3.5 h-3.5" />
               <select
                 aria-label={t('Language')}
@@ -795,7 +800,7 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
   };
 
   return (
-    <div className="bg-white/70 rounded-3xl border border-white/40 backdrop-blur-xl p-4 shadow-lift max-w-md mx-auto relative z-10">
+    <div className="bg-white/95 rounded-3xl border border-black/[0.06] backdrop-blur-2xl p-5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] max-w-md mx-auto relative z-10 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] transition-shadow duration-500">
       <div className="flex items-center justify-between border-b border-foreground/10 pb-4 mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-foreground text-background rounded-full flex items-center justify-center">
@@ -918,7 +923,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   return (
     <div className="w-full max-w-5xl mx-auto">
       <div className="flex justify-center mb-12">
-        <div className="bg-white/70 border border-white/40 backdrop-blur-xl p-1 rounded-full flex relative shadow-soft">
+        <div className="bg-white/95 border border-black/[0.06] backdrop-blur-xl p-1.5 rounded-full flex relative shadow-lg">
           <button
             onClick={() => setBillingCycle('monthly')}
             className={`px-6 py-2 rounded-full text-sm font-semibold transition-all duration-300 relative z-10 ${billingCycle === 'monthly' ? 'text-[var(--on-primary)]' : 'text-muted hover:text-foreground'}`}
@@ -943,7 +948,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
       </div>
 
       <div className="grid md:grid-cols-2 gap-8 items-center">
-        <div className={`relative p-8 rounded-3xl border transition-all duration-300 ${billingCycle === 'monthly' ? 'bg-[#0b0b0b]/90 text-white border-primary shadow-lift scale-[1.02] z-10 backdrop-blur-xl' : 'bg-white/70 border-white/40 backdrop-blur-xl hover:border-primary/30'}`}>
+        <div className={`relative p-8 rounded-3xl border transition-all duration-500 ${billingCycle === 'monthly' ? 'bg-gradient-to-br from-slate-900 to-slate-800 text-white border-primary/50 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] scale-[1.03] z-10' : 'bg-white/95 border-black/[0.06] hover:border-primary/30 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1'}`}>
           <h3 className="text-xl font-display font-semibold mb-2">{t('Monthly Plan')}</h3>
           <p className={`text-sm mb-6 ${billingCycle === 'monthly' ? 'text-white/80' : 'text-muted'}`}>{t('Perfect for short-term projects and starters.')}</p>
           <div className="flex items-baseline gap-1 mb-6">
@@ -971,7 +976,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           </Button>
         </div>
 
-        <div className={`relative p-8 rounded-3xl border transition-all duration-300 ${billingCycle === 'yearly' ? 'bg-[#0b0b0b]/90 text-white border-primary shadow-lift scale-[1.02] z-10 backdrop-blur-xl' : 'bg-white/70 border-white/40 backdrop-blur-xl hover:border-primary/30'}`}>
+        <div className={`relative p-8 rounded-3xl border transition-all duration-500 ${billingCycle === 'yearly' ? 'bg-gradient-to-br from-slate-900 to-slate-800 text-white border-primary/50 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] scale-[1.03] z-10' : 'bg-white/95 border-black/[0.06] hover:border-primary/30 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1'}`}>
           {billingCycle === 'yearly' && (
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-[var(--on-primary)] text-xs font-bold px-3 py-1 rounded-full shadow-soft">
               {t('MOST POPULAR')}
@@ -1094,10 +1099,10 @@ const Landing: React.FC = () => {
     'Track revenue, manage expenses, and export tax-ready cash-flow reports with a dashboard designed for clarity.',
     ...ANALYTICS_BULLETS,
     'Admin Dashboard Interface',
-    'Business owners',
-    'Built for small and medium teams.',
-    'Owners use ZuriBills to keep invoices, expenses, and payouts calm and ready for audit.',
-    ...OWNER_STORIES.flatMap(owner => [owner.name, owner.role, owner.quote]),
+    'Who We Serve',
+    'Built for people who do real work',
+    'Whether you run a boutique, freelance on the side, or craft custom pieces — ZuriBills helps you look professional and get paid faster.',
+    ...AUDIENCE_CARDS.flatMap(card => [card.title, card.description]),
     'FAQ',
     'Answers for growing teams.',
     'Everything you need before you start billing clients.',
@@ -1174,7 +1179,7 @@ const Landing: React.FC = () => {
         onLanguageChange={handleLanguageChange}
       />
 
-      <section className="relative pt-36 pb-24 bg-background overflow-hidden">
+      <section className="relative pt-40 pb-32 bg-gradient-to-b from-white via-white to-slate-50/50 overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-40" />
         {/* Parallax Elements */}
         <div
@@ -1192,19 +1197,18 @@ const Landing: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-primary"></span>
               {t('Built for growing businesses, freelancers & artisans')}
             </div>
-            <h1 className="text-5xl md:text-6xl font-display font-semibold leading-tight mb-4">
-              {t('Be in control')} — <span className="text-gradient">{t('from services to paid invoices')}</span>
+            <h1 className="text-5xl md:text-[3.5rem] lg:text-6xl font-display font-bold leading-[1.1] tracking-tight mb-6">
+              {t('Be in control')} — <br className="hidden md:block" /><span className="bg-gradient-to-r from-primary via-primary to-emerald-500 bg-clip-text text-transparent">{t('from services to paid invoices')}</span>
             </h1>
-            <p className="text-sm text-muted mb-6">{t('Built for growing businesses, freelancers & artisans')}</p>
-            <p className="text-lg text-muted mb-8 max-w-xl">
+            <p className="text-lg md:text-xl text-slate-600 mb-8 max-w-xl leading-relaxed">
               {t('One canvas for services, expenses, pricing, checkout, and follow-ups. Share a beautiful catalog, get paid faster, and file taxes with clean inflow/outflow reports.')}
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <Button onClick={() => navigate({ to: '/onboarding' })} className="px-6">
+              <Button onClick={() => navigate({ to: '/onboarding' })} className="px-8 h-12 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300">
                 {t('Start free')}
               </Button>
-              <Button variant="outline" className="px-6">
+              <Button variant="outline" className="px-8 h-12 text-base hover:bg-slate-900 hover:text-white hover:border-slate-900 hover:scale-[1.02] transition-all duration-300">
                 <Play className="w-4 h-4 mr-2" /> {t('Watch demo')}
               </Button>
             </div>
@@ -1274,9 +1278,8 @@ const Landing: React.FC = () => {
         <FeatureSlider t={t} />
       </section>
 
-      <section id="how-it-works" className="py-24 bg-transparent relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-20" />
-        <div className="absolute inset-0 bg-spotlight opacity-35" />
+      <section id="how-it-works" className="py-28 bg-gradient-to-b from-slate-50/50 to-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-[0.03]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-14">
             <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('How it works')}</div>
@@ -1284,14 +1287,14 @@ const Landing: React.FC = () => {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {HOW_IT_WORKS_STEPS.map((item) => (
-              <div key={item.step} className="p-6 rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]">
+              <div key={item.step} className="group p-6 rounded-3xl border border-black/[0.04] bg-white/90 backdrop-blur-xl shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.15)] hover:border-primary/20 hover:-translate-y-1 transition-all duration-500 cursor-pointer">
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-xs uppercase tracking-widest text-muted">{item.step}</span>
-                  <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center group-hover:bg-primary group-hover:scale-110 transition-all duration-300">
                     {item.icon}
                   </div>
                 </div>
-                <h3 className="text-lg font-display font-semibold mb-2">{t(item.title)}</h3>
+                <h3 className="text-lg font-display font-semibold mb-2 group-hover:text-primary transition-colors duration-300">{t(item.title)}</h3>
                 <p className="text-sm text-muted">{t(item.description)}</p>
               </div>
             ))}
@@ -1299,7 +1302,7 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <section id="ai-insights" className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
+      <section id="ai-assistant" className="py-28 bg-white relative overflow-hidden">
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[520px] h-[520px] bg-primary/10 blur-[140px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-center gap-16">
@@ -1330,17 +1333,39 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <section id="local-languages" className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
+      <section id="local-languages" className="py-28 bg-gradient-to-b from-white to-slate-50/50 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-15" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="relative overflow-hidden rounded-[32px] border border-white/40 shadow-lift min-h-[420px]">
-            <img
-              src="/video/local-languages.jpg"
-              alt={t('Local language support preview')}
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/10" />
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-primary/30">
+              <div className="absolute inset-0 opacity-30 pointer-events-none">
+                <svg className="w-full h-full" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+                  <defs>
+                    <pattern id="langPattern" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
+                      <circle cx="60" cy="60" r="1" fill="white" opacity="0.4" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#langPattern)" />
+                  <g opacity="0.25">
+                    <text x="50" y="80" fill="white" fontSize="16" fontFamily="system-ui" fontWeight="500">Hello</text>
+                    <text x="200" y="150" fill="white" fontSize="14" fontFamily="system-ui">مرحبا</text>
+                    <text x="680" y="100" fill="white" fontSize="15" fontFamily="system-ui">你好</text>
+                    <text x="600" y="200" fill="white" fontSize="13" fontFamily="system-ui">Bonjour</text>
+                    <text x="450" y="420" fill="white" fontSize="14" fontFamily="system-ui">Habari</text>
+                    <text x="80" y="350" fill="white" fontSize="16" fontFamily="system-ui">Olá</text>
+                    <text x="700" y="350" fill="white" fontSize="13" fontFamily="system-ui">こんにちは</text>
+                    <text x="350" y="60" fill="white" fontSize="12" fontFamily="system-ui">Hola</text>
+                    <text x="550" y="300" fill="white" fontSize="15" fontFamily="system-ui">안녕</text>
+                    <text x="150" y="450" fill="white" fontSize="12" fontFamily="system-ui">Sawubona</text>
+                    <text x="300" y="250" fill="white" fontSize="11" fontFamily="system-ui">Muraho</text>
+                  </g>
+                  <circle cx="100" cy="200" r="50" stroke="white" strokeWidth="0.5" fill="none" opacity="0.15" />
+                  <circle cx="700" cy="400" r="70" stroke="white" strokeWidth="0.5" fill="none" opacity="0.1" />
+                  <circle cx="400" cy="100" r="40" stroke="white" strokeWidth="0.5" fill="none" opacity="0.12" />
+                </svg>
+              </div>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-black/40" />
             <div className="relative z-10 p-8 sm:p-12 lg:p-14 grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center text-white">
               <div className="max-w-xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/40 text-xs uppercase tracking-widest text-white/80 mb-6">
@@ -1370,14 +1395,13 @@ const Landing: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <div className="text-sm font-semibold">{t(language.label)}</div>
-                      <div className="mt-2 flex items-end gap-1">
-                        {LANGUAGE_WAVE_BARS.map((height, index) => (
-                          <span key={`${language.code}-${index}`} className={`w-1 ${height} rounded-full bg-white/70`} />
-                        ))}
+                      <div className="mt-1 flex items-center gap-1 text-white/50 text-[10px]">
+                        <MessageSquare className="w-3 h-3" />
+                        <span>Native support</span>
                       </div>
                     </div>
                     <div className="w-9 h-9 rounded-full border border-white/50 bg-white/10 flex items-center justify-center">
-                      <Play className="w-3 h-3 text-white" />
+                      <Languages className="w-4 h-4 text-white" />
                     </div>
                   </div>
                 ))}
@@ -1391,49 +1415,57 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <section className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-10" />
-        <div className="absolute -top-24 right-8 w-72 h-72 bg-primary/10 blur-[140px]" />
+      <section className="py-28 bg-gradient-to-b from-white to-slate-50/80 relative overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 blur-[120px] rounded-full" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid lg:grid-cols-[1fr_2fr] gap-12 items-start">
-            <div>
-              <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('Business owners')}</div>
-              <h2 className="text-3xl md:text-4xl font-display font-semibold mb-6">
-                {t('Built for small and medium teams.')}
-              </h2>
-              <p className="text-muted text-lg leading-relaxed">
-                {t('Owners use ZuriBills to keep invoices, expenses, and payouts calm and ready for audit.')}
-              </p>
-            </div>
+          <div className="text-center mb-16">
+            <div className="text-xs uppercase tracking-widest text-primary font-semibold mb-4">{t('Who We Serve')}</div>
+            <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-slate-900">
+              {t('Built for people who do real work')}
+            </h2>
+            <p className="text-slate-500 text-lg leading-relaxed max-w-2xl mx-auto">
+              {t('Whether you run a boutique, freelance on the side, or craft custom pieces — ZuriBills helps you look professional and get paid faster.')}
+            </p>
+          </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              {OWNER_STORIES.map((owner) => (
-                <div
-                  key={owner.name}
-                  className="group rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]"
+          <div className="grid md:grid-cols-3 gap-8">
+            {AUDIENCE_CARDS.map((card, index) => {
+              const colorClasses: Record<string, { iconBg: string; iconText: string; statBg: string; statText: string; statBorder: string; hoverBorder: string }> = {
+                blue: { iconBg: 'bg-blue-100', iconText: 'text-blue-600', statBg: 'bg-blue-50', statText: 'text-blue-700', statBorder: 'border-blue-200', hoverBorder: 'hover:border-blue-300' },
+                emerald: { iconBg: 'bg-emerald-100', iconText: 'text-emerald-600', statBg: 'bg-emerald-50', statText: 'text-emerald-700', statBorder: 'border-emerald-200', hoverBorder: 'hover:border-emerald-300' },
+                orange: { iconBg: 'bg-orange-100', iconText: 'text-orange-600', statBg: 'bg-orange-50', statText: 'text-orange-700', statBorder: 'border-orange-200', hoverBorder: 'hover:border-orange-300' },
+              };
+              const colors = colorClasses[card.color] || colorClasses.blue;
+
+              return (
+                <motion.div
+                  key={card.title}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-30px" }}
+                  transition={{ duration: 0.5, delay: index * 0.15, ease: [0.22, 1, 0.36, 1] }}
+                  whileHover={{ y: -6 }}
+                  className="group"
                 >
-                  <div className="relative overflow-hidden rounded-2xl">
-                    <img
-                      src={owner.image}
-                      alt={t(owner.name)}
-                      className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent" />
-                    <div className="absolute bottom-3 left-3 text-white">
-                      <div className="text-sm font-semibold">{t(owner.name)}</div>
-                      <div className="text-xs text-white/70">{t(owner.role)}</div>
+                  <div className={`relative h-full rounded-3xl border border-slate-200/80 bg-white p-8 transition-all duration-500 ${colors.hoverBorder} hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.12)]`}>
+                    <div className={`w-14 h-14 rounded-2xl ${colors.iconBg} ${colors.iconText} flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110`}>
+                      {card.icon}
+                    </div>
+                    <h3 className="text-xl font-bold mb-3 text-slate-900">{t(card.title)}</h3>
+                    <p className="text-slate-500 text-[15px] leading-relaxed mb-6">{t(card.description)}</p>
+                    <div className={`inline-flex items-center rounded-full ${colors.statBg} border ${colors.statBorder} px-4 py-2`}>
+                      <CheckCircle className={`w-4 h-4 mr-2 ${colors.statText}`} />
+                      <span className={`text-sm font-semibold ${colors.statText}`}>{card.stat}</span>
                     </div>
                   </div>
-                  <p className="mt-4 text-sm text-muted leading-relaxed">{t(owner.quote)}</p>
-                </div>
-              ))}
-            </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      <section id="faq" className="py-24 bg-transparent border-t border-border/40 relative overflow-hidden">
+      <section id="faq" className="py-28 bg-gradient-to-b from-slate-50/50 to-white relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <div className="text-xs uppercase tracking-widest text-muted mb-4">{t('FAQ')}</div>
@@ -1449,7 +1481,7 @@ const Landing: React.FC = () => {
             {FAQ_ITEMS.map((item) => (
               <details
                 key={item.question}
-                className="group rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]"
+                className="group rounded-3xl border border-black/[0.04] bg-white/95 backdrop-blur-xl p-6 shadow-[0_2px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_16px_32px_-8px_rgba(0,0,0,0.1)] hover:border-primary/20 transition-all duration-300"
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-semibold text-foreground">
                   <span>{t(item.question)}</span>
@@ -1462,9 +1494,8 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <section id="pricing" className="py-24 bg-transparent border-t border-border/40 relative">
-        <div className="absolute inset-0 bg-grid opacity-10" />
-        <div className="absolute -top-24 left-1/3 w-72 h-72 bg-primary/10 blur-[140px]" />
+      <section id="pricing" className="py-28 bg-white relative">
+        <div className="absolute -top-24 left-1/3 w-72 h-72 bg-primary/5 blur-[140px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-display font-semibold mb-6">
@@ -1492,22 +1523,22 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
       <div className="sticky top-0 min-h-[450px] py-16 md:py-20 flex items-center overflow-hidden bg-[#000000] z-10">
         <div className="max-w-7xl mx-auto px-6 sm:px-10 md:px-16 w-full relative flex items-center justify-between">
           <div className="max-w-2xl relative z-20">
-            <h2 className="text-[32px] sm:text-[40px] md:text-[52px] font-display font-medium tracking-[-0.03em] leading-[1.1] mb-8 md:mb-10 text-white text-left">
-              {t('Take Control of your Business Finances.')} <br />
-              {t('Get Started With ZuriBills')}
+            <h2 className="text-[28px] sm:text-[36px] md:text-[48px] font-display font-bold tracking-[-0.03em] leading-[1.15] mb-8 md:mb-10 text-white text-left">
+              {t('Ready to get paid faster?')} <br />
+              <span className="text-primary">{t('Start your free trial today.')}</span>
             </h2>
             <div className="flex flex-col sm:flex-row flex-wrap gap-4">
               <Button
                 onClick={() => navigate({ to: '/onboarding' })}
-                className="h-[52px] px-8 rounded-full bg-primary text-[#0b0b0b] font-bold text-sm hover:bg-primary/90 transition-all border-none shadow-lg"
+                className="h-14 px-10 rounded-full bg-primary text-[#0b0b0b] font-bold text-base hover:bg-primary/90 hover:scale-[1.03] transition-all duration-300 border-none shadow-xl shadow-primary/30"
               >
-                {t('Start for free')}
+                {t('Start free — no credit card')}
               </Button>
               <Button
                 variant="outline"
-                className="h-[52px] px-8 rounded-full border-2 border-white/60 text-white hover:bg-white/20 font-bold text-sm transition-all bg-white/10 backdrop-blur-sm shadow-lg"
+                className="h-14 px-10 rounded-full border-2 border-white/40 text-white hover:bg-white hover:text-slate-900 font-bold text-base transition-all duration-300 bg-white/5 backdrop-blur-sm"
               >
-                {t('See a demo')} <ArrowRight className="w-4 h-4 ml-2" />
+                {t('Watch 2-min demo')} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
           </div>
@@ -1542,10 +1573,10 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
                 <div className="w-7 h-7 rounded-[6px] bg-white flex items-center justify-center">
                   <Zap className="w-4 h-4 text-black fill-current" />
                 </div>
-                <span className="font-display font-bold text-[22px] tracking-tight text-white">ZuriBills</span>
+                <span className="font-display font-bold text-xl tracking-tight text-white">ZuriBills</span>
               </div>
-              <div className="text-[11px] uppercase tracking-[0.25em] text-white/30 font-bold">
-                2026 © ZuriBills From X-Labs
+              <div className="text-[11px] uppercase tracking-[0.2em] text-white/40 font-semibold">
+                © 2026 ZuriBills • Made with ❤️ by X-Labs
               </div>
             </div>
 
