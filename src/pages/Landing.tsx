@@ -1607,8 +1607,13 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
                 <div>
                   <h4 className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-black mb-10 text-white">{t('Legal')}</h4>
                   <ul className="space-y-5 text-[15px] font-semibold text-white/70">
-                    {['Developer Policy', 'Terms of Use', 'Disclaimer', 'Cookies', 'Security'].map(item => (
-                      <li key={item}><a href="#" className="hover:text-white transition-colors">{t(item)}</a></li>
+                    {[
+                      { label: 'Terms of Use', href: '/terms' },
+                      { label: 'Disclaimer', href: '/disclaimer' },
+                      { label: 'Cookies', href: '/cookies' },
+                      { label: 'Security', href: '/security' },
+                    ].map(item => (
+                      <li key={item.label}><a href={item.href} className="hover:text-white transition-colors">{t(item.label)}</a></li>
                     ))}
                   </ul>
                 </div>
