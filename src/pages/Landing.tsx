@@ -108,20 +108,6 @@ const ANALYTICS_BULLETS = [
   'One-click export for monthly and yearly tax reports',
 ];
 
-const LANGUAGE_WAVE_BARS = [
-  'h-2',
-  'h-3',
-  'h-4',
-  'h-2',
-  'h-5',
-  'h-3',
-  'h-4',
-  'h-2',
-  'h-3',
-  'h-5',
-  'h-2',
-  'h-3',
-];
 
 const LOCAL_LANGUAGES = [
   { code: 'rw', label: 'Kinyarwanda' },
@@ -947,7 +933,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
         )}
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8 items-center">
+      <div className="grid md:grid-cols-2 gap-8 items-stretch overflow-visible py-6">
         <div className={`relative p-8 rounded-3xl border transition-all duration-500 ${billingCycle === 'monthly' ? 'bg-gradient-to-br from-slate-900 to-slate-800 text-white border-primary/50 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] scale-[1.03] z-10' : 'bg-white/95 border-black/[0.06] hover:border-primary/30 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1'}`}>
           <h3 className="text-xl font-display font-semibold mb-2">{t('Monthly Plan')}</h3>
           <p className={`text-sm mb-6 ${billingCycle === 'monthly' ? 'text-white/80' : 'text-muted'}`}>{t('Perfect for short-term projects and starters.')}</p>
@@ -976,30 +962,30 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           </Button>
         </div>
 
-        <div className={`relative p-8 rounded-3xl border transition-all duration-500 ${billingCycle === 'yearly' ? 'bg-gradient-to-br from-slate-900 to-slate-800 text-white border-primary/50 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] scale-[1.03] z-10' : 'bg-white/95 border-black/[0.06] hover:border-primary/30 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1'}`}>
+        <div className={`relative p-8 rounded-3xl border transition-all duration-500 ${billingCycle === 'yearly' ? 'bg-white border-primary/50 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] scale-[1.03] z-10' : 'bg-white/95 border-black/[0.06] hover:border-primary/30 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1'}`}>
           {billingCycle === 'yearly' && (
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-[var(--on-primary)] text-xs font-bold px-3 py-1 rounded-full shadow-soft">
               {t('MOST POPULAR')}
             </div>
           )}
-          <h3 className="text-xl font-display font-semibold mb-2">{t('Yearly Plan')}</h3>
-          <p className={`text-sm mb-6 ${billingCycle === 'yearly' ? 'text-white/80' : 'text-muted'}`}>{t('Best value for growing businesses.')}</p>
+          <h3 className="text-xl font-display font-semibold mb-2 text-slate-900">{t('Yearly Plan')}</h3>
+          <p className="text-sm mb-6 text-slate-500">{t('Best value for growing businesses.')}</p>
           <div className="flex items-baseline gap-1 mb-2">
-            <span className="text-4xl font-display font-semibold">{loadingRate ? '$1.67' : formatPrice(1.67)}</span>
-            <span className={`text-sm ${billingCycle === 'yearly' ? 'text-white/70' : 'text-muted'}`}>/mo</span>
+            <span className="text-4xl font-display font-semibold text-slate-900">{loadingRate ? '$1.67' : formatPrice(1.67)}</span>
+            <span className="text-sm text-slate-500">/mo</span>
           </div>
-          <p className={`text-xs mb-6 ${billingCycle === 'yearly' ? 'text-white/80' : 'text-muted'}`}>
+          <p className="text-xs mb-6 text-slate-500">
             {loadingRate ? t('Billed $20 yearly') : `${t('Billed')} ${formatPrice(20)} ${t('yearly')}`}
           </p>
           <ul className="space-y-4 mb-8">
             {PRICING_FEATURES.map((feat, i) => (
-              <li key={i} className={`flex items-center gap-3 text-sm ${billingCycle === 'yearly' ? 'text-white/90' : 'text-foreground'}`}>
+              <li key={i} className="flex items-center gap-3 text-sm text-slate-900">
                 <CheckCircle className="w-5 h-5 text-primary" /> {t(feat)}
               </li>
             ))}
           </ul>
           <div className="mb-4">
-            <span className={`text-xs ${billingCycle === 'yearly' ? 'text-white/60' : 'text-muted'}`}>
+            <span className="text-xs text-slate-500">
               {t('3-day free trial included')}
             </span>
           </div>
