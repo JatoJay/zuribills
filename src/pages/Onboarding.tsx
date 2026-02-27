@@ -419,7 +419,7 @@ const Onboarding: React.FC = () => {
                             <Zap className="w-4 h-4 text-primary" />
                         </div>
                         <span className="font-display text-lg font-semibold tracking-tight text-black">
-                            Invoice<span className="text-primary">Flow</span>
+                            Zuri<span className="text-primary">Bills</span>
                         </span>
                     </div>
                     <button

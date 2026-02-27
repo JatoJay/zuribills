@@ -119,9 +119,9 @@ const Help: React.FC = () => {
     ];
 
     const supportChannels = [
-        { icon: Mail, title: t('Email Support'), description: t('Get a response within 24 hours'), action: t('Send Email'), href: 'mailto:support@invoiceflow.app' },
-        { icon: BookOpen, title: t('Documentation'), description: t('Browse our comprehensive guides'), action: t('View Docs'), href: 'https://docs.invoiceflow.app' },
-        { icon: Video, title: t('Video Tutorials'), description: t('Learn with step-by-step videos'), action: t('Watch Videos'), href: 'https://youtube.com/@invoiceflow' },
+        { icon: Mail, title: t('Email Support'), description: t('Get a response within 24 hours'), action: t('Send Email'), href: 'mailto:support@zuribills.com' },
+        { icon: BookOpen, title: t('Documentation'), description: t('Browse our comprehensive guides'), action: t('View Docs'), href: 'https://docs.zuribills.com' },
+        { icon: Video, title: t('Video Tutorials'), description: t('Learn with step-by-step videos'), action: t('Watch Videos'), href: 'https://youtube.com/@zuribills' },
     ];
 
     if (!org?.id) return <div className="p-8">Loading...</div>;
