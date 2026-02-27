@@ -968,24 +968,24 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
               {t('MOST POPULAR')}
             </div>
           )}
-          <h3 className="text-xl font-display font-semibold mb-2 text-slate-900">{t('Yearly Plan')}</h3>
-          <p className="text-sm mb-6 text-slate-500">{t('Best value for growing businesses.')}</p>
+          <h3 className="text-xl font-display font-semibold mb-2" style={{ color: '#0f172a' }}>{t('Yearly Plan')}</h3>
+          <p className="text-sm mb-6" style={{ color: '#64748b' }}>{t('Best value for growing businesses.')}</p>
           <div className="flex items-baseline gap-1 mb-2">
-            <span className="text-4xl font-display font-semibold text-slate-900">{loadingRate ? '$1.67' : formatPrice(1.67)}</span>
-            <span className="text-sm text-slate-500">/mo</span>
+            <span className="text-4xl font-display font-semibold" style={{ color: '#0f172a' }}>{loadingRate ? '$1.67' : formatPrice(1.67)}</span>
+            <span className="text-sm" style={{ color: '#64748b' }}>/mo</span>
           </div>
-          <p className="text-xs mb-6 text-slate-500">
+          <p className="text-xs mb-6" style={{ color: '#64748b' }}>
             {loadingRate ? t('Billed $20 yearly') : `${t('Billed')} ${formatPrice(20)} ${t('yearly')}`}
           </p>
           <ul className="space-y-4 mb-8">
             {PRICING_FEATURES.map((feat, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm text-slate-900">
+              <li key={i} className="flex items-center gap-3 text-sm" style={{ color: '#0f172a' }}>
                 <CheckCircle className="w-5 h-5 text-primary" /> {t(feat)}
               </li>
             ))}
           </ul>
           <div className="mb-4">
-            <span className="text-xs text-slate-500">
+            <span className="text-xs" style={{ color: '#64748b' }}>
               {t('3-day free trial included')}
             </span>
           </div>
