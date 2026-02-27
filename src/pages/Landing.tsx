@@ -1324,30 +1324,87 @@ const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="relative overflow-hidden rounded-[32px] border border-white/40 shadow-lift min-h-[420px]">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-primary/30">
-              <div className="absolute inset-0 opacity-30 pointer-events-none">
-                <svg className="w-full h-full" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+              <div className="absolute inset-0 pointer-events-none">
+                <svg className="w-full h-full" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
                   <defs>
-                    <pattern id="langPattern" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
-                      <circle cx="60" cy="60" r="1" fill="white" opacity="0.4" />
-                    </pattern>
+                    <linearGradient id="globeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#0EA5A4" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#0EA5A4" stopOpacity="0.1" />
+                    </linearGradient>
+                    <linearGradient id="bubbleGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="white" stopOpacity="0.15" />
+                      <stop offset="100%" stopColor="white" stopOpacity="0.05" />
+                    </linearGradient>
+                    <linearGradient id="bubbleGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#0EA5A4" stopOpacity="0.2" />
+                      <stop offset="100%" stopColor="#0EA5A4" stopOpacity="0.08" />
+                    </linearGradient>
                   </defs>
-                  <rect width="100%" height="100%" fill="url(#langPattern)" />
-                  <g opacity="0.25">
-                    <text x="50" y="80" fill="white" fontSize="16" fontFamily="system-ui" fontWeight="500">Hello</text>
-                    <text x="200" y="150" fill="white" fontSize="14" fontFamily="system-ui">مرحبا</text>
-                    <text x="680" y="100" fill="white" fontSize="15" fontFamily="system-ui">你好</text>
-                    <text x="600" y="200" fill="white" fontSize="13" fontFamily="system-ui">Bonjour</text>
-                    <text x="450" y="420" fill="white" fontSize="14" fontFamily="system-ui">Habari</text>
-                    <text x="80" y="350" fill="white" fontSize="16" fontFamily="system-ui">Olá</text>
-                    <text x="700" y="350" fill="white" fontSize="13" fontFamily="system-ui">こんにちは</text>
-                    <text x="350" y="60" fill="white" fontSize="12" fontFamily="system-ui">Hola</text>
-                    <text x="550" y="300" fill="white" fontSize="15" fontFamily="system-ui">안녕</text>
-                    <text x="150" y="450" fill="white" fontSize="12" fontFamily="system-ui">Sawubona</text>
-                    <text x="300" y="250" fill="white" fontSize="11" fontFamily="system-ui">Muraho</text>
+
+                  <circle cx="900" cy="300" r="220" fill="url(#globeGrad)" opacity="0.6" />
+                  <circle cx="900" cy="300" r="220" stroke="white" strokeWidth="1" fill="none" opacity="0.15" />
+                  <ellipse cx="900" cy="300" rx="220" ry="80" stroke="white" strokeWidth="0.5" fill="none" opacity="0.2" />
+                  <ellipse cx="900" cy="300" rx="80" ry="220" stroke="white" strokeWidth="0.5" fill="none" opacity="0.2" />
+                  <ellipse cx="900" cy="300" rx="150" ry="220" stroke="white" strokeWidth="0.5" fill="none" opacity="0.15" transform="rotate(30 900 300)" />
+                  <ellipse cx="900" cy="300" rx="150" ry="220" stroke="white" strokeWidth="0.5" fill="none" opacity="0.15" transform="rotate(-30 900 300)" />
+
+                  <g className="animate-pulse" style={{ animationDuration: '4s' }}>
+                    <circle cx="780" cy="200" r="6" fill="#0EA5A4" opacity="0.8" />
+                    <circle cx="950" cy="180" r="4" fill="#0EA5A4" opacity="0.6" />
+                    <circle cx="1020" cy="280" r="5" fill="#0EA5A4" opacity="0.7" />
+                    <circle cx="850" cy="400" r="4" fill="#0EA5A4" opacity="0.6" />
+                    <circle cx="980" cy="380" r="6" fill="#0EA5A4" opacity="0.8" />
+                    <circle cx="820" cy="320" r="3" fill="#0EA5A4" opacity="0.5" />
                   </g>
-                  <circle cx="100" cy="200" r="50" stroke="white" strokeWidth="0.5" fill="none" opacity="0.15" />
-                  <circle cx="700" cy="400" r="70" stroke="white" strokeWidth="0.5" fill="none" opacity="0.1" />
-                  <circle cx="400" cy="100" r="40" stroke="white" strokeWidth="0.5" fill="none" opacity="0.12" />
+
+                  <g opacity="0.9">
+                    <rect x="80" y="80" width="140" height="70" rx="16" fill="url(#bubbleGrad1)" />
+                    <path d="M120 150 L130 165 L140 150" fill="url(#bubbleGrad1)" />
+                    <text x="110" y="115" fill="white" fontSize="14" fontFamily="system-ui" fontWeight="500" opacity="0.9">Muraho!</text>
+                    <text x="100" y="135" fill="white" fontSize="10" fontFamily="system-ui" opacity="0.6">Kinyarwanda</text>
+                  </g>
+
+                  <g opacity="0.85">
+                    <rect x="60" y="220" width="130" height="65" rx="14" fill="url(#bubbleGrad2)" />
+                    <path d="M90 285 L100 298 L110 285" fill="url(#bubbleGrad2)" />
+                    <text x="85" y="252" fill="white" fontSize="13" fontFamily="system-ui" fontWeight="500" opacity="0.9">Habari!</text>
+                    <text x="80" y="270" fill="white" fontSize="9" fontFamily="system-ui" opacity="0.6">Swahili</text>
+                  </g>
+
+                  <g opacity="0.8">
+                    <rect x="100" y="360" width="120" height="60" rx="12" fill="url(#bubbleGrad1)" />
+                    <path d="M130 420 L140 432 L150 420" fill="url(#bubbleGrad1)" />
+                    <text x="125" y="390" fill="white" fontSize="12" fontFamily="system-ui" fontWeight="500" opacity="0.9">Akwaaba</text>
+                    <text x="128" y="408" fill="white" fontSize="9" fontFamily="system-ui" opacity="0.6">Twi</text>
+                  </g>
+
+                  <g opacity="0.75">
+                    <rect x="250" y="160" width="110" height="55" rx="12" fill="url(#bubbleGrad2)" />
+                    <text x="270" y="188" fill="white" fontSize="11" fontFamily="system-ui" fontWeight="500" opacity="0.9">Sawubona</text>
+                    <text x="278" y="203" fill="white" fontSize="8" fontFamily="system-ui" opacity="0.6">Zulu</text>
+                  </g>
+
+                  <g opacity="0.7">
+                    <rect x="280" y="420" width="100" height="50" rx="10" fill="url(#bubbleGrad1)" />
+                    <text x="300" y="446" fill="white" fontSize="11" fontFamily="system-ui" fontWeight="500" opacity="0.9">Sannu</text>
+                    <text x="302" y="460" fill="white" fontSize="8" fontFamily="system-ui" opacity="0.6">Hausa</text>
+                  </g>
+
+                  <g opacity="0.65">
+                    <rect x="400" y="100" width="90" height="45" rx="10" fill="url(#bubbleGrad2)" />
+                    <text x="418" y="124" fill="white" fontSize="10" fontFamily="system-ui" fontWeight="500" opacity="0.9">Nnọọ</text>
+                    <text x="425" y="138" fill="white" fontSize="8" fontFamily="system-ui" opacity="0.6">Igbo</text>
+                  </g>
+
+                  <line x1="220" y1="115" x2="780" y2="200" stroke="white" strokeWidth="0.5" opacity="0.1" strokeDasharray="4 4" />
+                  <line x1="190" y1="252" x2="820" y2="320" stroke="white" strokeWidth="0.5" opacity="0.1" strokeDasharray="4 4" />
+                  <line x1="220" y1="390" x2="850" y2="400" stroke="white" strokeWidth="0.5" opacity="0.1" strokeDasharray="4 4" />
+                  <line x1="360" y1="187" x2="950" y2="180" stroke="white" strokeWidth="0.5" opacity="0.08" strokeDasharray="4 4" />
+                  <line x1="380" y1="445" x2="980" y2="380" stroke="white" strokeWidth="0.5" opacity="0.08" strokeDasharray="4 4" />
+
+                  <circle cx="150" cy="500" r="80" stroke="white" strokeWidth="0.3" fill="none" opacity="0.1" />
+                  <circle cx="500" cy="550" r="60" stroke="#0EA5A4" strokeWidth="0.3" fill="none" opacity="0.15" />
+                  <circle cx="650" cy="50" r="40" stroke="white" strokeWidth="0.3" fill="none" opacity="0.1" />
                 </svg>
               </div>
             </div>
