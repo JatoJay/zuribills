@@ -28,24 +28,54 @@ const showInstallPrompt = () => {
     const existing = document.getElementById('pwa-install-prompt');
     if (existing) existing.remove();
 
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const prompt = document.createElement('div');
     prompt.id = 'pwa-install-prompt';
     prompt.className = 'fixed bottom-0 left-0 right-0 bg-slate-900 text-white p-4 z-[9999] animate-fade-in-up border-t border-white/10 safe-area-pb';
-    prompt.innerHTML = `
-        <div class="max-w-lg mx-auto flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+
+    if (isIOS) {
+        prompt.innerHTML = `
+            <div class="max-w-lg mx-auto">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-sm">Install ZuriBills App</p>
+                        <p class="text-xs text-white/70 mt-1 leading-relaxed">Get instant access from your home screen. Create invoices, track payments, and manage your business even when offline.</p>
+                        <div class="mt-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                            <p class="text-xs text-white/80 flex items-center gap-2">
+                                <span class="font-semibold">How to install:</span>
+                            </p>
+                            <p class="text-xs text-white/60 mt-1">Tap the Share button <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mx-1 text-emerald-400"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg> at the bottom of your screen, then select <span class="font-semibold text-white/80">"Add to Home Screen"</span></p>
+                        </div>
+                    </div>
+                    <button id="pwa-dismiss" class="text-white/40 hover:text-white p-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
             </div>
-            <div class="flex-1 min-w-0">
-                <p class="font-semibold text-sm">Add ZuriBills to Home Screen</p>
-                <p class="text-xs text-white/60 mt-0.5">Quick access & work offline</p>
+        `;
+    } else {
+        prompt.innerHTML = `
+            <div class="max-w-lg mx-auto">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-sm">Install ZuriBills App</p>
+                        <p class="text-xs text-white/70 mt-1 leading-relaxed">Get instant access from your home screen. Create invoices, track payments, and manage your business even when offline.</p>
+                    </div>
+                    <div class="flex gap-2 flex-shrink-0">
+                        <button id="pwa-dismiss" class="px-3 py-2 text-xs text-white/50 hover:text-white font-medium">Later</button>
+                        <button id="pwa-install" class="px-4 py-2 bg-emerald-500 text-white text-xs font-semibold rounded-lg hover:bg-emerald-600 transition-colors">Install Now</button>
+                    </div>
+                </div>
             </div>
-            <div class="flex gap-2 flex-shrink-0">
-                <button id="pwa-dismiss" class="px-3 py-2 text-xs text-white/50 hover:text-white font-medium">Later</button>
-                <button id="pwa-install" class="px-4 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 transition-colors">Install</button>
-            </div>
-        </div>
-    `;
+        `;
+    }
+
     document.body.appendChild(prompt);
 
     document.getElementById('pwa-dismiss')?.addEventListener('click', () => {
@@ -60,18 +90,6 @@ const showInstallPrompt = () => {
                 prompt.remove();
             }
             deferredPrompt = null;
-        } else {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            if (isIOS) {
-                prompt.innerHTML = `
-                    <div class="max-w-lg mx-auto text-center py-2">
-                        <p class="font-semibold text-sm mb-2">Install ZuriBills</p>
-                        <p class="text-xs text-white/70">Tap <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mx-1"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg> then "Add to Home Screen"</p>
-                        <button id="pwa-ios-dismiss" class="mt-3 px-4 py-2 text-xs text-white/50 hover:text-white font-medium">Got it</button>
-                    </div>
-                `;
-                document.getElementById('pwa-ios-dismiss')?.addEventListener('click', () => prompt.remove());
-            }
         }
     });
 };
@@ -79,12 +97,10 @@ const showInstallPrompt = () => {
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e as BeforeInstallPromptEvent;
-    if (isMobile()) {
-        showInstallPrompt();
-    }
+    showInstallPrompt();
 });
 
-if (isMobile() && !isStandalone()) {
+if (!isStandalone()) {
     setTimeout(() => {
         showInstallPrompt();
     }, 2000);

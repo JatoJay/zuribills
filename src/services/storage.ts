@@ -14,6 +14,7 @@ import {
   TrialInfo,
   AgentLog,
   InvoiceTransfer,
+  EInvoicingConfig,
 } from '../types';
 import { getSupabaseClient } from './supabaseClient';
 import { resolveCountryCode, resolveDefaultCurrency, resolvePayoutProvider } from './paymentRouting';
@@ -159,6 +160,7 @@ const mapOrganizationFromDb = (row: any): Organization => ({
   signatoryTitle: row.signatory_title ?? undefined,
   address: row.address ?? undefined,
   paymentConfig: row.payment_config ?? undefined,
+  eInvoicingConfig: row.e_invoicing_config ?? undefined,
   trial: row.trial ?? undefined,
   subscription: row.subscription ?? undefined,
   createdAt: row.created_at,
@@ -183,6 +185,7 @@ const mapOrganizationToDb = (org: Organization) => ({
   signatory_title: toNullable(org.signatoryTitle),
   address: org.address ?? null,
   payment_config: org.paymentConfig ?? null,
+  e_invoicing_config: org.eInvoicingConfig ?? null,
   trial: org.trial ?? null,
   subscription: org.subscription ?? null,
   created_at: org.createdAt,
@@ -198,6 +201,8 @@ const mapServiceFromDb = (row: any): Service => ({
   isActive: row.is_active,
   depositRequirement: row.deposit_requirement ?? undefined,
   imageUrl: row.image_url ?? undefined,
+  hsnCode: row.hsn_code ?? undefined,
+  sacCode: row.sac_code ?? undefined,
 });
 
 const mapServiceToDb = (service: Service) => ({
@@ -210,6 +215,8 @@ const mapServiceToDb = (service: Service) => ({
   is_active: service.isActive,
   deposit_requirement: toNullable(service.depositRequirement),
   image_url: toNullable(service.imageUrl),
+  hsn_code: toNullable(service.hsnCode),
+  sac_code: toNullable(service.sacCode),
 });
 
 const mapClientFromDb = (row: any): Client => ({
@@ -218,6 +225,7 @@ const mapClientFromDb = (row: any): Client => ({
   name: row.name,
   email: row.email,
   company: row.company ?? undefined,
+  tin: row.tin ?? undefined,
   phone: row.phone ?? undefined,
   address: row.address ?? undefined,
   createdAt: row.created_at,
@@ -229,6 +237,7 @@ const mapClientToDb = (client: Client) => ({
   name: client.name,
   email: client.email,
   company: toNullable(client.company),
+  tin: toNullable(client.tin),
   phone: toNullable(client.phone),
   address: client.address ?? null,
   created_at: client.createdAt,
@@ -861,15 +870,71 @@ export const getInvoices = async (orgId: string): Promise<Invoice[]> => {
   }
 };
 
-export const createInvoice = async (invoice: Omit<Invoice, 'id' | 'invoiceNumber'>): Promise<Invoice> => {
+const generateInvoiceNumber = async (
+  organizationId: string,
+  config?: EInvoicingConfig
+): Promise<string> => {
   const supabase = getSupabaseClient();
-  const { count, error: countError } = await supabase
-    .from('invoices')
-    .select('id', { count: 'exact', head: true })
-    .eq('organization_id', invoice.organizationId);
-  if (countError) throw countError;
+  const now = new Date();
+  const format = config?.invoiceNumberFormat || 'dated';
+  const customPrefix = config?.invoiceNumberPrefix || 'INV';
 
-  const invoiceNumber = `INV-${String((count || 0) + 1).padStart(4, '0')}`;
+  let prefix: string;
+  let searchPattern: string;
+
+  switch (format) {
+    case 'nitda':
+      prefix = `${customPrefix}`;
+      searchPattern = `${customPrefix}%`;
+      break;
+    case 'simple':
+      prefix = `${customPrefix}-`;
+      searchPattern = `${customPrefix}-%`;
+      break;
+    case 'dated':
+    default: {
+      const year = now.getFullYear().toString().slice(-2);
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      prefix = `${customPrefix}-${year}${month}-`;
+      searchPattern = `${prefix}%`;
+      break;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('invoice_number')
+    .eq('organization_id', organizationId)
+    .like('invoice_number', searchPattern)
+    .order('invoice_number', { ascending: false })
+    .limit(1);
+
+  if (error) throw error;
+
+  let nextSeq = 1;
+  if (data && data.length > 0) {
+    const lastNumber = data[0].invoice_number;
+    const match = lastNumber.match(/(\d+)$/);
+    if (match) {
+      const parsed = parseInt(match[1], 10);
+      if (!isNaN(parsed)) {
+        nextSeq = parsed + 1;
+      }
+    }
+  }
+
+  if (format === 'nitda') {
+    return `${prefix}${String(nextSeq).padStart(4, '0')}`;
+  }
+  return `${prefix}${String(nextSeq).padStart(4, '0')}`;
+};
+
+export const createInvoice = async (
+  invoice: Omit<Invoice, 'id' | 'invoiceNumber'>,
+  eInvoicingConfig?: EInvoicingConfig
+): Promise<Invoice> => {
+  const supabase = getSupabaseClient();
+  const invoiceNumber = await generateInvoiceNumber(invoice.organizationId, eInvoicingConfig);
   const newInvoice: Invoice = {
     ...invoice,
     id: crypto.randomUUID(),
@@ -939,7 +1004,8 @@ export const transferInvoiceOwnership = async (
   invoiceId: string,
   newClient: { name: string; email: string; company?: string; tin?: string },
   reason?: string,
-  newTotal?: number
+  newTotal?: number,
+  eInvoicingConfig?: EInvoicingConfig
 ): Promise<{ originalInvoice: Invoice; newInvoice: Invoice; transfer: InvoiceTransfer }> => {
   const supabase = getSupabaseClient();
 
@@ -957,13 +1023,7 @@ export const transferInvoiceOwnership = async (
   const nextSequence = (originalInvoice.transferSequence ?? 0) + 1;
   const finalTotal = newTotal ?? originalInvoice.total;
 
-  const { count, error: countError } = await supabase
-    .from('invoices')
-    .select('id', { count: 'exact', head: true })
-    .eq('organization_id', originalInvoice.organizationId);
-  if (countError) throw countError;
-
-  const newInvoiceNumber = `INV-${String((count || 0) + 1).padStart(4, '0')}`;
+  const newInvoiceNumber = await generateInvoiceNumber(originalInvoice.organizationId, eInvoicingConfig);
 
   const newInvoice: Invoice = {
     id: crypto.randomUUID(),

@@ -19,8 +19,8 @@ export const PRICING_PLANS: Record<string, PricingPlan> = {
         id: 'monthly',
         name: 'Monthly Plan',
         billingCycle: 'monthly',
-        pricePerMonth: 4.99,
-        priceTotal: 4.99,
+        pricePerMonth: 2,
+        priceTotal: 2,
         trialDays: 3,
         features: [
             'Unlimited invoices',
@@ -34,8 +34,8 @@ export const PRICING_PLANS: Record<string, PricingPlan> = {
         id: 'yearly',
         name: 'Yearly Plan',
         billingCycle: 'yearly',
-        pricePerMonth: 4.50,
-        priceTotal: 54, // $4.50 x 12 months
+        pricePerMonth: 1.67,
+        priceTotal: 20, // ~$1.67 x 12 months
         trialDays: 3,
         features: [
             'Unlimited invoices',
