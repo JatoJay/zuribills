@@ -13,10 +13,6 @@ interface BeforeInstallPromptEvent extends Event {
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-const isMobile = () => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-};
-
 const isStandalone = () => {
     return window.matchMedia('(display-mode: standalone)').matches ||
            (window.navigator as any).standalone === true;
