@@ -64,15 +64,15 @@ const InvoiceCreate: React.FC = () => {
     const [aiPrompt, setAiPrompt] = useState('');
     const [isAiLoading, setIsAiLoading] = useState(false);
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState(() => ({
         clientName: '',
         clientEmail: '',
         clientCompany: '',
         clientTin: '',
         dueDate: '',
         notes: '',
-        vatRate: 0,
-    });
+        vatRate: org?.vatRate ?? 0,
+    }));
 
     const [items, setItems] = useState<InvoiceItem[]>([]);
 
@@ -102,6 +102,12 @@ const InvoiceCreate: React.FC = () => {
             isActive = false;
         };
     }, [org?.id]);
+
+    useEffect(() => {
+        if (!isEditMode && org?.vatRate !== undefined) {
+            setFormData(prev => ({ ...prev, vatRate: org.vatRate ?? 0 }));
+        }
+    }, [org?.vatRate, isEditMode]);
 
     useEffect(() => {
         const state = location.state as any;
@@ -257,7 +263,7 @@ const InvoiceCreate: React.FC = () => {
                  date: original.date, // Keep creation date?
              });
         } else {
-             await createInvoice(invoiceData);
+             await createInvoice(invoiceData, org.eInvoicingConfig);
         }
         setLoading(false);
         navigate({ to: '/org/$slug/invoices', params: { slug: org.slug } });

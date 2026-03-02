@@ -49,6 +49,47 @@ export interface SubscriptionInfo {
   startedAt: string;
 }
 
+export type InvoiceNumberFormat = 'simple' | 'dated' | 'nitda' | 'custom';
+
+export interface EInvoicingConfig {
+  enabled: boolean;
+  country?: string;
+  invoiceNumberFormat: InvoiceNumberFormat;
+  invoiceNumberPrefix: string;
+  includeQrCode: boolean;
+  qrCodeFields: string[];
+  requireClientTin: boolean;
+  requireHsnCode: boolean;
+  showSellerTin: boolean;
+  digitalSignatureEnabled: boolean;
+  irnPrefix?: string;
+}
+
+export const DEFAULT_EINVOICING_CONFIG: EInvoicingConfig = {
+  enabled: false,
+  invoiceNumberFormat: 'dated',
+  invoiceNumberPrefix: 'INV',
+  includeQrCode: true,
+  qrCodeFields: ['invoiceNumber', 'date', 'total', 'sellerName'],
+  requireClientTin: false,
+  requireHsnCode: false,
+  showSellerTin: true,
+  digitalSignatureEnabled: false,
+};
+
+export const NIGERIA_EINVOICING_PRESET: Partial<EInvoicingConfig> = {
+  enabled: true,
+  country: 'NG',
+  invoiceNumberFormat: 'nitda',
+  invoiceNumberPrefix: 'INV',
+  includeQrCode: true,
+  qrCodeFields: ['invoiceNumber', 'date', 'sellerName', 'sellerTin', 'buyerName', 'buyerTin', 'total', 'vatAmount', 'currency'],
+  requireClientTin: true,
+  requireHsnCode: true,
+  showSellerTin: true,
+  digitalSignatureEnabled: false,
+};
+
 export interface Organization {
   id: string;
   accountId: string;
@@ -86,6 +127,7 @@ export interface Organization {
     momoAccountName?: string;
     platformFeePercent?: number;
   };
+  eInvoicingConfig?: EInvoicingConfig;
   trial?: TrialInfo;
   subscription?: SubscriptionInfo;
   createdAt: string;
@@ -97,6 +139,7 @@ export interface Client {
   name: string;
   email: string;
   company?: string;
+  tin?: string;
   phone?: string;
   address?: {
     street: string;
@@ -116,8 +159,10 @@ export interface Service {
   price: number;
   category: string;
   isActive: boolean;
-  depositRequirement?: number; // Percentage 0-100
+  depositRequirement?: number;
   imageUrl?: string;
+  hsnCode?: string;
+  sacCode?: string;
 }
 
 export enum InvoiceStatus {
@@ -129,11 +174,13 @@ export enum InvoiceStatus {
 
 export interface InvoiceItem {
   id: string;
-  serviceId?: string; // Optional if custom item
+  serviceId?: string;
   description: string;
   quantity: number;
   unitPrice: number;
   total: number;
+  hsnCode?: string;
+  sacCode?: string;
 }
 
 export interface OwnershipTransfer {

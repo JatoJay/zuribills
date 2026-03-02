@@ -742,9 +742,9 @@ export class AppController {
             await resend.emails.send({
                 from: fromEmail,
                 to: email,
-                subject: `Welcome to ${org.name} on InvoiceFlow`,
+                subject: `Welcome to ${org.name} on ZuriBills`,
                 text: `Hi ${name},\n\nYou've been added to ${org.name}. Log in with:\nEmail: ${email}\nPassword: ${defaultPassword}\n\n${appBaseUrl}/login`,
-                html: buildHtmlBody(`Hi ${name},\n\nYou've been added to ${org.name} on InvoiceFlow. \n\nYou can log in using the details below:\n\nEmail: ${email}\nPassword: <strong>${defaultPassword}</strong>\n\n<a href="${appBaseUrl}/login">Log in here</a>\n\nFor security, please change your password after your first login.`),
+                html: buildHtmlBody(`Hi ${name},\n\nYou've been added to ${org.name} on ZuriBills. \n\nYou can log in using the details below:\n\nEmail: ${email}\nPassword: <strong>${defaultPassword}</strong>\n\n<a href="${appBaseUrl}/login">Log in here</a>\n\nFor security, please change your password after your first login.`),
             });
         }
 
@@ -767,20 +767,20 @@ export class AppController {
 
         switch (type) {
             case 'welcome':
-                subject = 'Welcome to InvoiceFlow!';
-                body = `Hi ${data?.name || 'there'},\n\nWelcome to InvoiceFlow! Your account has been created successfully. You can now start managing your invoices and expenses.\n\nBest,\nThe InvoiceFlow Team`;
+                subject = 'Welcome to ZuriBills!';
+                body = `Hi ${data?.name || 'there'},\n\nWelcome to ZuriBills! Your account has been created successfully. You can now start managing your invoices and expenses.\n\nBest,\nThe ZuriBills Team`;
                 break;
             case 'login_alert':
                 subject = 'New Login to Your Account';
-                body = `Hello,\n\nWe detected a new login to your InvoiceFlow account on ${new Date().toLocaleString()}.\n\nIf this wasn't you, please reset your password immediately.\n\nBest,\nThe InvoiceFlow Team`;
+                body = `Hello,\n\nWe detected a new login to your ZuriBills account on ${new Date().toLocaleString()}.\n\nIf this wasn't you, please reset your password immediately.\n\nBest,\nThe ZuriBills Team`;
                 break;
             case 'password_reset':
                 subject = 'Password Reset Request';
-                body = `Hello,\n\nYou requested a password reset for your InvoiceFlow account. Click the link below to set a new password:\n\n${appBaseUrl}/login?reset_token=${data?.token}\n\nIf you didn't request this, you can safely ignore this email.\n\nBest,\nThe InvoiceFlow Team`;
+                body = `Hello,\n\nYou requested a password reset for your ZuriBills account. Click the link below to set a new password:\n\n${appBaseUrl}/login?reset_token=${data?.token}\n\nIf you didn't request this, you can safely ignore this email.\n\nBest,\nThe ZuriBills Team`;
                 break;
             case 'team_invite':
-                subject = `You've been added to ${data?.orgName || 'a workspace'} on InvoiceFlow`;
-                body = `Hi ${data?.name || 'there'},\n\n${data?.inviterName || 'An administrator'} has added you to the ${data?.orgName || 'workspace'} on InvoiceFlow.\n\nYou can log in using the details below:\n\nEmail: ${to}\nPassword: ${data?.password}\n\nLog in here: ${appBaseUrl}/login\n\nFor security, please change your password after your first login.\n\nBest,\nThe InvoiceFlow Team`;
+                subject = `You've been added to ${data?.orgName || 'a workspace'} on ZuriBills`;
+                body = `Hi ${data?.name || 'there'},\n\n${data?.inviterName || 'An administrator'} has added you to the ${data?.orgName || 'workspace'} on ZuriBills.\n\nYou can log in using the details below:\n\nEmail: ${to}\nPassword: ${data?.password}\n\nLog in here: ${appBaseUrl}/login\n\nFor security, please change your password after your first login.\n\nBest,\nThe ZuriBills Team`;
                 break;
             default:
                 return res.status(400).json({ error: 'Invalid email type.' });
@@ -1234,7 +1234,7 @@ export class AppController {
                 billing_type: 'subscription',
             },
             customizations: {
-                title: 'InvoiceFlow Subscription',
+                title: 'ZuriBills Subscription',
                 description: `${plan.label} plan`,
             },
         };

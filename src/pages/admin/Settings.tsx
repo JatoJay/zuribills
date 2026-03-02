@@ -1,16 +1,17 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Organization } from '@/types';
+import { Organization, EInvoicingConfig, DEFAULT_EINVOICING_CONFIG, NIGERIA_EINVOICING_PRESET, InvoiceNumberFormat } from '@/types';
 import { updateOrganization, rotateSecurityStamp, getCurrentUserId } from '@/services/storage';
 import { getSupabaseClient } from '@/services/supabaseClient';
 import { Button, Input, Card, Select } from '@/components/ui';
-import { Upload, ImageIcon, X, AlertCircle, ShieldAlert, MapPin } from 'lucide-react';
+import { Upload, ImageIcon, X, AlertCircle, ShieldAlert, MapPin, FileText } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 import { detectLocationLanguage } from '@/services/geolocation';
+import TwoFactorSetup from '@/components/TwoFactorSetup';
 
 const PLATFORM_FEE_PERCENT = 0.7;
 
@@ -39,6 +40,8 @@ const Settings: React.FC = () => {
         'Tax ID',
         'VAT Rate',
         'VAT rate applied to invoices (0-100%)',
+        'Nigeria VAT (7.5%)',
+        'No VAT',
         'Authorized Signatory',
         'Signatory Title',
         'Business Address',
@@ -80,6 +83,40 @@ const Settings: React.FC = () => {
         '94105',
         'USA',
         '+1 (555) 000-0000',
+        'E-Invoicing Compliance',
+        'Configure e-invoicing settings for regulatory compliance.',
+        'Enable E-Invoicing',
+        'Invoice Number Format',
+        'Simple (INV-0001)',
+        'Dated (INV-2502-0001)',
+        'NITDA (INV0001)',
+        'Invoice Prefix',
+        'Include QR Code',
+        'Show Seller TIN on Invoice',
+        'Require Client TIN',
+        'Require HSN/SAC Code',
+        'Apply Nigeria Preset',
+        'Reset to Default',
+        'QR Code Fields',
+        'Select which fields to include in the invoice QR code.',
+        'Two-Factor Authentication',
+        'Add an extra layer of security to your account.',
+        'Enabled',
+        'Disabled',
+        'Enable 2FA',
+        'Disable 2FA',
+        'Scan this QR code with your authenticator app',
+        'Or enter manually',
+        'Secret Key',
+        'Copied!',
+        'Enter the 6-digit code to verify',
+        'Verification Code',
+        'Verify',
+        'Cancel',
+        'Disable Two-Factor Authentication',
+        'You will need to set up 2FA again if you want to re-enable it.',
+        '2FA settings saved',
+        'Failed to update 2FA settings',
     ]), []);
     const { t, setLanguage } = useTranslation(translationStrings);
     const [loading, setLoading] = useState(false);
@@ -115,6 +152,7 @@ const Settings: React.FC = () => {
             provider: 'flutterwave',
             platformFeePercent: PLATFORM_FEE_PERCENT,
         },
+        eInvoicingConfig: { ...DEFAULT_EINVOICING_CONFIG },
         createdAt: ''
     });
 
@@ -125,6 +163,7 @@ const Settings: React.FC = () => {
                 provider: 'flutterwave',
                 platformFeePercent: PLATFORM_FEE_PERCENT,
             };
+            const eInvoicingConfig = org.eInvoicingConfig || { ...DEFAULT_EINVOICING_CONFIG };
             setFormData({
                 ...org,
                 catalogEnabled: org.catalogEnabled ?? false,
@@ -132,6 +171,7 @@ const Settings: React.FC = () => {
                 vatRate: org.vatRate ?? 0,
                 address: org.address || { street: '', city: '', state: '', zip: '', country: '' },
                 paymentConfig,
+                eInvoicingConfig,
             });
         }
     }, [org]);
@@ -164,6 +204,35 @@ const Settings: React.FC = () => {
                 ...(prev.address || {}),
                 [field]: value
             }
+        }));
+    };
+
+    const updateEInvoicing = <K extends keyof EInvoicingConfig>(field: K, value: EInvoicingConfig[K]) => {
+        setFormData(prev => ({
+            ...prev,
+            eInvoicingConfig: {
+                ...DEFAULT_EINVOICING_CONFIG,
+                ...(prev.eInvoicingConfig || {}),
+                [field]: value
+            }
+        }));
+    };
+
+    const applyNigeriaPreset = () => {
+        setFormData(prev => ({
+            ...prev,
+            vatRate: 7.5,
+            eInvoicingConfig: {
+                ...DEFAULT_EINVOICING_CONFIG,
+                ...NIGERIA_EINVOICING_PRESET,
+            } as EInvoicingConfig
+        }));
+    };
+
+    const resetEInvoicing = () => {
+        setFormData(prev => ({
+            ...prev,
+            eInvoicingConfig: { ...DEFAULT_EINVOICING_CONFIG }
         }));
     };
 
@@ -352,6 +421,22 @@ const Settings: React.FC = () => {
                                         setFormData({ ...formData, vatRate: Math.min(100, Math.max(0, value)) });
                                     }}
                                 />
+                                <div className="flex items-center gap-2 mt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, vatRate: 7.5 })}
+                                        className={`text-xs px-2 py-1 rounded border transition-colors ${formData.vatRate === 7.5 ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                                    >
+                                        {t('Nigeria VAT (7.5%)')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, vatRate: 0 })}
+                                        className={`text-xs px-2 py-1 rounded border transition-colors ${formData.vatRate === 0 ? 'bg-slate-100 border-slate-300 text-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                                    >
+                                        {t('No VAT')}
+                                    </button>
+                                </div>
                                 <p className="text-xs text-slate-500 mt-1">{t('VAT rate applied to invoices (0-100%)')}</p>
                             </div>
                         </div>
@@ -370,6 +455,112 @@ const Settings: React.FC = () => {
                                 value={formData.signatoryTitle || ''}
                                 onChange={e => setFormData({ ...formData, signatoryTitle: e.target.value })}
                             />
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                                    <FileText className="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-medium">{t('E-Invoicing Compliance')}</h3>
+                                    <p className="text-xs text-slate-500">{t('Configure e-invoicing settings for regulatory compliance.')}</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={applyNigeriaPreset}
+                                    className="text-xs px-3 py-1.5 rounded border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors"
+                                >
+                                    {t('Apply Nigeria Preset')}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={resetEInvoicing}
+                                    className="text-xs px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                                >
+                                    {t('Reset to Default')}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50">
+                                <div>
+                                    <div className="text-sm font-medium text-slate-900">{t('Enable E-Invoicing')}</div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={formData.eInvoicingConfig?.enabled ?? false}
+                                        onChange={(e) => updateEInvoicing('enabled', e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 rounded-full peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 peer-checked:bg-primary transition-colors" />
+                                    <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5" />
+                                </label>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <Select
+                                    label={t('Invoice Number Format')}
+                                    options={[
+                                        { label: t('Simple (INV-0001)'), value: 'simple' },
+                                        { label: t('Dated (INV-2502-0001)'), value: 'dated' },
+                                        { label: t('NITDA (INV0001)'), value: 'nitda' },
+                                    ]}
+                                    value={formData.eInvoicingConfig?.invoiceNumberFormat || 'dated'}
+                                    onChange={(e) => updateEInvoicing('invoiceNumberFormat', e.target.value as InvoiceNumberFormat)}
+                                />
+                                <Input
+                                    label={t('Invoice Prefix')}
+                                    placeholder="INV"
+                                    value={formData.eInvoicingConfig?.invoiceNumberPrefix || 'INV'}
+                                    onChange={(e) => updateEInvoicing('invoiceNumberPrefix', e.target.value.toUpperCase())}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <label className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.eInvoicingConfig?.includeQrCode ?? true}
+                                        onChange={(e) => updateEInvoicing('includeQrCode', e.target.checked)}
+                                        className="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
+                                    />
+                                    <span className="text-sm text-slate-700">{t('Include QR Code')}</span>
+                                </label>
+                                <label className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.eInvoicingConfig?.showSellerTin ?? true}
+                                        onChange={(e) => updateEInvoicing('showSellerTin', e.target.checked)}
+                                        className="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
+                                    />
+                                    <span className="text-sm text-slate-700">{t('Show Seller TIN on Invoice')}</span>
+                                </label>
+                                <label className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.eInvoicingConfig?.requireClientTin ?? false}
+                                        onChange={(e) => updateEInvoicing('requireClientTin', e.target.checked)}
+                                        className="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
+                                    />
+                                    <span className="text-sm text-slate-700">{t('Require Client TIN')}</span>
+                                </label>
+                                <label className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.eInvoicingConfig?.requireHsnCode ?? false}
+                                        onChange={(e) => updateEInvoicing('requireHsnCode', e.target.checked)}
+                                        className="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
+                                    />
+                                    <span className="text-sm text-slate-700">{t('Require HSN/SAC Code')}</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -543,6 +734,31 @@ const Settings: React.FC = () => {
                             >
                                 {t('Sign Out All Devices')}
                             </Button>
+                        </div>
+
+                        <div className="mt-6 p-4 rounded-lg border border-slate-200 bg-slate-50">
+                            <TwoFactorSetup
+                                translations={{
+                                    title: t('Two-Factor Authentication'),
+                                    description: t('Add an extra layer of security to your account.'),
+                                    enabled: t('Enabled'),
+                                    disabled: t('Disabled'),
+                                    enable: t('Enable 2FA'),
+                                    disable: t('Disable 2FA'),
+                                    scanQrCode: t('Scan this QR code with your authenticator app'),
+                                    orEnterManually: t('Or enter manually'),
+                                    secretKey: t('Secret Key'),
+                                    copied: t('Copied!'),
+                                    enterCode: t('Enter the 6-digit code to verify'),
+                                    verificationCode: t('Verification Code'),
+                                    verify: t('Verify'),
+                                    cancel: t('Cancel'),
+                                    confirmDisable: t('Disable Two-Factor Authentication'),
+                                    confirmDisableDesc: t('You will need to set up 2FA again if you want to re-enable it.'),
+                                    success: t('2FA settings saved'),
+                                    error: t('Failed to update 2FA settings'),
+                                }}
+                            />
                         </div>
                     </div>
 

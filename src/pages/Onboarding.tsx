@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input, Select } from '../components/ui';
-import { createAccount, createOrganization, ensureAuthUser, getAccountById, getOrganizationBySlug, setCurrentAccountId, setCurrentUserId } from '../services/storage';
+import { createAccount, createOrganization, ensureAuthUser, getAccountById, getOrganizationBySlug, getOrganizationsForUser, getUserByEmail, setCurrentAccountId, setCurrentUserId } from '../services/storage';
 import { UserRole } from '../types';
 import { Zap, ShieldCheck, Clock3, Sparkles, CheckCircle } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -189,12 +189,23 @@ const Onboarding: React.FC = () => {
         const checkAuth = async () => {
             const supabase = getSupabaseClient();
             const { data: { user } } = await supabase.auth.getUser();
-            
+
             if (user) {
                 const metadata = user.user_metadata || {};
                 const email = user.email || '';
                 const name = metadata.full_name || metadata.name || deriveOwnerName(email);
                 const picture = metadata.avatar_url || metadata.picture || '';
+
+                const existingUser = await getUserByEmail(email);
+                if (existingUser) {
+                    const orgs = await getOrganizationsForUser(existingUser.id, existingUser.accountId);
+                    if (orgs.length > 0) {
+                        setCurrentUserId(existingUser.id);
+                        setCurrentAccountId(existingUser.accountId);
+                        navigate({ to: `/${orgs[0].slug}/dashboard` });
+                        return;
+                    }
+                }
 
                 setGoogleProfile({
                     name,
@@ -408,7 +419,7 @@ const Onboarding: React.FC = () => {
                             <Zap className="w-4 h-4 text-primary" />
                         </div>
                         <span className="font-display text-lg font-semibold tracking-tight text-black">
-                            Invoice<span className="text-primary">Flow</span>
+                            Zuri<span className="text-primary">Bills</span>
                         </span>
                     </div>
                     <button

@@ -9,8 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SecurityRouteImport } from './routes/security'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DisclaimerRouteImport } from './routes/disclaimer'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrgSlugRouteImport } from './routes/org.$slug'
 import { Route as CatalogSlugRouteImport } from './routes/catalog.$slug'
@@ -32,6 +36,16 @@ import { Route as OrgSlugInvoicesCreateRouteImport } from './routes/org.$slug.in
 import { Route as CatalogSlugSuccessInvoiceIdRouteImport } from './routes/catalog.$slug.success.$invoiceId'
 import { Route as CatalogSlugInvoiceInvoiceIdRouteImport } from './routes/catalog.$slug.invoice.$invoiceId'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -40,6 +54,16 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DisclaimerRoute = DisclaimerRouteImport.update({
+  id: '/disclaimer',
+  path: '/disclaimer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -147,8 +171,12 @@ const CatalogSlugInvoiceInvoiceIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cookies': typeof CookiesRoute
+  '/disclaimer': typeof DisclaimerRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/security': typeof SecurityRoute
+  '/terms': typeof TermsRoute
   '/catalog/$slug': typeof CatalogSlugRouteWithChildren
   '/org/$slug': typeof OrgSlugRouteWithChildren
   '/catalog/$slug/checkout': typeof CatalogSlugCheckoutRoute
@@ -171,8 +199,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cookies': typeof CookiesRoute
+  '/disclaimer': typeof DisclaimerRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/security': typeof SecurityRoute
+  '/terms': typeof TermsRoute
   '/catalog/$slug/checkout': typeof CatalogSlugCheckoutRoute
   '/org/$slug/businesses': typeof OrgSlugBusinessesRoute
   '/org/$slug/clients': typeof OrgSlugClientsRoute
@@ -193,8 +225,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cookies': typeof CookiesRoute
+  '/disclaimer': typeof DisclaimerRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/security': typeof SecurityRoute
+  '/terms': typeof TermsRoute
   '/catalog/$slug': typeof CatalogSlugRouteWithChildren
   '/org/$slug': typeof OrgSlugRouteWithChildren
   '/catalog/$slug/checkout': typeof CatalogSlugCheckoutRoute
@@ -219,8 +255,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cookies'
+    | '/disclaimer'
     | '/login'
     | '/onboarding'
+    | '/security'
+    | '/terms'
     | '/catalog/$slug'
     | '/org/$slug'
     | '/catalog/$slug/checkout'
@@ -243,8 +283,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/cookies'
+    | '/disclaimer'
     | '/login'
     | '/onboarding'
+    | '/security'
+    | '/terms'
     | '/catalog/$slug/checkout'
     | '/org/$slug/businesses'
     | '/org/$slug/clients'
@@ -264,8 +308,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/cookies'
+    | '/disclaimer'
     | '/login'
     | '/onboarding'
+    | '/security'
+    | '/terms'
     | '/catalog/$slug'
     | '/org/$slug'
     | '/catalog/$slug/checkout'
@@ -289,14 +337,32 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CookiesRoute: typeof CookiesRoute
+  DisclaimerRoute: typeof DisclaimerRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  SecurityRoute: typeof SecurityRoute
+  TermsRoute: typeof TermsRoute
   CatalogSlugRoute: typeof CatalogSlugRouteWithChildren
   OrgSlugRoute: typeof OrgSlugRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -309,6 +375,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disclaimer': {
+      id: '/disclaimer'
+      path: '/disclaimer'
+      fullPath: '/disclaimer'
+      preLoaderRoute: typeof DisclaimerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -519,8 +599,12 @@ const OrgSlugRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CookiesRoute: CookiesRoute,
+  DisclaimerRoute: DisclaimerRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  SecurityRoute: SecurityRoute,
+  TermsRoute: TermsRoute,
   CatalogSlugRoute: CatalogSlugRouteWithChildren,
   OrgSlugRoute: OrgSlugRouteWithChildren,
 }

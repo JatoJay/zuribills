@@ -1,4 +1,4 @@
-# Ogasir
+# Zuribills
 One canvas for services, expenses, pricing, checkout, and follow-ups. 
 Take full control of your business with Ogasir; share a beautiful catalog, get paid faster, and file taxes with clean inflow/outflow reports.
 
