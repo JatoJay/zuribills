@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams } from '@tanstack/react-router';
-import { Invoice, Organization, InvoiceStatus } from '@/types';
+import { Invoice, Organization, InvoiceStatus, DEFAULT_EINVOICING_CONFIG } from '@/types';
 import { getOrganizationBySlug, getInvoices } from '@/services/storage';
 import { apiFetch } from '@/services/apiClient';
 import { Button, formatCurrency, Badge, Card, Input } from '@/components/ui';
@@ -8,12 +8,19 @@ import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, 
 import { processPayment } from '@/services/paymentService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { resolvePayoutProvider } from '@/services/paymentRouting';
+import { QRCodeSVG } from 'qrcode.react';
 
 const PAYMENT_PROVIDER_DETAILS = {
     name: 'Secure Payment',
     icon: CreditCard,
     description: 'Pay via Card, Bank or Mobile Money',
     color: 'bg-orange-500',
+};
+
+const generateInvoiceQRData = (invoice: Invoice, org: Organization): string => {
+    const baseUrl = window.location.origin;
+    const invoiceUrl = `${baseUrl}/catalog/${org.slug}/invoice/${invoice.id}`;
+    return invoiceUrl;
 };
 
 const PENDING_PAYMENT_KEY = 'invoiceflow_pending_payment';
@@ -66,6 +73,7 @@ const InvoiceView: React.FC = () => {
         'Transfer Date',
         'Transfer Reason',
         'TIN:',
+        'Scan to verify',
     ]), []);
     const { t } = useTranslation(translationStrings);
     const [data, setData] = useState<{ invoice: Invoice, org: Organization } | null>(null);
@@ -307,9 +315,10 @@ const InvoiceView: React.FC = () => {
 
     const { invoice, org } = data;
     const paymentConfig = org.paymentConfig;
-    const paymentProvider = paymentConfig?.bankCountry
+    const _paymentProvider = paymentConfig?.bankCountry
         ? resolvePayoutProvider(paymentConfig.bankCountry)
         : (paymentConfig?.provider || 'flutterwave');
+    void _paymentProvider;
     const paymentsEnabled = Boolean(
         paymentConfig?.enabled
         && (
@@ -403,6 +412,9 @@ const InvoiceView: React.FC = () => {
                                         {org.address.country && <p>{org.address.country}</p>}
                                     </div>
                                 )}
+                                {org.taxId && (org.eInvoicingConfig?.showSellerTin ?? DEFAULT_EINVOICING_CONFIG.showSellerTin) && (
+                                    <p className="mt-1">{t('TIN:')} {org.taxId}</p>
+                                )}
                                 <p className="mt-2 text-xs uppercase tracking-wide text-slate-400">{t('Bill From')}</p>
                             </div>
                         </div>
@@ -412,6 +424,20 @@ const InvoiceView: React.FC = () => {
                             <div className="mt-2">
                                 <Badge status={invoice.status} />
                             </div>
+                            {(org.eInvoicingConfig?.includeQrCode ?? DEFAULT_EINVOICING_CONFIG.includeQrCode) && (
+                                <>
+                                    <div className="mt-4 flex justify-end">
+                                        <div className="p-2 bg-white border border-slate-200 rounded-lg">
+                                            <QRCodeSVG
+                                                value={generateInvoiceQRData(invoice, org)}
+                                                size={80}
+                                                level="M"
+                                            />
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-1">{t('Scan to verify')}</p>
+                                </>
+                            )}
                         </div>
                     </div>
 

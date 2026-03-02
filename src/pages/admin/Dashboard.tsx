@@ -153,61 +153,61 @@ const Dashboard: React.FC = () => {
 
             {/* Key Metrics Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6">
-                <Card className="p-4 md:p-6 relative overflow-hidden bg-surface border-border">
+                <Card interactive className="p-4 md:p-6 relative overflow-hidden group hover-glow">
                     <div className="flex items-center justify-between z-10 relative">
                         <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Total Revenue')}</p>
                             <h3 className="text-2xl font-bold mt-1 tracking-tight text-foreground">{formatMoney(totalRevenue)}</h3>
                         </div>
-                        <div className="shrink-0 p-3 bg-green-500/10 rounded-xl text-green-500">
+                        <div className="shrink-0 p-3 bg-green-500/10 rounded-xl text-green-500 group-hover:scale-110 transition-transform duration-300">
                             <DollarSign className="w-5 h-5" />
                         </div>
                     </div>
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-green-500/5 rounded-full z-0 pointer-events-none" />
+                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-green-500/5 rounded-full z-0 pointer-events-none group-hover:scale-125 transition-transform duration-500" />
                 </Card>
 
-                <Card className="p-4 md:p-6 relative overflow-hidden bg-surface border-border">
+                <Card interactive className="p-4 md:p-6 relative overflow-hidden group hover-glow">
                     <div className="flex items-center justify-between z-10 relative">
                         <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Outstanding')}</p>
                             <h3 className="text-2xl font-bold mt-1 tracking-tight text-foreground">{formatMoney(pendingAmount)}</h3>
                         </div>
-                        <div className="shrink-0 p-3 bg-orange-500/10 rounded-xl text-orange-500">
+                        <div className="shrink-0 p-3 bg-orange-500/10 rounded-xl text-orange-500 group-hover:scale-110 transition-transform duration-300">
                             <AlertCircle className="w-5 h-5" />
                         </div>
                     </div>
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-orange-500/5 rounded-full z-0 pointer-events-none" />
+                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-orange-500/5 rounded-full z-0 pointer-events-none group-hover:scale-125 transition-transform duration-500" />
                 </Card>
 
-                <Card className="p-4 md:p-6 relative overflow-hidden bg-surface border-border">
+                <Card interactive className="p-4 md:p-6 relative overflow-hidden group hover-glow">
                     <div className="flex items-center justify-between z-10 relative">
                         <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Payment Rate')}</p>
                             <h3 className="text-2xl font-bold mt-1 tracking-tight text-foreground">{paymentRate}%</h3>
                         </div>
-                        <div className="shrink-0 p-3 bg-blue-500/10 rounded-xl text-blue-500">
+                        <div className="shrink-0 p-3 bg-blue-500/10 rounded-xl text-blue-500 group-hover:scale-110 transition-transform duration-300">
                             <Activity className="w-5 h-5" />
                         </div>
                     </div>
                     <div className="w-full bg-surface/50 h-1.5 mt-4 rounded-full overflow-hidden">
-                        <div className="bg-blue-500 h-full rounded-full transition-all duration-1000" style={{ width: `${paymentRate}%` }}></div>
+                        <div className="bg-blue-500 h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${paymentRate}%` }}></div>
                     </div>
                 </Card>
 
-                <Card className="p-4 md:p-6 relative overflow-hidden bg-surface border-border">
+                <Card interactive className="p-4 md:p-6 relative overflow-hidden group hover-glow">
                     <div className="flex items-center justify-between z-10 relative">
                         <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Avg. Invoice')}</p>
                             <h3 className="text-2xl font-bold mt-1 tracking-tight text-foreground">{formatMoney(averageValue)}</h3>
                         </div>
-                        <div className="shrink-0 p-3 bg-purple-500/10 rounded-xl text-purple-500">
+                        <div className="shrink-0 p-3 bg-purple-500/10 rounded-xl text-purple-500 group-hover:scale-110 transition-transform duration-300">
                             <TrendingUp className="w-5 h-5" />
                         </div>
                     </div>
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-purple-500/5 rounded-full z-0 pointer-events-none" />
+                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-purple-500/5 rounded-full z-0 pointer-events-none group-hover:scale-125 transition-transform duration-500" />
                 </Card>
 
-                <Card className="p-4 md:p-6 relative overflow-hidden bg-surface border-border">
+                <Card interactive className="p-4 md:p-6 relative overflow-hidden group hover-glow">
                     <div className="flex items-center justify-between z-10 relative">
                         <div className="min-w-0 pr-2">
                             <p className="text-sm text-muted font-medium">{t('Expenses (Paid)')}</p>
@@ -216,11 +216,11 @@ const Dashboard: React.FC = () => {
                                 {t('Outstanding:')} <span className="text-foreground font-semibold">{formatMoney(outstandingExpenses)}</span>
                             </p>
                         </div>
-                        <div className="shrink-0 p-3 bg-primary/10 rounded-xl text-primary">
+                        <div className="shrink-0 p-3 bg-primary/10 rounded-xl text-primary group-hover:scale-110 transition-transform duration-300">
                             <Wallet className="w-5 h-5" />
                         </div>
                     </div>
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-primary/5 rounded-full z-0 pointer-events-none" />
+                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-primary/5 rounded-full z-0 pointer-events-none group-hover:scale-125 transition-transform duration-500" />
                     <div className="mt-4">
                         <Link
                             to="/org/$slug/expenses"

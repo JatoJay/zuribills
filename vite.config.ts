@@ -18,9 +18,9 @@ export default defineConfig({
                 'icons/icon-512-maskable.png',
             ],
             manifest: {
-                name: 'InvoiceFlow',
-                short_name: 'InvoiceFlow',
-                description: 'InvoiceFlow helps businesses create, send, and track invoices fast.',
+                name: 'ZuriBills',
+                short_name: 'ZuriBills',
+                description: 'ZuriBills helps businesses create, send, and track invoices fast.',
                 start_url: '/',
                 scope: '/',
                 display: 'standalone',
@@ -100,6 +100,7 @@ export default defineConfig({
     },
     server: {
         port: 3004,
+        allowedHosts: ['.trycloudflare.com'],
         proxy: {
             '/api': {
                 target: 'http://localhost:8787',

@@ -13,6 +13,8 @@ import {
   setCurrentAccountId,
   setCurrentUserId,
 } from '@/services/storage';
+import { requiresMFAVerification } from '@/services/mfaService';
+import TwoFactorVerify from '@/components/TwoFactorVerify';
 import { UserRole } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { ArrowRight, Building2, ShieldCheck, Sparkles, Eye, EyeOff } from 'lucide-react';
@@ -27,6 +29,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [mfaRequired, setMfaRequired] = useState<{ factorId: string; pendingEmail: string } | null>(null);
 
   const translationStrings = useMemo(() => ([
     'Welcome back',
@@ -71,6 +74,13 @@ const Login: React.FC = () => {
     'Workspace not found for that slug.',
     'You do not have access to that workspace.',
     'Finish setup',
+    'Two-Factor Authentication',
+    'Enter the 6-digit code from your authenticator app',
+    'Verification Code',
+    'Verify',
+    'Cancel',
+    'Verification failed',
+    'Invalid code. Please try again.',
   ]), []);
   const { t } = useTranslation(translationStrings);
 
@@ -94,6 +104,80 @@ const Login: React.FC = () => {
     setMessage(null);
   };
 
+  const completeLoginAfterMFA = async (userEmail: string) => {
+    setLoading(true);
+    try {
+      fetch('/api/email/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: userEmail, type: 'login_alert' }),
+      }).catch(console.error);
+
+      const userRecord = await getUserByEmail(userEmail);
+      if (!userRecord) {
+        navigate({ to: '/onboarding', search: { email: userEmail } as any });
+        return;
+      }
+
+      setCurrentUserId(userRecord.id);
+      setCurrentAccountId(userRecord.accountId);
+
+      let destinationSlug = slug.trim();
+      if (destinationSlug) {
+        const org = await getOrganizationBySlug(destinationSlug);
+        if (!org) {
+          setMessage({ type: 'error', text: t('Workspace not found for that slug.') });
+          return;
+        }
+        const memberships = await getOrgMemberships(org.id);
+        const hasAccess = memberships.some((membership) => membership.userId === userRecord.id);
+        if (!hasAccess) {
+          const isAccountOwner = org.accountId
+            && userRecord.accountId === org.accountId
+            && [UserRole.OWNER, UserRole.ADMIN].includes(userRecord.role);
+          if (!isAccountOwner) {
+            setMessage({ type: 'error', text: t('You do not have access to that workspace.') });
+            return;
+          }
+
+          try {
+            await upsertOrgMembership({
+              organizationId: org.id,
+              userId: userRecord.id,
+              role: userRecord.role,
+              permissions: userRecord.permissions?.length ? userRecord.permissions : ['ALL'],
+            });
+          } catch (error) {
+            console.error('Failed to restore org membership', error);
+            setMessage({ type: 'error', text: t('You do not have access to that workspace.') });
+            return;
+          }
+        }
+      } else {
+        const orgs = await getOrganizationsForUser(userRecord.id, userRecord.accountId);
+        if (!orgs.length && [UserRole.OWNER, UserRole.ADMIN].includes(userRecord.role)) {
+          const accountOrgs = await getOrganizationsByAccount(userRecord.accountId);
+          if (accountOrgs.length) {
+            destinationSlug = accountOrgs[0].slug;
+          }
+        } else if (orgs.length) {
+          destinationSlug = orgs[0].slug;
+        }
+
+        if (!destinationSlug) {
+          navigate({ to: '/onboarding', search: { email: userEmail } as any });
+          return;
+        }
+      }
+
+      navigate({ to: '/org/$slug', params: { slug: destinationSlug } });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error?.message || t('Authentication failed. Please try again.') });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSignIn = async () => {
     resetState();
     if (!email.trim() || !password) {
@@ -111,6 +195,13 @@ const Login: React.FC = () => {
       });
       if (error) {
         setMessage({ type: 'error', text: error.message || t('Authentication failed. Please try again.') });
+        return;
+      }
+
+      const mfaCheck = await requiresMFAVerification();
+      if (mfaCheck.required && mfaCheck.factorId) {
+        setMfaRequired({ factorId: mfaCheck.factorId, pendingEmail: normalizedEmail });
+        setLoading(false);
         return;
       }
 
@@ -315,6 +406,29 @@ const Login: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
+      {mfaRequired && (
+        <TwoFactorVerify
+          factorId={mfaRequired.factorId}
+          onSuccess={() => {
+            const pendingEmail = mfaRequired.pendingEmail;
+            setMfaRequired(null);
+            completeLoginAfterMFA(pendingEmail);
+          }}
+          onCancel={() => {
+            setMfaRequired(null);
+            getSupabaseClient().auth.signOut();
+          }}
+          translations={{
+            title: t('Two-Factor Authentication'),
+            description: t('Enter the 6-digit code from your authenticator app'),
+            verificationCode: t('Verification Code'),
+            verify: t('Verify'),
+            cancel: t('Cancel'),
+            error: t('Verification failed'),
+            invalidCode: t('Invalid code. Please try again.'),
+          }}
+        />
+      )}
       <div className="absolute inset-0 bg-grid opacity-30" />
       <div className="absolute -top-32 right-[-10%] w-[420px] h-[420px] bg-primary/20 blur-[140px]" />
       <div className="absolute bottom-0 left-[-5%] w-[360px] h-[360px] bg-foreground/10 blur-[140px]" />
