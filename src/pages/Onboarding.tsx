@@ -129,6 +129,7 @@ const Onboarding: React.FC = () => {
         'We will set your currency automatically.',
         'Please select a country.',
         'Please enter your business name and contact email.',
+        'Please sign in with Google above to continue',
         'Loading countries...',
         'Slug might already exist or invalid data.',
         'Translating...',
@@ -629,9 +630,20 @@ const Onboarding: React.FC = () => {
                                     )}
                                 </div>
 
-                                <Button type="submit" className="w-full h-12 text-base" isLoading={loading}>
+                                <Button
+                                    type="submit"
+                                    className="w-full h-12 text-base"
+                                    isLoading={loading}
+                                    disabled={!googleProfile && showGoogleButton}
+                                >
                                     {t('Create & Launch Dashboard')}
                                 </Button>
+
+                                {!googleProfile && showGoogleButton && (
+                                    <p className="text-xs text-center text-amber-600 mt-2">
+                                        {t('Please sign in with Google above to continue')}
+                                    </p>
+                                )}
 
                                 <p className="text-xs text-center text-slate-500">
                                     {t('By signing up, you agree to our Terms of Service and Privacy Policy.')}
