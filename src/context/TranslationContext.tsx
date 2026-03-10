@@ -85,26 +85,33 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (isEnglish) return;
         const normalized = normalizeLanguage(language);
         const uniqueStrings = Array.from(new Set(strings.filter(Boolean)));
-        const missing = uniqueStrings.filter((item) => !translations[item]);
-        if (!missing.length) return;
 
-        setIsTranslating(true);
-        try {
-            const translated = await translateBatch(missing, normalized);
-            setTranslations((prev) => {
-                const merged = { ...prev };
-                missing.forEach((item, index) => {
-                    merged[item] = translated[index] || item;
+        setTranslations((currentTranslations) => {
+            const missing = uniqueStrings.filter((item) => !currentTranslations[item]);
+            if (!missing.length) return currentTranslations;
+
+            setIsTranslating(true);
+            translateBatch(missing, normalized)
+                .then((translated) => {
+                    setTranslations((prev) => {
+                        const merged = { ...prev };
+                        missing.forEach((item, index) => {
+                            merged[item] = translated[index] || item;
+                        });
+                        localStorage.setItem(`${CACHE_PREFIX}${normalized.toLowerCase()}`, JSON.stringify(merged));
+                        return merged;
+                    });
+                })
+                .catch((error) => {
+                    console.error('Translation batch failed', error);
+                })
+                .finally(() => {
+                    setIsTranslating(false);
                 });
-                localStorage.setItem(`${CACHE_PREFIX}${normalized.toLowerCase()}`, JSON.stringify(merged));
-                return merged;
-            });
-        } catch (error) {
-            console.error('Translation batch failed', error);
-        } finally {
-            setIsTranslating(false);
-        }
-    }, [isEnglish, language, translations]);
+
+            return currentTranslations;
+        });
+    }, [isEnglish, language]);
 
     const value = useMemo(() => ({
         language: normalizedLanguage,
