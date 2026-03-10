@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Button, Input, Select } from '../components/ui';
 import { createAccount, createOrganization, ensureAuthUser, getAccountById, getOrganizationBySlug, getOrganizationsForUser, getUserByEmail, setCurrentAccountId, setCurrentUserId } from '../services/storage';
 import { UserRole } from '../types';
-import { Zap, ShieldCheck, Clock3, Sparkles, CheckCircle } from 'lucide-react';
+import { ShieldCheck, Clock3, Sparkles, CheckCircle } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePrompt } from '@/context/PromptContext';
 import { resolveDefaultCurrency, resolvePayoutProvider } from '@/services/paymentRouting';
@@ -415,9 +415,7 @@ const Onboarding: React.FC = () => {
             <header className="relative z-20 border-b border-slate-200/70 bg-white/90 backdrop-blur">
                 <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center shadow-sm">
-                            <Zap className="w-4 h-4 text-primary" />
-                        </div>
+                        <img src="/logo.svg" alt="ZuriBills" className="w-10 h-10" />
                         <span className="font-display text-lg font-semibold tracking-tight text-black">
                             Zuri<span className="text-primary">Bills</span>
                         </span>

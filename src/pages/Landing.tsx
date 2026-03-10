@@ -215,9 +215,7 @@ const NavBar: React.FC<{
             className="flex items-center gap-3 cursor-pointer"
             onClick={() => navigate({ to: '/' })}
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 text-white flex items-center justify-center shadow-lg shadow-primary/25">
-              <Zap className="w-4 h-4" />
-            </div>
+            <img src="/logo.svg" alt="ZuriBills" className="w-9 h-9" />
             <span className="font-display text-lg font-semibold tracking-tight">
               <span className="text-black">Zuri</span><span className="text-primary">Bills</span>
             </span>
@@ -1613,9 +1611,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
             {/* Top Integrated Header Row */}
             <div className="py-12 flex flex-col md:flex-row justify-between items-center gap-6 text-left">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-[6px] bg-white flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-black fill-current" />
-                </div>
+                <img src="/logo.svg" alt="ZuriBills" className="w-7 h-7" />
                 <span className="font-display font-bold text-xl tracking-tight text-white">ZuriBills</span>
               </div>
               <div className="text-[11px] uppercase tracking-[0.2em] text-white/40 font-semibold">
