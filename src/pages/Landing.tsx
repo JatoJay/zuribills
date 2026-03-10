@@ -256,7 +256,7 @@ const NavBar: React.FC<{
               {t('Sign in')}
             </button>
             <Button
-              onClick={() => navigate({ to: '/onboarding' })}
+              onClick={() => navigate({ to: '/signup' })}
               className="px-5"
             >
               {t('Start free')}
@@ -899,7 +899,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
 
   const handleSelectPlan = (planId: string) => {
     navigate({
-      to: '/onboarding',
+      to: '/signup',
       search: { plan: planId } as any
     });
   };
@@ -1195,7 +1195,7 @@ const Landing: React.FC = () => {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <Button onClick={() => navigate({ to: '/onboarding' })} className="px-8 h-12 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300">
+              <Button onClick={() => navigate({ to: '/signup' })} className="px-8 h-12 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300">
                 {t('Start free')}
               </Button>
               <Button variant="outline" className="px-8 h-12 text-base hover:bg-slate-900 hover:text-white hover:border-slate-900 hover:scale-[1.02] transition-all duration-300">
@@ -1230,7 +1230,7 @@ const Landing: React.FC = () => {
               <div className="mt-3 text-xs text-muted flex justify-between">
                 <span>
                   {t('New here?')}{' '}
-                  <button onClick={() => navigate({ to: '/onboarding' })} className="text-foreground underline decoration-primary/60 underline-offset-4">
+                  <button onClick={() => navigate({ to: '/signup' })} className="text-foreground underline decoration-primary/60 underline-offset-4">
                     {t('Create workspace')}
                   </button>
                 </span>
@@ -1576,7 +1576,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
             </h2>
             <div className="flex flex-col sm:flex-row flex-wrap gap-4">
               <Button
-                onClick={() => navigate({ to: '/onboarding' })}
+                onClick={() => navigate({ to: '/signup' })}
                 className="h-14 px-10 rounded-full bg-primary text-[#0b0b0b] font-bold text-base hover:bg-primary/90 hover:scale-[1.03] transition-all duration-300 border-none shadow-xl shadow-primary/30"
               >
                 {t('Start free — no credit card')}
@@ -1637,7 +1637,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
                     <div>
                       <h4 className="text-[10px] uppercase tracking-[0.3em] text-white/25 font-black mb-6">Get Started</h4>
                       <ul className="space-y-4 text-[15px] font-semibold text-white/60">
-                        <li><button onClick={() => navigate({ to: '/onboarding' })} className="hover:text-white transition-colors">Create an account</button></li>
+                        <li><button onClick={() => navigate({ to: '/signup' })} className="hover:text-white transition-colors">Create an account</button></li>
                         <li><button onClick={() => navigate({ to: '/login' })} className="hover:text-white transition-colors">Sign in</button></li>
                       </ul>
                     </div>

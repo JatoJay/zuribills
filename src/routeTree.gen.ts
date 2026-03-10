@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
@@ -39,6 +40,11 @@ import { Route as CatalogSlugInvoiceInvoiceIdRouteImport } from './routes/catalo
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SecurityRoute = SecurityRouteImport.update({
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/security': typeof SecurityRoute
+  '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/catalog/$slug': typeof CatalogSlugRouteWithChildren
   '/org/$slug': typeof OrgSlugRouteWithChildren
@@ -204,6 +211,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/security': typeof SecurityRoute
+  '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/catalog/$slug/checkout': typeof CatalogSlugCheckoutRoute
   '/org/$slug/businesses': typeof OrgSlugBusinessesRoute
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/security': typeof SecurityRoute
+  '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/catalog/$slug': typeof CatalogSlugRouteWithChildren
   '/org/$slug': typeof OrgSlugRouteWithChildren
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/security'
+    | '/signup'
     | '/terms'
     | '/catalog/$slug'
     | '/org/$slug'
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/security'
+    | '/signup'
     | '/terms'
     | '/catalog/$slug/checkout'
     | '/org/$slug/businesses'
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/security'
+    | '/signup'
     | '/terms'
     | '/catalog/$slug'
     | '/org/$slug'
@@ -342,6 +354,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   SecurityRoute: typeof SecurityRoute
+  SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   CatalogSlugRoute: typeof CatalogSlugRouteWithChildren
   OrgSlugRoute: typeof OrgSlugRouteWithChildren
@@ -354,6 +367,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/security': {
@@ -604,6 +624,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   SecurityRoute: SecurityRoute,
+  SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   CatalogSlugRoute: CatalogSlugRouteWithChildren,
   OrgSlugRoute: OrgSlugRouteWithChildren,

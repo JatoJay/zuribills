@@ -620,7 +620,7 @@ const Login: React.FC = () => {
                   <span>
                     {t('Need an account?')}{' '}
                     <a
-                      href="/onboarding"
+                      href="/signup"
                       className="text-foreground underline decoration-primary/60 underline-offset-4"
                     >
                       {t('Create account')}
