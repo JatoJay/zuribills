@@ -1117,7 +1117,13 @@ const Landing: React.FC = () => {
     'Learn more',
     'Get started'
   ]), []);
-  const { t, language, setLanguage } = useTranslation(translationStrings);
+  const { t, language, setLanguage, isTranslating } = useTranslation(translationStrings);
+  const [, forceUpdate] = useState(0);
+
+  useEffect(() => {
+    forceUpdate(n => n + 1);
+  }, [language, isTranslating]);
+
   const languageOptions = useMemo(() => {
     if (SUPPORTED_LANGUAGES.includes(language)) {
       return SUPPORTED_LANGUAGES;
