@@ -1,5 +1,6 @@
 import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { lazy, Suspense } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { TranslationProvider } from '@/context/TranslationContext'
 import { PromptProvider } from '@/context/PromptContext'
@@ -18,6 +19,7 @@ export const Route = createRootRoute({
             <TranslationProvider>
                 <PromptProvider>
                     <Outlet />
+                    <Analytics />
                     {import.meta.env.DEV && (
                         <Suspense>
                             <div className="print:hidden">
