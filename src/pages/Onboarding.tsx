@@ -383,8 +383,10 @@ const Onboarding: React.FC = () => {
                 },
             });
             navigate({ to: `/org/${slug}` });
-        } catch (err) {
-            prompt.alert({ message: t('Slug might already exist or invalid data.'), type: 'error' });
+        } catch (err: any) {
+            console.error('Organization creation failed:', err);
+            const errorMessage = err?.message || t('Slug might already exist or invalid data.');
+            prompt.alert({ message: errorMessage, type: 'error' });
         } finally {
             setLoading(false);
         }
