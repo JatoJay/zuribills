@@ -1384,7 +1384,7 @@ export const seedDatabase = async () => {
     },
     paymentConfig: {
       enabled: false,
-      provider: 'stripe',
+      provider: 'stripe' as const,
       bankCountry: 'US',
       platformFeePercent: 0.7,
     },

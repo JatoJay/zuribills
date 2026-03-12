@@ -116,15 +116,15 @@ export interface Organization {
   };
   paymentConfig?: {
     enabled: boolean;
-    provider: 'flutterwave' | 'stripe' | 'momo';
-    accountId?: string; // Flutterwave subaccount or Stripe account id
+    provider: 'dusupay' | 'stripe';
+    accountId?: string;
     bankName?: string;
     bankCode?: string;
     bankCountry?: string;
     accountName?: string;
     accountNumberLast4?: string;
-    momoMsisdn?: string;
-    momoAccountName?: string;
+    mobileNumber?: string;
+    mobileNetwork?: string;
     platformFeePercent?: number;
   };
   eInvoicingConfig?: EInvoicingConfig;

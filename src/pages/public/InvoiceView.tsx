@@ -58,7 +58,7 @@ const InvoiceView: React.FC = () => {
         'Close',
         'Try Again',
         'Secured with 256-bit SSL encryption',
-        'Processed by Flutterwave',
+        'Processed securely',
         'Payments unavailable',
         'This business needs to connect a payout account before it can accept payments.',
         'Redirecting to secure checkout...',
@@ -150,12 +150,12 @@ const InvoiceView: React.FC = () => {
         localStorage.removeItem(PENDING_PAYMENT_KEY);
     };
 
-    const persistPendingPayment = (reference: string) => {
+    const persistPendingPayment = (reference: string, provider: string) => {
         if (!data) return;
         localStorage.setItem(PENDING_PAYMENT_KEY, JSON.stringify({
             invoiceId: data.invoice.id,
             reference,
-            provider: 'flutterwave',
+            provider,
         }));
     };
 
@@ -255,19 +255,20 @@ const InvoiceView: React.FC = () => {
         setErrorMessage('');
         setPaymentStatus('redirecting');
 
-        const result = await processPayment('flutterwave', {
+        const countryCode = data.org.paymentConfig?.bankCountry || data.org.address?.country;
+        const result = await processPayment({
             invoiceId: data.invoice.id,
             amount: data.invoice.total,
             currency: data.org.currency,
             customerEmail: data.invoice.clientEmail,
             customerName: data.invoice.clientName,
+            customerPhone: momoPhone.trim(),
             description: `Payment for Invoice ${data.invoice.invoiceNumber}`,
-            payerPhone: momoPhone.trim(),
-            payerNetwork: momoNetwork,
-        } as any);
+            countryCode,
+        });
 
         if (result.reference) {
-            persistPendingPayment(result.reference);
+            persistPendingPayment(result.reference, result.provider || 'stripe');
         }
 
         if (result.redirectUrl && !requiresPhone) {
@@ -317,13 +318,13 @@ const InvoiceView: React.FC = () => {
     const paymentConfig = org.paymentConfig;
     const _paymentProvider = paymentConfig?.bankCountry
         ? resolvePayoutProvider(paymentConfig.bankCountry)
-        : (paymentConfig?.provider || 'flutterwave');
+        : (paymentConfig?.provider || 'stripe');
     void _paymentProvider;
     const paymentsEnabled = Boolean(
         paymentConfig?.enabled
         && (
             paymentConfig?.accountId
-            || paymentConfig?.momoMsisdn
+            || paymentConfig?.mobileNumber
         )
     );
     const requiresPhone = false;

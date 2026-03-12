@@ -1,48 +1,50 @@
 /**
  * Payment Gateway Service
- * Uses Flutterwave for payment initialization.
+ * Uses DusuPay for African payments and Stripe for international payments.
  */
 
 import { getSupabaseClient } from './supabaseClient';
 import { apiFetch } from './apiClient';
+import { isDusupayRegion } from './paymentRouting';
 
-// Types
 export interface PaymentConfig {
     invoiceId: string;
     amount: number;
     currency: string;
     customerEmail: string;
     customerName: string;
+    customerPhone?: string;
     description: string;
     metadata?: Record<string, string>;
-    payerPhone?: string;
-    payerNetwork?: string;
+    countryCode?: string;
 }
 
 export interface PaymentResult {
     success: boolean;
     reference?: string;
-    referenceType?: 'id' | 'tx_ref';
-    txRef?: string;
     redirectUrl?: string;
     error?: string;
+    provider?: 'dusupay' | 'stripe';
 }
 
-export interface FlutterwaveBank {
+export interface BankInfo {
     code: string;
     name: string;
 }
 
-export interface FlutterwavePayoutPayload {
+export interface PayoutAccountPayload {
     orgId: string;
-    bankCode: string;
+    provider: 'dusupay' | 'stripe';
+    bankCode?: string;
     bankName?: string;
     accountNumber: string;
     accountName: string;
     bankCountry: string;
+    mobileNetwork?: string;
+    mobileNumber?: string;
 }
 
-export interface FlutterwavePayoutResult {
+export interface PayoutAccountResult {
     success: boolean;
     accountId?: string;
     bankName?: string;
@@ -58,8 +60,7 @@ export interface ProviderRateResult {
     source?: string;
 }
 
-export type PaymentGateway = 'flutterwave';
-
+export type PaymentGateway = 'dusupay' | 'stripe';
 
 const getAccessToken = async (): Promise<string | null> => {
     const supabase = getSupabaseClient();
@@ -67,19 +68,21 @@ const getAccessToken = async (): Promise<string | null> => {
     return data.session?.access_token || null;
 };
 
-// ============================================
-// FLUTTERWAVE PAYMENT INITIALIZATION
-// ============================================
-
-export const initFlutterwavePayment = async (
+export const initDusupayPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
-        const response = await apiFetch('/api/payments/flutterwave/initialize', {
+        const response = await apiFetch('/api/payments/dusupay/initialize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 invoiceId: config.invoiceId,
+                amount: config.amount,
+                currency: config.currency,
+                email: config.customerEmail,
+                name: config.customerName,
+                phone: config.customerPhone,
+                description: config.description,
             }),
         });
 
@@ -92,28 +95,61 @@ export const initFlutterwavePayment = async (
         return {
             success: true,
             reference: data.reference,
-            redirectUrl: data.link,
+            redirectUrl: data.payment_url || data.redirect_url,
+            provider: 'dusupay',
         };
     } catch (error: any) {
-        console.error('Flutterwave payment error:', error);
+        console.error('DusuPay payment error:', error);
         return { success: false, error: error.message || 'Failed to initialize payment.' };
     }
 };
 
-// ============================================
-// FLUTTERWAVE PAYOUT HELPERS
-// ============================================
+export const initStripePayment = async (
+    config: PaymentConfig
+): Promise<PaymentResult> => {
+    try {
+        const response = await apiFetch('/api/payments/stripe/initialize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                invoiceId: config.invoiceId,
+                amount: config.amount,
+                currency: config.currency,
+                email: config.customerEmail,
+                name: config.customerName,
+                description: config.description,
+            }),
+        });
 
-export const fetchFlutterwaveBanks = async (country: string): Promise<FlutterwaveBank[]> => {
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            return { success: false, error: errorBody.error || 'Failed to initialize payment.' };
+        }
+
+        const data = await response.json();
+        return {
+            success: true,
+            reference: data.reference || data.session_id,
+            redirectUrl: data.url || data.checkout_url,
+            provider: 'stripe',
+        };
+    } catch (error: any) {
+        console.error('Stripe payment error:', error);
+        return { success: false, error: error.message || 'Failed to initialize payment.' };
+    }
+};
+
+export const fetchBanks = async (country: string, provider: PaymentGateway): Promise<BankInfo[]> => {
     try {
         const token = await getAccessToken();
         if (!token) {
             throw new Error('Authentication required.');
         }
 
-        const response = await apiFetch(`/api/payments/flutterwave/banks?country=${encodeURIComponent(country)}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await apiFetch(
+            `/api/payments/${provider}/banks?country=${encodeURIComponent(country)}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
 
         if (!response.ok) {
             const errorBody = await response.json().catch(() => ({}));
@@ -123,21 +159,21 @@ export const fetchFlutterwaveBanks = async (country: string): Promise<Flutterwav
         const data = await response.json();
         return Array.isArray(data?.banks) ? data.banks : [];
     } catch (error) {
-        console.error('Flutterwave bank list error', error);
+        console.error(`${provider} bank list error`, error);
         return [];
     }
 };
 
-export const createFlutterwavePayoutAccount = async (
-    payload: FlutterwavePayoutPayload
-): Promise<FlutterwavePayoutResult> => {
+export const createPayoutAccount = async (
+    payload: PayoutAccountPayload
+): Promise<PayoutAccountResult> => {
     try {
         const token = await getAccessToken();
         if (!token) {
             return { success: false, error: 'Authentication required.' };
         }
 
-        const response = await apiFetch('/api/payments/flutterwave/payouts', {
+        const response = await apiFetch(`/api/payments/${payload.provider}/payouts`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -162,28 +198,34 @@ export const createFlutterwavePayoutAccount = async (
             accountNumberLast4: data.accountNumberLast4,
         };
     } catch (error: any) {
-        console.error('Flutterwave payout account error:', error);
+        console.error('Payout account error:', error);
         return { success: false, error: error.message || 'Failed to connect payout account.' };
     }
 };
 
-// ============================================
-// UNIFIED PAYMENT HANDLER
-// ============================================
-
 export const processPayment = async (
-    _gateway: PaymentGateway,
     config: PaymentConfig
-): Promise<PaymentResult> => initFlutterwavePayment(config);
+): Promise<PaymentResult> => {
+    const provider = getRecommendedGateway(config.countryCode);
+    if (provider === 'dusupay') {
+        return initDusupayPayment(config);
+    }
+    return initStripePayment(config);
+};
 
-export const getRecommendedGateway = (_currency: string): PaymentGateway => 'flutterwave';
+export const getRecommendedGateway = (countryCode?: string): PaymentGateway => {
+    if (isDusupayRegion(countryCode)) {
+        return 'dusupay';
+    }
+    return 'stripe';
+};
 
-export const getRecommendedGatewayAsync = async (_currency: string): Promise<PaymentGateway> =>
-    Promise.resolve('flutterwave');
-
-// Get all available gateways for a currency (for showing user options)
-export const getAvailableGateways = async (_currency: string): Promise<PaymentGateway[]> =>
-    Promise.resolve(['flutterwave']);
+export const getAvailableGateways = (countryCode?: string): PaymentGateway[] => {
+    if (isDusupayRegion(countryCode)) {
+        return ['dusupay'];
+    }
+    return ['stripe'];
+};
 
 export const isGatewayConfigured = (_gateway: PaymentGateway): boolean => true;
 

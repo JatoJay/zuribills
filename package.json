@@ -30,7 +30,8 @@
         "recharts": "^3.5.1",
         "reflect-metadata": "^0.2.2",
         "resend": "^6.6.0",
-        "rxjs": "^7.8.1"
+        "rxjs": "^7.8.1",
+        "stripe": "^20.4.1"
     },
     "devDependencies": {
         "@tanstack/router-plugin": "^1.143.6",
