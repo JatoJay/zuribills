@@ -158,6 +158,10 @@ const mapOrganizationFromDb = (row: any): Organization => ({
   vatRate: row.vat_rate ?? 0,
   signatoryName: row.signatory_name ?? undefined,
   signatoryTitle: row.signatory_title ?? undefined,
+  parentOrganizationId: row.parent_organization_id ?? undefined,
+  branchCode: row.branch_code ?? undefined,
+  shareClientsWithParent: row.share_clients_with_parent ?? false,
+  shareServicesWithParent: row.share_services_with_parent ?? false,
   address: row.address ?? undefined,
   paymentConfig: row.payment_config ?? undefined,
   eInvoicingConfig: row.e_invoicing_config ?? undefined,
@@ -183,6 +187,10 @@ const mapOrganizationToDb = (org: Organization) => ({
   vat_rate: org.vatRate ?? 0,
   signatory_name: toNullable(org.signatoryName),
   signatory_title: toNullable(org.signatoryTitle),
+  parent_organization_id: toNullable(org.parentOrganizationId),
+  branch_code: toNullable(org.branchCode),
+  share_clients_with_parent: org.shareClientsWithParent ?? false,
+  share_services_with_parent: org.shareServicesWithParent ?? false,
   address: org.address ?? null,
   payment_config: org.paymentConfig ?? null,
   e_invoicing_config: org.eInvoicingConfig ?? null,
@@ -542,6 +550,28 @@ export const getAccountById = async (accountId: string): Promise<Account | undef
   return data ? mapAccountFromDb(data) : undefined;
 };
 
+export const getBranchesOfOrganization = async (parentOrgId: string): Promise<Organization[]> => {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('parent_organization_id', parentOrgId)
+    .order('branch_code', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapOrganizationFromDb);
+};
+
+export const getOrganizationById = async (orgId: string): Promise<Organization | undefined> => {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', orgId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapOrganizationFromDb(data) : undefined;
+};
+
 export const createAccount = async (account: Omit<Account, 'id' | 'createdAt'> & { id?: string }): Promise<Account> => {
   const supabase = getSupabaseClient();
   const newAccount: Account = {
@@ -746,14 +776,23 @@ export const removeOrgMembership = async (orgId: string, userId: string): Promis
 
 // --- Services ---
 
-export const getServices = async (orgId: string): Promise<Service[]> => {
+export const getServices = async (orgId: string, includeParent = true): Promise<Service[]> => {
   const cacheKey = `services_${orgId}`;
   try {
     const supabase = getSupabaseClient();
+    const orgIds = [orgId];
+
+    if (includeParent) {
+      const org = await getOrganizationById(orgId);
+      if (org?.shareServicesWithParent && org.parentOrganizationId) {
+        orgIds.push(org.parentOrganizationId);
+      }
+    }
+
     const { data, error } = await supabase
       .from('services')
       .select('*')
-      .eq('organization_id', orgId)
+      .in('organization_id', orgIds)
       .order('name', { ascending: true });
     if (error) throw error;
     const results = (data || []).map(mapServiceFromDb);
@@ -797,14 +836,23 @@ export const deleteService = async (id: string): Promise<void> => {
 
 // --- Clients ---
 
-export const getClients = async (orgId: string): Promise<Client[]> => {
+export const getClients = async (orgId: string, includeParent = true): Promise<Client[]> => {
   const cacheKey = `clients_${orgId}`;
   try {
     const supabase = getSupabaseClient();
+    const orgIds = [orgId];
+
+    if (includeParent) {
+      const org = await getOrganizationById(orgId);
+      if (org?.shareClientsWithParent && org.parentOrganizationId) {
+        orgIds.push(org.parentOrganizationId);
+      }
+    }
+
     const { data, error } = await supabase
       .from('clients')
       .select('*')
-      .eq('organization_id', orgId)
+      .in('organization_id', orgIds)
       .order('name', { ascending: true });
     if (error) throw error;
     const results = (data || []).map(mapClientFromDb);

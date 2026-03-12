@@ -107,6 +107,10 @@ export interface Organization {
   vatRate?: number;
   signatoryName?: string;
   signatoryTitle?: string;
+  parentOrganizationId?: string;
+  branchCode?: string;
+  shareClientsWithParent?: boolean;
+  shareServicesWithParent?: boolean;
   address?: {
     street: string;
     city: string;
