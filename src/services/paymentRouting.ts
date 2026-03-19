@@ -1,6 +1,6 @@
-export type PayoutProvider = 'dusupay' | 'stripe';
+export type PayoutProvider = 'paystack' | 'stripe';
 
-export const DUSUPAY_COUNTRIES = [
+export const PAYSTACK_COUNTRIES = [
   'NG', 'GH', 'KE', 'RW', 'UG', 'TZ', 'ZM', 'ZA', 'CM', 'CI', 'SN', 'BJ', 'TG', 'ML', 'BF'
 ] as const;
 
@@ -11,7 +11,7 @@ export const STRIPE_COUNTRIES = [
   'SE', 'NO', 'IS', 'LI', 'CH', 'JP', 'SG', 'HK',
 ] as const;
 
-const DUSUPAY_CURRENCY_BY_COUNTRY: Record<string, string> = {
+const PAYSTACK_CURRENCY_BY_COUNTRY: Record<string, string> = {
   NG: 'NGN',
   GH: 'GHS',
   KE: 'KES',
@@ -98,15 +98,15 @@ export const resolveCountryCode = (countryCode?: string, countryName?: string) =
 
 export const resolvePayoutProvider = (countryCode?: string): PayoutProvider => {
   const normalized = normalizeCountryCode(countryCode);
-  if (DUSUPAY_COUNTRIES.includes(normalized as (typeof DUSUPAY_COUNTRIES)[number])) {
-    return 'dusupay';
+  if (PAYSTACK_COUNTRIES.includes(normalized as (typeof PAYSTACK_COUNTRIES)[number])) {
+    return 'paystack';
   }
   return 'stripe';
 };
 
-export const isDusupayRegion = (countryCode?: string) => {
+export const isPaystackRegion = (countryCode?: string) => {
   const normalized = normalizeCountryCode(countryCode);
-  return DUSUPAY_COUNTRIES.includes(normalized as (typeof DUSUPAY_COUNTRIES)[number]);
+  return PAYSTACK_COUNTRIES.includes(normalized as (typeof PAYSTACK_COUNTRIES)[number]);
 };
 
 export const isStripeRegion = (countryCode?: string) => {
@@ -117,15 +117,15 @@ export const isStripeRegion = (countryCode?: string) => {
 export const shouldDefaultToUsd = (countryCode?: string) => {
   const normalized = normalizeCountryCode(countryCode);
   if (!normalized) return true;
-  if (isDusupayRegion(normalized)) return false;
+  if (isPaystackRegion(normalized)) return false;
   if (isStripeRegion(normalized)) return false;
   return true;
 };
 
 export const resolveDefaultCurrency = (countryCode?: string, fallbackCurrency = 'USD') => {
   const normalized = normalizeCountryCode(countryCode);
-  if (DUSUPAY_CURRENCY_BY_COUNTRY[normalized]) {
-    return DUSUPAY_CURRENCY_BY_COUNTRY[normalized];
+  if (PAYSTACK_CURRENCY_BY_COUNTRY[normalized]) {
+    return PAYSTACK_CURRENCY_BY_COUNTRY[normalized];
   }
   if (STRIPE_CURRENCY_BY_COUNTRY[normalized]) {
     return STRIPE_CURRENCY_BY_COUNTRY[normalized];

@@ -179,7 +179,7 @@ const Payouts: React.FC = () => {
         },
         paymentConfig: {
             enabled: false,
-            provider: 'dusupay',
+            provider: 'paystack',
             platformFeePercent: PLATFORM_FEE_PERCENT,
         },
         createdAt: ''
@@ -212,25 +212,25 @@ const Payouts: React.FC = () => {
         [payoutForm.momoMsisdn, resolvedPayoutCountry]
     );
     const payoutProvider = resolvePayoutProvider(resolvedPayoutCountry);
-    const isDusupayProvider = payoutProvider === 'dusupay';
+    const isPaystackProvider = payoutProvider === 'paystack';
     const isStripeProvider = payoutProvider === 'stripe';
     const mobileMoneyNetworkOptions = useMemo(() => {
-        if (!isDusupayProvider) return [];
+        if (!isPaystackProvider) return [];
         if (!banks.length) return [];
         const filtered = banks.filter((bank) => MOMO_NETWORK_KEYWORDS.test(bank.name));
         return filtered.length ? filtered : banks;
-    }, [banks, isDusupayProvider]);
+    }, [banks, isPaystackProvider]);
 
     useEffect(() => {
         if (org) {
             const paymentConfig = org.paymentConfig || {
                 enabled: false,
-                provider: 'dusupay',
+                provider: 'paystack',
                 platformFeePercent: PLATFORM_FEE_PERCENT,
             };
             const inferredCountry = resolveCountryCode(paymentConfig.bankCountry, org.address?.country);
             const payoutProvider = resolvePayoutProvider(inferredCountry || paymentConfig.bankCountry);
-            const isEnabled = payoutProvider === 'dusupay'
+            const isEnabled = payoutProvider === 'paystack'
                 ? Boolean(paymentConfig.mobileNumber || paymentConfig.accountId)
                 : Boolean(paymentConfig.accountId);
             setFormData({
@@ -295,22 +295,22 @@ const Payouts: React.FC = () => {
     }, [formData.address?.country, payoutForm.bankCountry]);
 
     useEffect(() => {
-        if (isDusupayProvider && payoutForm.momoMsisdn) {
+        if (isPaystackProvider && payoutForm.momoMsisdn) {
             const formatted = normalizeMomoMsisdn(payoutForm.momoMsisdn, resolvedPayoutCountry).formatted;
             if (formatted && formatted !== payoutForm.momoMsisdn) {
                 setPayoutForm(prev => ({ ...prev, momoMsisdn: formatted }));
             }
         }
-        if (isDusupayProvider && payoutForm.accountNumber) {
+        if (isPaystackProvider && payoutForm.accountNumber) {
             const formatted = formatAccountNumberInput(payoutForm.accountNumber, resolvedPayoutCountry);
             if (formatted !== payoutForm.accountNumber) {
                 setPayoutForm(prev => ({ ...prev, accountNumber: formatted }));
             }
         }
-    }, [isDusupayProvider, payoutForm.accountNumber, payoutForm.momoMsisdn, resolvedPayoutCountry]);
+    }, [isPaystackProvider, payoutForm.accountNumber, payoutForm.momoMsisdn, resolvedPayoutCountry]);
 
     useEffect(() => {
-        if (!isDusupayProvider) {
+        if (!isPaystackProvider) {
             setBanks([]);
             setBanksLoading(false);
             return;
@@ -325,7 +325,7 @@ const Payouts: React.FC = () => {
 
         const loadBanks = async () => {
             setBanksLoading(true);
-            const data = await fetchBanks(resolvedPayoutCountry, 'dusupay');
+            const data = await fetchBanks(resolvedPayoutCountry, 'paystack');
             if (!cancelled) {
                 setBanks(data);
                 setBanksLoading(false);
@@ -343,13 +343,13 @@ const Payouts: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [resolvedPayoutCountry, isDusupayProvider]);
+    }, [resolvedPayoutCountry, isPaystackProvider]);
 
     const payoutValidationError = useMemo(() => {
         if (!resolvedPayoutCountry) {
             return t('Set your business country before connecting payouts.');
         }
-        if (isDusupayProvider) {
+        if (isPaystackProvider) {
             const bankCode = payoutForm.bankCode.trim();
             const accountNumber = formatAccountNumberInput(payoutForm.accountNumber, resolvedPayoutCountry);
             const accountName = payoutForm.accountName.trim();
@@ -379,7 +379,7 @@ const Payouts: React.FC = () => {
             if (!accountId) return t('Please enter your Stripe account ID.');
         }
         return '';
-    }, [accountRule, isDusupayProvider, isStripeProvider, momoState, payoutForm, resolvedPayoutCountry, t]);
+    }, [accountRule, isPaystackProvider, isStripeProvider, momoState, payoutForm, resolvedPayoutCountry, t]);
 
     const handleBankChange = (value: string) => {
         const selected = banks.find((bank) => bank.code === value);
@@ -390,7 +390,7 @@ const Payouts: React.FC = () => {
         }));
     };
 
-    const handleConnectDusupayPayout = async () => {
+    const handleConnectPaystackPayout = async () => {
         if (!org.id) return;
         setPayoutLoading(true);
         setMessage(null);
@@ -410,7 +410,7 @@ const Payouts: React.FC = () => {
 
         const payload: PayoutAccountPayload = {
             orgId: org.id,
-            provider: 'dusupay',
+            provider: 'paystack',
             bankCode,
             bankName,
             accountNumber: accountNumber || mobileNumber,
@@ -433,7 +433,7 @@ const Payouts: React.FC = () => {
             paymentConfig: {
                 ...(prev.paymentConfig || {}),
                 enabled: true,
-                provider: 'dusupay',
+                provider: 'paystack',
                 accountId: result.accountId,
                 bankName: result.bankName || payoutForm.bankName,
                 bankCode: result.bankCode || payoutForm.bankCode,
@@ -502,7 +502,7 @@ const Payouts: React.FC = () => {
             ...formData,
             paymentConfig: {
                 enabled: false,
-                provider: 'dusupay',
+                provider: 'paystack',
                 platformFeePercent: PLATFORM_FEE_PERCENT,
             } as any
         };
@@ -530,7 +530,7 @@ const Payouts: React.FC = () => {
     };
 
     const payoutAccountSummary = (() => {
-        if (isDusupayProvider && formData.paymentConfig?.mobileNumber) {
+        if (isPaystackProvider && formData.paymentConfig?.mobileNumber) {
             const last4 = formData.paymentConfig.mobileNumber.slice(-4);
             const network = formData.paymentConfig.mobileNetwork ? ` (${formData.paymentConfig.mobileNetwork})` : '';
             return `Mobile Money${network} - ${t('Ending in')} ${last4 || '----'}`;
@@ -544,7 +544,7 @@ const Payouts: React.FC = () => {
         return '';
     })();
 
-    const payoutProviderLabel = isDusupayProvider ? 'DusuPay' : 'Stripe';
+    const payoutProviderLabel = isPaystackProvider ? 'Paystack' : 'Stripe';
 
     const canConnectPayout = !payoutValidationError && !payoutLoading;
     const payoutEntries = useMemo(() => payoutLogs.slice(0, 20), [payoutLogs]);
@@ -640,7 +640,7 @@ const Payouts: React.FC = () => {
                         />
                     </div>
 
-                    {isDusupayProvider && (
+                    {isPaystackProvider && (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {banks.length > 0 || banksLoading ? (
@@ -729,7 +729,7 @@ const Payouts: React.FC = () => {
                                     variant="secondary"
                                     isLoading={payoutLoading}
                                     disabled={!canConnectPayout}
-                                    onClick={handleConnectDusupayPayout}
+                                    onClick={handleConnectPaystackPayout}
                                 >
                                     {formData.paymentConfig?.accountId || formData.paymentConfig?.mobileNumber ? t('Update Payout Account') : t('Connect Payout Account')}
                                 </Button>

@@ -1,11 +1,11 @@
 /**
  * Payment Gateway Service
- * Uses DusuPay for African payments and Stripe for international payments.
+ * Uses Paystack for African payments and Stripe for international payments.
  */
 
 import { getSupabaseClient } from './supabaseClient';
 import { apiFetch } from './apiClient';
-import { isDusupayRegion } from './paymentRouting';
+import { isPaystackRegion } from './paymentRouting';
 
 export interface PaymentConfig {
     invoiceId: string;
@@ -24,7 +24,7 @@ export interface PaymentResult {
     reference?: string;
     redirectUrl?: string;
     error?: string;
-    provider?: 'dusupay' | 'stripe';
+    provider?: 'paystack' | 'stripe';
 }
 
 export interface BankInfo {
@@ -34,7 +34,7 @@ export interface BankInfo {
 
 export interface PayoutAccountPayload {
     orgId: string;
-    provider: 'dusupay' | 'stripe';
+    provider: 'paystack' | 'stripe';
     bankCode?: string;
     bankName?: string;
     accountNumber: string;
@@ -60,7 +60,7 @@ export interface ProviderRateResult {
     source?: string;
 }
 
-export type PaymentGateway = 'dusupay' | 'stripe';
+export type PaymentGateway = 'paystack' | 'stripe';
 
 const getAccessToken = async (): Promise<string | null> => {
     const supabase = getSupabaseClient();
@@ -68,11 +68,11 @@ const getAccessToken = async (): Promise<string | null> => {
     return data.session?.access_token || null;
 };
 
-export const initDusupayPayment = async (
+export const initPaystackPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
-        const response = await apiFetch('/api/payments/dusupay/initialize', {
+        const response = await apiFetch('/api/payments/paystack/initialize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -95,11 +95,11 @@ export const initDusupayPayment = async (
         return {
             success: true,
             reference: data.reference,
-            redirectUrl: data.payment_url || data.redirect_url,
-            provider: 'dusupay',
+            redirectUrl: data.authorization_url,
+            provider: 'paystack',
         };
     } catch (error: any) {
-        console.error('DusuPay payment error:', error);
+        console.error('Paystack payment error:', error);
         return { success: false, error: error.message || 'Failed to initialize payment.' };
     }
 };
@@ -207,22 +207,22 @@ export const processPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
     const provider = getRecommendedGateway(config.countryCode);
-    if (provider === 'dusupay') {
-        return initDusupayPayment(config);
+    if (provider === 'paystack') {
+        return initPaystackPayment(config);
     }
     return initStripePayment(config);
 };
 
 export const getRecommendedGateway = (countryCode?: string): PaymentGateway => {
-    if (isDusupayRegion(countryCode)) {
-        return 'dusupay';
+    if (isPaystackRegion(countryCode)) {
+        return 'paystack';
     }
     return 'stripe';
 };
 
 export const getAvailableGateways = (countryCode?: string): PaymentGateway[] => {
-    if (isDusupayRegion(countryCode)) {
-        return ['dusupay'];
+    if (isPaystackRegion(countryCode)) {
+        return ['paystack'];
     }
     return ['stripe'];
 };

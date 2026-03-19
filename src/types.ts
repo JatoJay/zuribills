@@ -120,7 +120,7 @@ export interface Organization {
   };
   paymentConfig?: {
     enabled: boolean;
-    provider: 'dusupay' | 'stripe';
+    provider: 'paystack' | 'stripe';
     accountId?: string;
     bankName?: string;
     bankCode?: string;
