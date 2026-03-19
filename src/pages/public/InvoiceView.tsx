@@ -159,7 +159,7 @@ const InvoiceView: React.FC = () => {
         }));
     };
 
-    const pollAfnexStatus = (reference: string) => {
+    const pollPaymentStatus = (reference: string, provider: string) => {
         if (!data) return () => {};
         let cancelled = false;
         let attempts = 0;
@@ -168,8 +168,7 @@ const InvoiceView: React.FC = () => {
             if (cancelled) return;
             attempts += 1;
             try {
-                // Use the MoMo status endpoint since it covers Flutterwave verification
-                const response = await apiFetch(`/api/payments/momo/status?reference=${reference}&invoiceId=${data.invoice.id}`, {
+                const response = await apiFetch(`/api/payments/${provider}/status?reference=${reference}&invoiceId=${data.invoice.id}`, {
                     method: 'GET',
                 });
                 const statusData = await response.json().catch(() => ({}));
@@ -201,10 +200,6 @@ const InvoiceView: React.FC = () => {
                 }
             } catch (error) {
                 console.error('Failed to check payment status', error);
-                setPaymentStatus('error');
-                setErrorMessage(t('Payment failed. Please try again.'));
-                clearPendingPayment();
-                return;
             }
 
             if (attempts < 10) {
@@ -233,7 +228,7 @@ const InvoiceView: React.FC = () => {
             resumedPendingRef.current = true;
             setPaymentStatus('pending');
             setPaymentNotice(t('Waiting for payment confirmation...'));
-            pollAfnexStatus(pending.reference);
+            pollPaymentStatus(pending.reference, pending.provider);
         } catch (error) {
             console.error('Failed to resume pending payment', error);
         }
@@ -279,7 +274,7 @@ const InvoiceView: React.FC = () => {
         if (result.success && result.reference && requiresPhone) {
             setPaymentStatus('pending');
             setPaymentNotice(t('Payment prompt sent. Please approve on your phone.'));
-            pollAfnexStatus(result.reference);
+            pollPaymentStatus(result.reference, result.provider || 'paystack');
             setIsProcessing(false);
             return;
         }
