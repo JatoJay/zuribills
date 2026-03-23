@@ -28,9 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const stripe = new Stripe(STRIPE_SECRET_KEY, {
-            apiVersion: '2024-12-18.acacia',
-        });
+        const stripe = new Stripe(STRIPE_SECRET_KEY);
 
         const amountInCents = Math.round(Number(amount) * 100);
 

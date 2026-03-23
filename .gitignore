@@ -30,3 +30,4 @@ dev-dist
 !.env.example
 env
 .env
+.vercel
