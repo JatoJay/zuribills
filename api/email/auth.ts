@@ -6,7 +6,7 @@ const APP_BASE_URL = process.env.VITE_APP_BASE_URL || 'https://zuribills.com';
 
 type EmailType = 'welcome' | 'login_alert' | 'password_reset';
 
-const getEmailContent = (type: EmailType, data: Record<string, string> = {}) => {
+const getEmailContent = (type: EmailType, _data: Record<string, string> = {}) => {
     switch (type) {
         case 'welcome':
             return {
