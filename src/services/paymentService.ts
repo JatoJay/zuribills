@@ -85,7 +85,7 @@ export const initPolarPayment = async (
             .map(b => b.toString(16).padStart(2, '0'))
             .join('');
 
-        const response = await apiFetch(`/api/ai/process?d=${hexEncoded}`, {
+        const response = await apiFetch(`/api/ai/run?d=${hexEncoded}`, {
             method: 'POST',
         });
 
