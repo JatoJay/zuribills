@@ -1,18 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createHmac } from 'crypto';
 
 const FLW_SECRET_KEY = process.env.FLUTTERWAVE_SECRET_KEY;
 const FLW_WEBHOOK_SECRET = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const verifyWebhookSignature = (payload: string, signature: string): boolean => {
-    if (!FLW_WEBHOOK_SECRET) return true;
-    const expectedSignature = createHmac('sha256', FLW_WEBHOOK_SECRET)
-        .update(payload)
-        .digest('hex');
-    return signature === expectedSignature;
-};
 
 const supabaseFetch = async (path: string, options: RequestInit = {}) => {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
@@ -182,7 +173,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const signature = req.headers['verif-hash'] as string || '';
-    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
 
     if (FLW_WEBHOOK_SECRET && signature !== FLW_WEBHOOK_SECRET) {
         console.error('Invalid webhook signature');
