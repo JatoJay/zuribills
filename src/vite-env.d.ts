@@ -5,9 +5,8 @@ interface ImportMetaEnv {
     readonly VITE_API_KEY: string
     readonly VITE_API_BASE_URL?: string
     readonly VITE_GEMINI_API_KEY: string
-    readonly VITE_STRIPE_PUBLIC_KEY: string
-    readonly VITE_PAYSTACK_PUBLIC_KEY: string
-    readonly VITE_FLUTTERWAVE_PUBLIC_KEY: string
+    readonly VITE_POLAR_ACCESS_TOKEN: string
+    readonly VITE_POLAR_ORG_ID: string
     readonly VITE_APP_BASE_URL: string
     readonly VITE_GOOGLE_CLIENT_ID: string
     readonly VITE_TRIAL_DAYS: string

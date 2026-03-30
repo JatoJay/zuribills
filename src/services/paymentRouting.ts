@@ -1,17 +1,12 @@
-export type PayoutProvider = 'paystack' | 'stripe';
+export type PayoutProvider = 'polar';
 
-export const PAYSTACK_COUNTRIES = [
-  'NG', 'GH', 'KE', 'RW', 'UG', 'TZ', 'ZM', 'ZA', 'CM', 'CI', 'SN', 'BJ', 'TG', 'ML', 'BF'
+export const SUPPORTED_CURRENCIES = [
+  'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'NZD', 'CHF', 'NOK', 'SEK', 'DKK',
+  'NGN', 'GHS', 'KES', 'ZAR', 'RWF', 'UGX', 'TZS', 'ZMW', 'XAF', 'XOF',
+  'JPY', 'SGD', 'HKD', 'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'INR', 'AED',
 ] as const;
 
-export const STRIPE_COUNTRIES = [
-  'US', 'CA', 'GB', 'AU', 'NZ',
-  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU',
-  'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES',
-  'SE', 'NO', 'IS', 'LI', 'CH', 'JP', 'SG', 'HK',
-] as const;
-
-const PAYSTACK_CURRENCY_BY_COUNTRY: Record<string, string> = {
+const CURRENCY_BY_COUNTRY: Record<string, string> = {
   NG: 'NGN',
   GH: 'GHS',
   KE: 'KES',
@@ -27,9 +22,6 @@ const PAYSTACK_CURRENCY_BY_COUNTRY: Record<string, string> = {
   TG: 'XOF',
   ML: 'XOF',
   BF: 'XOF',
-};
-
-const STRIPE_CURRENCY_BY_COUNTRY: Record<string, string> = {
   US: 'USD',
   CA: 'CAD',
   GB: 'GBP',
@@ -47,6 +39,27 @@ const STRIPE_CURRENCY_BY_COUNTRY: Record<string, string> = {
   HU: 'HUF',
   RO: 'RON',
   BG: 'BGN',
+  IN: 'INR',
+  AE: 'AED',
+  FR: 'EUR',
+  DE: 'EUR',
+  IT: 'EUR',
+  ES: 'EUR',
+  NL: 'EUR',
+  BE: 'EUR',
+  AT: 'EUR',
+  PT: 'EUR',
+  IE: 'EUR',
+  FI: 'EUR',
+  GR: 'EUR',
+  LU: 'EUR',
+  MT: 'EUR',
+  CY: 'EUR',
+  EE: 'EUR',
+  LV: 'EUR',
+  LT: 'EUR',
+  SK: 'EUR',
+  SI: 'EUR',
 };
 
 const COUNTRY_NAME_TO_CODE: Record<string, string> = {
@@ -82,6 +95,9 @@ const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   Netherlands: 'NL',
   Belgium: 'BE',
   Switzerland: 'CH',
+  India: 'IN',
+  'United Arab Emirates': 'AE',
+  UAE: 'AE',
 };
 
 export const normalizeCountryCode = (countryCode?: string) =>
@@ -96,45 +112,24 @@ export const resolveCountryCode = (countryCode?: string, countryName?: string) =
   return '';
 };
 
-export const resolvePayoutProvider = (countryCode?: string): PayoutProvider => {
-  const normalized = normalizeCountryCode(countryCode);
-  if (PAYSTACK_COUNTRIES.includes(normalized as (typeof PAYSTACK_COUNTRIES)[number])) {
-    return 'paystack';
-  }
-  return 'stripe';
+export const resolvePayoutProvider = (_countryCode?: string): PayoutProvider => {
+  return 'polar';
 };
 
-export const isPaystackRegion = (countryCode?: string) => {
-  const normalized = normalizeCountryCode(countryCode);
-  return PAYSTACK_COUNTRIES.includes(normalized as (typeof PAYSTACK_COUNTRIES)[number]);
-};
-
-export const isStripeRegion = (countryCode?: string) => {
-  const normalized = normalizeCountryCode(countryCode);
-  return STRIPE_COUNTRIES.includes(normalized as (typeof STRIPE_COUNTRIES)[number]);
+export const isPolarSupported = (_countryCode?: string) => {
+  return true;
 };
 
 export const shouldDefaultToUsd = (countryCode?: string) => {
   const normalized = normalizeCountryCode(countryCode);
   if (!normalized) return true;
-  if (isPaystackRegion(normalized)) return false;
-  if (isStripeRegion(normalized)) return false;
-  return true;
+  return !CURRENCY_BY_COUNTRY[normalized];
 };
 
 export const resolveDefaultCurrency = (countryCode?: string, fallbackCurrency = 'USD') => {
   const normalized = normalizeCountryCode(countryCode);
-  if (PAYSTACK_CURRENCY_BY_COUNTRY[normalized]) {
-    return PAYSTACK_CURRENCY_BY_COUNTRY[normalized];
-  }
-  if (STRIPE_CURRENCY_BY_COUNTRY[normalized]) {
-    return STRIPE_CURRENCY_BY_COUNTRY[normalized];
-  }
-  if (isStripeRegion(normalized)) {
-    return 'EUR';
-  }
-  if (shouldDefaultToUsd(normalized)) {
-    return 'USD';
+  if (CURRENCY_BY_COUNTRY[normalized]) {
+    return CURRENCY_BY_COUNTRY[normalized];
   }
   return fallbackCurrency || 'USD';
 };

@@ -149,7 +149,7 @@ const Settings: React.FC = () => {
         },
         paymentConfig: {
             enabled: false,
-            provider: 'paystack',
+            provider: 'polar',
             platformFeePercent: PLATFORM_FEE_PERCENT,
         },
         eInvoicingConfig: { ...DEFAULT_EINVOICING_CONFIG },
@@ -160,7 +160,7 @@ const Settings: React.FC = () => {
         if (org) {
             const paymentConfig = org.paymentConfig || {
                 enabled: false,
-                provider: 'paystack' as const,
+                provider: 'polar' as const,
                 platformFeePercent: PLATFORM_FEE_PERCENT,
             };
             const eInvoicingConfig = org.eInvoicingConfig || { ...DEFAULT_EINVOICING_CONFIG };

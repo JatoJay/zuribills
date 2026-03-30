@@ -1,11 +1,10 @@
 /**
  * Payment Gateway Service
- * Uses Paystack for African payments and Stripe for international payments.
+ * Uses Polar for all payments globally.
  */
 
 import { getSupabaseClient } from './supabaseClient';
 import { apiFetch } from './apiClient';
-import { isPaystackRegion } from './paymentRouting';
 
 export interface PaymentConfig {
     invoiceId: string;
@@ -23,8 +22,9 @@ export interface PaymentResult {
     success: boolean;
     reference?: string;
     redirectUrl?: string;
+    checkoutId?: string;
     error?: string;
-    provider?: 'paystack' | 'stripe';
+    provider?: 'polar';
 }
 
 export interface BankInfo {
@@ -34,7 +34,7 @@ export interface BankInfo {
 
 export interface PayoutAccountPayload {
     orgId: string;
-    provider: 'paystack' | 'stripe';
+    provider: 'polar';
     bankCode?: string;
     bankName?: string;
     accountNumber: string;
@@ -60,7 +60,7 @@ export interface ProviderRateResult {
     source?: string;
 }
 
-export type PaymentGateway = 'paystack' | 'stripe';
+export type PaymentGateway = 'polar';
 
 const getAccessToken = async (): Promise<string | null> => {
     const supabase = getSupabaseClient();
@@ -68,11 +68,11 @@ const getAccessToken = async (): Promise<string | null> => {
     return data.session?.access_token || null;
 };
 
-export const initPaystackPayment = async (
+export const initPolarPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
-        const response = await apiFetch('/api/payments/paystack/initialize', {
+        const response = await apiFetch('/api/payments/polar/initialize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -81,7 +81,6 @@ export const initPaystackPayment = async (
                 currency: config.currency,
                 email: config.customerEmail,
                 name: config.customerName,
-                phone: config.customerPhone,
                 description: config.description,
             }),
         });
@@ -95,73 +94,18 @@ export const initPaystackPayment = async (
         return {
             success: true,
             reference: data.reference,
-            redirectUrl: data.authorization_url,
-            provider: 'paystack',
+            redirectUrl: data.checkout_url,
+            checkoutId: data.checkout_id,
+            provider: 'polar',
         };
     } catch (error: any) {
-        console.error('Paystack payment error:', error);
+        console.error('Polar payment error:', error);
         return { success: false, error: error.message || 'Failed to initialize payment.' };
     }
 };
 
-export const initStripePayment = async (
-    config: PaymentConfig
-): Promise<PaymentResult> => {
-    try {
-        const response = await apiFetch('/api/payments/stripe/initialize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                invoiceId: config.invoiceId,
-                amount: config.amount,
-                currency: config.currency,
-                email: config.customerEmail,
-                name: config.customerName,
-                description: config.description,
-            }),
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            return { success: false, error: errorBody.error || 'Failed to initialize payment.' };
-        }
-
-        const data = await response.json();
-        return {
-            success: true,
-            reference: data.reference || data.session_id,
-            redirectUrl: data.url || data.checkout_url,
-            provider: 'stripe',
-        };
-    } catch (error: any) {
-        console.error('Stripe payment error:', error);
-        return { success: false, error: error.message || 'Failed to initialize payment.' };
-    }
-};
-
-export const fetchBanks = async (country: string, provider: PaymentGateway): Promise<BankInfo[]> => {
-    try {
-        const token = await getAccessToken();
-        if (!token) {
-            throw new Error('Authentication required.');
-        }
-
-        const response = await apiFetch(
-            `/api/payments/${provider}/banks?country=${encodeURIComponent(country)}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            throw new Error(errorBody.error || 'Failed to load banks.');
-        }
-
-        const data = await response.json();
-        return Array.isArray(data?.banks) ? data.banks : [];
-    } catch (error) {
-        console.error(`${provider} bank list error`, error);
-        return [];
-    }
+export const fetchBanks = async (_country: string, _provider: PaymentGateway): Promise<BankInfo[]> => {
+    return [];
 };
 
 export const createPayoutAccount = async (
@@ -173,7 +117,7 @@ export const createPayoutAccount = async (
             return { success: false, error: 'Authentication required.' };
         }
 
-        const response = await apiFetch(`/api/payments/${payload.provider}/payouts`, {
+        const response = await apiFetch(`/api/payments/polar/payouts`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -206,25 +150,15 @@ export const createPayoutAccount = async (
 export const processPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
-    const provider = getRecommendedGateway(config.countryCode);
-    if (provider === 'paystack') {
-        return initPaystackPayment(config);
-    }
-    return initStripePayment(config);
+    return initPolarPayment(config);
 };
 
-export const getRecommendedGateway = (countryCode?: string): PaymentGateway => {
-    if (isPaystackRegion(countryCode)) {
-        return 'paystack';
-    }
-    return 'stripe';
+export const getRecommendedGateway = (_countryCode?: string): PaymentGateway => {
+    return 'polar';
 };
 
-export const getAvailableGateways = (countryCode?: string): PaymentGateway[] => {
-    if (isPaystackRegion(countryCode)) {
-        return ['paystack'];
-    }
-    return ['stripe'];
+export const getAvailableGateways = (_countryCode?: string): PaymentGateway[] => {
+    return ['polar'];
 };
 
 export const isGatewayConfigured = (_gateway: PaymentGateway): boolean => true;

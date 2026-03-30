@@ -263,7 +263,7 @@ const InvoiceView: React.FC = () => {
         });
 
         if (result.reference) {
-            persistPendingPayment(result.reference, result.provider || 'stripe');
+            persistPendingPayment(result.reference, result.provider || 'polar');
         }
 
         if (result.redirectUrl && !requiresPhone) {
@@ -274,7 +274,7 @@ const InvoiceView: React.FC = () => {
         if (result.success && result.reference && requiresPhone) {
             setPaymentStatus('pending');
             setPaymentNotice(t('Payment prompt sent. Please approve on your phone.'));
-            pollPaymentStatus(result.reference, result.provider || 'paystack');
+            pollPaymentStatus(result.reference, result.provider || 'polar');
             setIsProcessing(false);
             return;
         }
@@ -313,7 +313,7 @@ const InvoiceView: React.FC = () => {
     const paymentConfig = org.paymentConfig;
     const _paymentProvider = paymentConfig?.bankCountry
         ? resolvePayoutProvider(paymentConfig.bankCountry)
-        : (paymentConfig?.provider || 'stripe');
+        : (paymentConfig?.provider || 'polar');
     void _paymentProvider;
     const paymentsEnabled = Boolean(
         paymentConfig?.enabled

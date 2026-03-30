@@ -120,7 +120,7 @@ export interface Organization {
   };
   paymentConfig?: {
     enabled: boolean;
-    provider: 'paystack' | 'stripe';
+    provider: 'polar';
     accountId?: string;
     bankName?: string;
     bankCode?: string;

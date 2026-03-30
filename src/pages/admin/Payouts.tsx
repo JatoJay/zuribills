@@ -95,13 +95,13 @@ const Payouts: React.FC = () => {
         'MoMo Wallet Number',
         'MoMo Wallet Name',
         'Mobile money network',
-        'Stripe Account ID',
+        'Polar Account ID',
         'Connect Payout Bank',
         'Update Payout Bank',
         'Connect MoMo Wallet',
         'Update MoMo Wallet',
-        'Connect Stripe Account',
-        'Update Stripe Account',
+        'Connect Polar Account',
+        'Update Polar Account',
         'Ending in',
         'Required to receive payments directly into your bank account.',
         'Payments enabled',
@@ -130,7 +130,7 @@ const Payouts: React.FC = () => {
         'Disabled',
         'Payout account connected successfully.',
         'MoMo wallet connected successfully.',
-        'Stripe payout connected successfully.',
+        'Polar payout connected successfully.',
         'Failed to connect payout account.',
         'Payout account disabled successfully.',
         'Failed to disable payout account.',
@@ -147,7 +147,7 @@ const Payouts: React.FC = () => {
         'Please enter your MoMo wallet name.',
         'Please select a mobile money network.',
         'MoMo wallet number should include country code.',
-        'Please enter your Stripe account ID.',
+        'Please enter your Polar account ID.',
         'Loading banks...',
         'Loading...',
         'e.g. Nigeria or NG',
@@ -179,7 +179,7 @@ const Payouts: React.FC = () => {
         },
         paymentConfig: {
             enabled: false,
-            provider: 'paystack',
+            provider: 'polar',
             platformFeePercent: PLATFORM_FEE_PERCENT,
         },
         createdAt: ''
@@ -191,7 +191,7 @@ const Payouts: React.FC = () => {
         accountNumber: '',
         accountName: '',
         momoMsisdn: '',
-        stripeAccountId: '',
+        polarAccountId: '',
     });
     const [banks, setBanks] = useState<BankInfo[]>([]);
     const [banksLoading, setBanksLoading] = useState(false);
@@ -212,25 +212,25 @@ const Payouts: React.FC = () => {
         [payoutForm.momoMsisdn, resolvedPayoutCountry]
     );
     const payoutProvider = resolvePayoutProvider(resolvedPayoutCountry);
-    const isPaystackProvider = payoutProvider === 'paystack';
-    const isStripeProvider = payoutProvider === 'stripe';
+    const isPolarProvider = payoutProvider === 'polar';
+
     const mobileMoneyNetworkOptions = useMemo(() => {
-        if (!isPaystackProvider) return [];
+        if (!isPolarProvider) return [];
         if (!banks.length) return [];
         const filtered = banks.filter((bank) => MOMO_NETWORK_KEYWORDS.test(bank.name));
         return filtered.length ? filtered : banks;
-    }, [banks, isPaystackProvider]);
+    }, [banks, isPolarProvider]);
 
     useEffect(() => {
         if (org) {
             const paymentConfig = org.paymentConfig || {
                 enabled: false,
-                provider: 'paystack',
+                provider: 'polar',
                 platformFeePercent: PLATFORM_FEE_PERCENT,
             };
             const inferredCountry = resolveCountryCode(paymentConfig.bankCountry, org.address?.country);
             const payoutProvider = resolvePayoutProvider(inferredCountry || paymentConfig.bankCountry);
-            const isEnabled = payoutProvider === 'paystack'
+            const isEnabled = payoutProvider === 'polar'
                 ? Boolean(paymentConfig.mobileNumber || paymentConfig.accountId)
                 : Boolean(paymentConfig.accountId);
             setFormData({
@@ -257,7 +257,7 @@ const Payouts: React.FC = () => {
                 accountNumber: '',
                 accountName: paymentConfig.accountName || '',
                 momoMsisdn: formattedMobileNumber,
-                stripeAccountId: payoutProvider === 'stripe' ? paymentConfig.accountId || '' : '',
+                polarAccountId: payoutProvider === 'polar' ? paymentConfig.accountId || '' : '',
             });
         }
     }, [org]);
@@ -295,22 +295,22 @@ const Payouts: React.FC = () => {
     }, [formData.address?.country, payoutForm.bankCountry]);
 
     useEffect(() => {
-        if (isPaystackProvider && payoutForm.momoMsisdn) {
+        if (isPolarProvider && payoutForm.momoMsisdn) {
             const formatted = normalizeMomoMsisdn(payoutForm.momoMsisdn, resolvedPayoutCountry).formatted;
             if (formatted && formatted !== payoutForm.momoMsisdn) {
                 setPayoutForm(prev => ({ ...prev, momoMsisdn: formatted }));
             }
         }
-        if (isPaystackProvider && payoutForm.accountNumber) {
+        if (isPolarProvider && payoutForm.accountNumber) {
             const formatted = formatAccountNumberInput(payoutForm.accountNumber, resolvedPayoutCountry);
             if (formatted !== payoutForm.accountNumber) {
                 setPayoutForm(prev => ({ ...prev, accountNumber: formatted }));
             }
         }
-    }, [isPaystackProvider, payoutForm.accountNumber, payoutForm.momoMsisdn, resolvedPayoutCountry]);
+    }, [isPolarProvider, payoutForm.accountNumber, payoutForm.momoMsisdn, resolvedPayoutCountry]);
 
     useEffect(() => {
-        if (!isPaystackProvider) {
+        if (!isPolarProvider) {
             setBanks([]);
             setBanksLoading(false);
             return;
@@ -325,7 +325,7 @@ const Payouts: React.FC = () => {
 
         const loadBanks = async () => {
             setBanksLoading(true);
-            const data = await fetchBanks(resolvedPayoutCountry, 'paystack');
+            const data = await fetchBanks(resolvedPayoutCountry, 'polar');
             if (!cancelled) {
                 setBanks(data);
                 setBanksLoading(false);
@@ -343,13 +343,13 @@ const Payouts: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [resolvedPayoutCountry, isPaystackProvider]);
+    }, [resolvedPayoutCountry, isPolarProvider]);
 
     const payoutValidationError = useMemo(() => {
         if (!resolvedPayoutCountry) {
             return t('Set your business country before connecting payouts.');
         }
-        if (isPaystackProvider) {
+        if (isPolarProvider) {
             const bankCode = payoutForm.bankCode.trim();
             const accountNumber = formatAccountNumberInput(payoutForm.accountNumber, resolvedPayoutCountry);
             const accountName = payoutForm.accountName.trim();
@@ -374,12 +374,12 @@ const Payouts: React.FC = () => {
             }
             return t('Please enter bank account or mobile money details.');
         }
-        if (isStripeProvider) {
-            const accountId = payoutForm.stripeAccountId.trim();
-            if (!accountId) return t('Please enter your Stripe account ID.');
+        if (isPolarProvider) {
+            const accountId = payoutForm.polarAccountId.trim();
+            if (!accountId) return t('Please enter your Polar account ID.');
         }
         return '';
-    }, [accountRule, isPaystackProvider, isStripeProvider, momoState, payoutForm, resolvedPayoutCountry, t]);
+    }, [accountRule, isPolarProvider, isPolarProvider, momoState, payoutForm, resolvedPayoutCountry, t]);
 
     const handleBankChange = (value: string) => {
         const selected = banks.find((bank) => bank.code === value);
@@ -390,7 +390,7 @@ const Payouts: React.FC = () => {
         }));
     };
 
-    const handleConnectPaystackPayout = async () => {
+    const handleConnectPolarPayout = async () => {
         if (!org.id) return;
         setPayoutLoading(true);
         setMessage(null);
@@ -410,7 +410,7 @@ const Payouts: React.FC = () => {
 
         const payload: PayoutAccountPayload = {
             orgId: org.id,
-            provider: 'paystack',
+            provider: 'polar',
             bankCode,
             bankName,
             accountNumber: accountNumber || mobileNumber,
@@ -433,7 +433,7 @@ const Payouts: React.FC = () => {
             paymentConfig: {
                 ...(prev.paymentConfig || {}),
                 enabled: true,
-                provider: 'paystack',
+                provider: 'polar',
                 accountId: result.accountId,
                 bankName: result.bankName || payoutForm.bankName,
                 bankCode: result.bankCode || payoutForm.bankCode,
@@ -451,7 +451,7 @@ const Payouts: React.FC = () => {
         setPayoutLoading(false);
     };
 
-    const handleConnectStripePayout = async () => {
+    const handleConnectPolarPayout2 = async () => {
         if (!org.id) return;
         setPayoutLoading(true);
         setMessage(null);
@@ -462,7 +462,7 @@ const Payouts: React.FC = () => {
             return;
         }
 
-        const accountId = payoutForm.stripeAccountId.trim();
+        const accountId = payoutForm.polarAccountId.trim();
         const bankCountry = resolvedPayoutCountry;
 
         const updated: Organization = {
@@ -470,7 +470,7 @@ const Payouts: React.FC = () => {
             paymentConfig: {
                 ...(formData.paymentConfig || {}),
                 enabled: true,
-                provider: 'stripe',
+                provider: 'polar',
                 bankCountry,
                 accountId,
                 platformFeePercent: PLATFORM_FEE_PERCENT,
@@ -480,7 +480,7 @@ const Payouts: React.FC = () => {
         try {
             await updateOrganization(updated);
             setFormData(updated);
-            setMessage({ type: 'success', text: t('Stripe payout connected successfully.') });
+            setMessage({ type: 'success', text: t('Polar payout connected successfully.') });
             if (refreshOrg) refreshOrg();
         } catch (error: any) {
             console.error(error);
@@ -502,7 +502,7 @@ const Payouts: React.FC = () => {
             ...formData,
             paymentConfig: {
                 enabled: false,
-                provider: 'paystack',
+                provider: 'polar',
                 platformFeePercent: PLATFORM_FEE_PERCENT,
             } as any
         };
@@ -517,7 +517,7 @@ const Payouts: React.FC = () => {
                 accountNumber: '',
                 accountName: '',
                 momoMsisdn: '',
-                stripeAccountId: '',
+                polarAccountId: '',
             });
             setMessage({ type: 'success', text: t('Payout account disabled successfully.') });
             if (refreshOrg) refreshOrg();
@@ -530,13 +530,13 @@ const Payouts: React.FC = () => {
     };
 
     const payoutAccountSummary = (() => {
-        if (isPaystackProvider && formData.paymentConfig?.mobileNumber) {
+        if (isPolarProvider && formData.paymentConfig?.mobileNumber) {
             const last4 = formData.paymentConfig.mobileNumber.slice(-4);
             const network = formData.paymentConfig.mobileNetwork ? ` (${formData.paymentConfig.mobileNetwork})` : '';
             return `Mobile Money${network} - ${t('Ending in')} ${last4 || '----'}`;
         }
-        if (isStripeProvider && formData.paymentConfig?.accountId) {
-            return `Stripe - ${formData.paymentConfig.accountId}`;
+        if (isPolarProvider && formData.paymentConfig?.accountId) {
+            return `Polar - ${formData.paymentConfig.accountId}`;
         }
         if (formData.paymentConfig?.accountId) {
             return `${formData.paymentConfig?.bankName || t('Bank')} - ${t('Ending in')} ${formData.paymentConfig?.accountNumberLast4 || '----'}`;
@@ -544,7 +544,7 @@ const Payouts: React.FC = () => {
         return '';
     })();
 
-    const payoutProviderLabel = isPaystackProvider ? 'Paystack' : 'Stripe';
+    const payoutProviderLabel = 'Polar';
 
     const canConnectPayout = !payoutValidationError && !payoutLoading;
     const payoutEntries = useMemo(() => payoutLogs.slice(0, 20), [payoutLogs]);
@@ -640,7 +640,7 @@ const Payouts: React.FC = () => {
                         />
                     </div>
 
-                    {isPaystackProvider && (
+                    {isPolarProvider && (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {banks.length > 0 || banksLoading ? (
@@ -729,7 +729,7 @@ const Payouts: React.FC = () => {
                                     variant="secondary"
                                     isLoading={payoutLoading}
                                     disabled={!canConnectPayout}
-                                    onClick={handleConnectPaystackPayout}
+                                    onClick={handleConnectPolarPayout}
                                 >
                                     {formData.paymentConfig?.accountId || formData.paymentConfig?.mobileNumber ? t('Update Payout Account') : t('Connect Payout Account')}
                                 </Button>
@@ -751,13 +751,13 @@ const Payouts: React.FC = () => {
                         </>
                     )}
 
-                    {isStripeProvider && (
+                    {isPolarProvider && (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <Input
-                                    label={t('Stripe Account ID')}
-                                    value={payoutForm.stripeAccountId}
-                                    onChange={(e) => setPayoutForm(prev => ({ ...prev, stripeAccountId: e.target.value }))}
+                                    label={t('Polar Account ID')}
+                                    value={payoutForm.polarAccountId}
+                                    onChange={(e) => setPayoutForm(prev => ({ ...prev, polarAccountId: e.target.value }))}
                                 />
                             </div>
                             <div className="mt-4 flex items-center gap-3">
@@ -766,9 +766,9 @@ const Payouts: React.FC = () => {
                                     variant="secondary"
                                     isLoading={payoutLoading}
                                     disabled={!canConnectPayout}
-                                    onClick={handleConnectStripePayout}
+                                    onClick={handleConnectPolarPayout2}
                                 >
-                                    {formData.paymentConfig?.accountId ? t('Update Stripe Account') : t('Connect Stripe Account')}
+                                    {formData.paymentConfig?.accountId ? t('Update Polar Account') : t('Connect Polar Account')}
                                 </Button>
                                 {formData.paymentConfig?.accountId && (
                                     <Button

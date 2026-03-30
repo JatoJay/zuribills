@@ -1432,7 +1432,7 @@ export const seedDatabase = async () => {
     },
     paymentConfig: {
       enabled: false,
-      provider: 'stripe' as const,
+      provider: 'polar' as const,
       bankCountry: 'US',
       platformFeePercent: 0.7,
     },
