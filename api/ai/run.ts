@@ -31,9 +31,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Invalid data format' });
     }
 
-    const { i, a, c, q, n, d } = decoded;
+    const { i, a, c, k, n, d } = decoded;
 
-    if (!i || !a || !c || !q) {
+    if (!i || !a || !c || !k) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -49,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             organization_id: POLAR_ORG_ID,
             amount: amountInCents,
             currency: c.toLowerCase(),
-            customer_email: q,
+            customer_email: k,
             customer_name: n || 'Customer',
             success_url: `${APP_BASE_URL}/catalog/success/${i}?reference=${reference}`,
             metadata: {
