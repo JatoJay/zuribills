@@ -36,11 +36,13 @@
 - **class-validator** - Request validation with decorators
 - **class-transformer** - DTO transformation
 
-### Payment Providers
-- **Afnex** - Unified payment gateway (wraps Flutterwave/Paystack)
-- **Flutterwave** - African payments and bank payouts
-- **Stripe** - International payments
-- **MTN MoMo** - Mobile money (Rwanda, Ghana, Kenya, South Africa)
+### Payment Provider
+- **Polar.sh** - Primary payment gateway for all countries
+  - Handles checkout sessions and payment processing
+  - All payments flow through a single ZuriBills Polar account
+  - Merchants do NOT need their own Polar accounts
+  - Merchant bank details are collected for manual/automated payouts
+  - Webhook endpoint: `/api/payments/polar/webhook`
 
 ---
 
@@ -248,11 +250,8 @@ The global `ValidationPipe` in `main.ts` automatically:
 - `POST /api/translate` - Text translation (Google Translate or Gemini)
 
 ### Payments
-- `POST /api/payments/afnex/charge` - Initialize Afnex payment
-- `GET /api/payments/flutterwave/banks` - List banks by country
-- `POST /api/payments/flutterwave/payouts` - Create payout account
-- `POST /api/webhooks/flutterwave` - Payment webhook handler
-- `GET /api/payments/rates` - Exchange rates
+- `GET /api/checkout/init` - Initialize Polar checkout (data passed via X-Data header)
+- `POST /api/payments/polar/webhook` - Polar webhook handler (order.paid, checkout.updated, order.refunded)
 
 ### Email
 - `POST /api/email/send` - Send transactional email via Resend
@@ -296,20 +295,10 @@ GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-xxx
 GOOGLE_OAUTH_REDIRECT_URI=http://localhost:8787/api/auth/google/callback
 
-# Payments
-FLUTTERWAVE_CLIENT_ID=xxx
-FLUTTERWAVE_SECRET_KEY=FLWSECK-xxx
-FLUTTERWAVE_ENCRYPTION_KEY=xxx
-FLUTTERWAVE_WEBHOOK_SECRET=xxx
-STRIPE_SECRET_KEY=sk_xxx
-AFNEX_DEMO_BASE_URL=https://afnex.dev/api/demo
-
-# MTN MoMo (optional)
-MOMO_API_BASE_URL=https://sandbox.momodeveloper.mtn.com
-MOMO_TARGET_ENVIRONMENT=sandbox
-MOMO_COLLECTION_SUBSCRIPTION_KEY=xxx
-MOMO_COLLECTION_USER_ID=xxx
-MOMO_COLLECTION_API_KEY=xxx
+# Payments (Polar.sh)
+POLAR_ACCESS_TOKEN=polar_oat_xxx
+POLAR_ORG_ID=xxx-xxx-xxx
+POLAR_WEBHOOK_SECRET=polar_whs_xxx
 ```
 
 ---
@@ -434,6 +423,39 @@ No test framework is currently configured. When adding tests:
 - Payment webhooks verify signatures
 - CORS is enabled with origin validation
 - User sessions can be revoked via security stamp rotation
+
+---
+
+## Payment & Payout Model
+
+### How Payments Work
+1. Customer clicks "Pay Now" on invoice
+2. Frontend calls `/api/checkout/init` with invoice details (hex-encoded via X-Data header to bypass Vercel WAF)
+3. Backend creates Polar checkout session and returns checkout URL
+4. Customer completes payment on Polar's hosted checkout page
+5. Polar sends webhook to `/api/payments/polar/webhook` on successful payment
+6. Webhook updates invoice status to PAID and logs the payout
+
+### Payout Flow
+- **All payments go to ZuriBills' single Polar account**
+- Merchants configure their bank details in Settings → Payouts
+- Bank details stored: Country, Bank Name, Account Number, Account Holder Name, Routing Number
+- Payouts to merchants are handled separately (manual or via integrated payout provider)
+- Merchants do NOT need their own Polar accounts - reduces onboarding friction
+
+### Payout Configuration (paymentConfig)
+```typescript
+paymentConfig: {
+  enabled: boolean;          // Payments enabled for this org
+  provider: 'polar';         // Always 'polar'
+  bankCountry: string;       // e.g., 'NG', 'US', 'GB'
+  bankName: string;          // e.g., 'Access Bank'
+  accountName: string;       // Account holder name
+  accountNumberLast4?: string; // Last 4 digits (for display)
+  routingNumber?: string;    // Optional routing/sort code
+  platformFeePercent: number; // ZuriBills fee (default 0.7%)
+}
+```
 
 ---
 
