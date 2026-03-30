@@ -79,7 +79,7 @@ export const initPolarPayment = async (
                 invoiceId: config.invoiceId,
                 amount: config.amount,
                 currency: config.currency,
-                customerEmail: config.customerEmail,
+                mail: config.customerEmail,
                 name: config.customerName,
                 description: config.description,
             }),
