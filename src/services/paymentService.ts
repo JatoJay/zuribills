@@ -72,17 +72,20 @@ export const initPolarPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
+        const payload = {
+            invoiceId: config.invoiceId,
+            amount: config.amount,
+            currency: config.currency,
+            email: config.customerEmail,
+            name: config.customerName,
+            description: config.description,
+        };
+        const encodedData = btoa(JSON.stringify(payload));
+
         const response = await apiFetch('/api/checkout/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                invoiceId: config.invoiceId,
-                amount: config.amount,
-                curr: config.currency,
-                payer: config.customerEmail,
-                name: config.customerName,
-                description: config.description,
-            }),
+            body: JSON.stringify({ data: encodedData }),
         });
 
         if (!response.ok) {

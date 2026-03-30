@@ -9,19 +9,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-    console.log('Polar initialize handler called, method:', req.method);
-
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed', receivedMethod: req.method });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { invoiceId, amount, curr, payer, name, description } = req.body || {};
+    const { data } = req.body || {};
 
-    if (!invoiceId || !amount || !curr || !payer) {
+    if (!data) {
+        return res.status(400).json({ error: 'Missing data' });
+    }
+
+    let decoded;
+    try {
+        decoded = JSON.parse(Buffer.from(data, 'base64').toString('utf-8'));
+    } catch {
+        return res.status(400).json({ error: 'Invalid data format' });
+    }
+
+    const { invoiceId, amount, currency, email, name, description } = decoded;
+
+    if (!invoiceId || !amount || !currency || !email) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -36,8 +47,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const payload = {
             organization_id: POLAR_ORG_ID,
             amount: amountInCents,
-            currency: curr.toLowerCase(),
-            customer_email: payer,
+            currency: currency.toLowerCase(),
+            customer_email: email,
             customer_name: name || 'Customer',
             success_url: `${APP_BASE_URL}/catalog/success/${invoiceId}?reference=${reference}`,
             metadata: {
@@ -56,20 +67,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             body: JSON.stringify(payload),
         });
 
-        const data = await response.json();
+        const responseData = await response.json();
 
         if (!response.ok) {
-            console.error('Polar error:', data);
+            console.error('Polar error:', responseData);
             return res.status(400).json({
-                error: data.detail || data.message || 'Failed to initialize payment'
+                error: responseData.detail || responseData.message || 'Failed to initialize payment'
             });
         }
 
         return res.status(200).json({
             success: true,
             reference,
-            checkout_url: data.url,
-            checkout_id: data.id,
+            checkout_url: responseData.url,
+            checkout_id: responseData.id,
         });
     } catch (error: any) {
         console.error('Polar initialization error:', error);
