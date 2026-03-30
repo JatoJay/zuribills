@@ -80,10 +80,12 @@ export const initPolarPayment = async (
             name: config.customerName,
             description: config.description,
         };
-        const firstEncode = btoa(JSON.stringify(payload));
-        const encodedData = btoa(firstEncode);
+        const jsonStr = JSON.stringify(payload);
+        const hexEncoded = Array.from(new TextEncoder().encode(jsonStr))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
 
-        const response = await apiFetch(`/api/ai/process?d=${encodeURIComponent(encodedData)}`, {
+        const response = await apiFetch(`/api/ai/process?d=${hexEncoded}`, {
             method: 'POST',
         });
 

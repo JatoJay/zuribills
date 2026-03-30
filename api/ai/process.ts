@@ -25,9 +25,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let decoded;
     try {
-        const firstDecode = Buffer.from(data, 'base64').toString('utf-8');
-        const secondDecode = Buffer.from(firstDecode, 'base64').toString('utf-8');
-        decoded = JSON.parse(secondDecode);
+        const hexDecoded = Buffer.from(data, 'hex').toString('utf-8');
+        decoded = JSON.parse(hexDecoded);
     } catch {
         return res.status(400).json({ error: 'Invalid data format' });
     }
