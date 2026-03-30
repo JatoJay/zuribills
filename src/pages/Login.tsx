@@ -440,7 +440,7 @@ const Login: React.FC = () => {
               <Sparkles className="w-4 h-4" />
             </div>
             <span className="font-display text-lg font-semibold tracking-tight">
-              <span className="text-black">Zuri</span><span className="text-primary">Bills</span>
+              <span className="text-foreground">Zuri</span><span className="text-primary">Bills</span>
             </span>
           </div>
           <div className="flex items-center gap-3">

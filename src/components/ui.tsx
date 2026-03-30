@@ -36,7 +36,7 @@ export const Input = ({ label, error, ...props }: React.InputHTMLAttributes<HTML
       </label>
     )}
     <input
-      className={`flex h-11 w-full rounded-xl border border-border bg-surface/80 backdrop-blur-sm px-4 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-200 hover:border-primary/30 ${error ? 'border-red-500 focus:ring-red-500/30' : ''} ${props.className || ''}`}
+      className={`flex h-11 w-full rounded-xl border border-border bg-background px-4 py-2 text-sm text-[var(--text)] placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-200 hover:border-primary/30 ${error ? 'border-red-500 focus:ring-red-500/30' : ''} ${props.className || ''}`}
       {...props}
     />
     {error && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">{error}</p>}
@@ -53,7 +53,7 @@ export const Select = ({
     {label && <label className="text-sm font-medium leading-none mb-2 block text-foreground">{label}</label>}
     <div className="relative">
       <select
-        className={`flex h-11 w-full appearance-none rounded-xl border border-border bg-surface/80 backdrop-blur-sm px-4 py-2 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 hover:border-primary/30 cursor-pointer ${className}`}
+        className={`flex h-11 w-full appearance-none rounded-xl border border-border bg-background px-4 py-2 pr-10 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 hover:border-primary/30 cursor-pointer ${className}`}
         {...props}
       >
         {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}

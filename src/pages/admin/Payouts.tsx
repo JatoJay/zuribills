@@ -1,263 +1,100 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AgentLog, Organization } from '@/types';
 import { getAgentLogsByOrg, updateOrganization } from '@/services/storage';
-import { createPayoutAccount, fetchBanks, BankInfo, PayoutAccountPayload } from '@/services/paymentService';
-import { resolveCountryCode, resolvePayoutProvider } from '@/services/paymentRouting';
 import { Button, Input, Card, Select, Badge } from '@/components/ui';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Building2, CreditCard, Zap } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePrompt } from '@/context/PromptContext';
 
 const PLATFORM_FEE_PERCENT = 0.7;
-const MOMO_MSISDN_RULES: Record<string, { countryCode: string; nationalLength: number; example: string }> = {
-    RW: { countryCode: '250', nationalLength: 9, example: '+2507XXXXXXXX' },
-    GH: { countryCode: '233', nationalLength: 9, example: '+2335XXXXXXX' },
-    KE: { countryCode: '254', nationalLength: 9, example: '+2547XXXXXXXX' },
-    ZA: { countryCode: '27', nationalLength: 9, example: '+278XXXXXXXX' },
-};
 
-const MOMO_NETWORK_KEYWORDS = /(momo|mobile|mtn|airtel|vodafone|mpesa|m-pesa|tigo|tigo cash)/i;
-const BANK_ACCOUNT_RULES: Record<string, { minLength: number; maxLength: number; example: string }> = {
-    NG: { minLength: 10, maxLength: 10, example: '0123456789' },
-};
-const DEFAULT_ACCOUNT_RULE = { minLength: 6, maxLength: 18, example: '0123456789' };
-
-const stripToDigits = (value: string) => value.replace(/\D/g, '');
-
-const resolveMomoRule = (countryCode?: string) => {
-    if (!countryCode) return undefined;
-    return MOMO_MSISDN_RULES[countryCode];
-};
-
-const normalizeMomoMsisdn = (value: string, countryCode?: string) => {
-    const rule = resolveMomoRule(countryCode);
-    const digits = stripToDigits(value);
-
-    if (!rule) {
-        return {
-            normalized: digits,
-            formatted: digits ? `+${digits}` : '',
-            expectedLength: 0,
-            example: '',
-        };
-    }
-
-    let normalized = digits;
-    const expectedLength = rule.countryCode.length + rule.nationalLength;
-
-    if (normalized.startsWith('0')) {
-        normalized = rule.countryCode + normalized.slice(1);
-    } else if (!normalized.startsWith(rule.countryCode) && normalized.length <= rule.nationalLength) {
-        normalized = rule.countryCode + normalized;
-    }
-
-    if (normalized.length > expectedLength) {
-        normalized = normalized.slice(0, expectedLength);
-    }
-
-    return {
-        normalized,
-        formatted: normalized ? `+${normalized}` : '',
-        expectedLength,
-        example: rule.example,
-    };
-};
-
-const resolveAccountRule = (countryCode?: string) => {
-    if (countryCode && BANK_ACCOUNT_RULES[countryCode]) {
-        return BANK_ACCOUNT_RULES[countryCode];
-    }
-    return DEFAULT_ACCOUNT_RULE;
-};
-
-const formatAccountNumberInput = (value: string, countryCode?: string) => {
-    const digits = stripToDigits(value);
-    const rule = resolveAccountRule(countryCode);
-    return digits.slice(0, rule.maxLength);
-};
+const COUNTRY_OPTIONS = [
+    { label: 'Select country', value: '' },
+    { label: 'Nigeria', value: 'NG' },
+    { label: 'Ghana', value: 'GH' },
+    { label: 'Kenya', value: 'KE' },
+    { label: 'Rwanda', value: 'RW' },
+    { label: 'South Africa', value: 'ZA' },
+    { label: 'United States', value: 'US' },
+    { label: 'United Kingdom', value: 'GB' },
+    { label: 'Canada', value: 'CA' },
+    { label: 'Germany', value: 'DE' },
+    { label: 'France', value: 'FR' },
+];
 
 const Payouts: React.FC = () => {
     const { org, refreshOrg } = useAdminContext();
     const prompt = usePrompt();
     const translationStrings = useMemo(() => ([
         'Payouts & Payments',
-        'Payments are disabled until a payout account is connected.',
-        'Payout method',
-        'Payout account connected',
-        'Receiving Country',
-        'Bank',
-        'Bank Code',
-        'Select a bank',
-        'Select a network',
+        'How it works',
+        'Customers pay via secure checkout',
+        'Funds are automatically transferred to your bank',
+        'No manual payouts needed - instant settlement',
+        'Bank Account Details',
+        'Enter your bank details to receive automatic payouts when customers pay.',
+        'Country',
+        'Bank Name',
         'Account Number',
-        'Account Name',
-        'MoMo Wallet Number',
-        'MoMo Wallet Name',
-        'Mobile money network',
-        'Polar Account ID',
-        'Connect Payout Bank',
-        'Update Payout Bank',
-        'Connect MoMo Wallet',
-        'Update MoMo Wallet',
-        'Connect Polar Account',
-        'Update Polar Account',
-        'Ending in',
-        'Required to receive payments directly into your bank account.',
+        'Account Holder Name',
+        'Routing Number / Sort Code',
+        'Optional for some countries',
+        'Save Payout Details',
+        'Update Payout Details',
+        'Payout account saved successfully.',
+        'Failed to save payout account.',
         'Payments enabled',
-        'Platform fee',
-        'ZuriBills fee per transaction.',
-        'Payout status',
-        'Latest payout',
-        'Payout history',
-        'No payout history yet.',
-        'Date',
-        'No payouts yet.',
-        'Status',
-        'Provider',
-        'Method',
-        'Reference',
-        'Transfer ID',
-    'Invoice',
-    'Amount',
-    'Updated',
-
-        'Initiated',
-        'Completed',
-        'Failed',
-        'Pending',
         'Enabled',
         'Disabled',
-        'Payout account connected successfully.',
-        'MoMo wallet connected successfully.',
-        'Polar payout connected successfully.',
-        'Failed to connect payout account.',
-        'Payout account disabled successfully.',
-        'Failed to disable payout account.',
-        'Are you sure you want to disable payouts? This will stop you from receiving payments.',
-        'Disable Payouts',
-        'Set your business country before connecting payouts.',
-        'Please select a bank.',
-        'Please enter your bank account number.',
-        'Account number should be numeric.',
-        'Account number should be 10 digits.',
-        'Account number should be at least 6 digits.',
-        'Please enter the bank account name.',
-        'Please enter your MoMo wallet number.',
-        'Please enter your MoMo wallet name.',
-        'Please select a mobile money network.',
-        'MoMo wallet number should include country code.',
-        'Please enter your Polar account ID.',
-        'Loading banks...',
+        'Platform fee',
+        'per transaction',
+        'Payout History',
+        'No payouts yet.',
+        'Date',
+        'Status',
+        'Amount',
+        'Reference',
         'Loading...',
-        'e.g. Nigeria or NG',
+        'Completed',
+        'Pending',
+        'Failed',
+        'Disable Payouts',
+        'Are you sure you want to disable payouts?',
+        'Payout account disabled.',
+        'Select country',
+        'Your bank name',
+        'Your account number',
+        'Name on the account',
     ]), []);
     const { t } = useTranslation(translationStrings);
+
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-    const [formData, setFormData] = useState<Organization>({
-        id: '',
-        accountId: '',
-        ownerId: '',
-        name: '',
-        slug: '',
-        logoUrl: '',
-        primaryColor: '',
-        currency: 'USD',
-        catalogEnabled: true,
-        preferredLanguage: 'English',
-        contactEmail: '',
-        contactPhone: '',
-        taxId: '',
-        signatoryName: '',
-        signatoryTitle: '',
-        address: {
-            street: '',
-            city: '',
-            state: '',
-            zip: '',
-            country: ''
-        },
-        paymentConfig: {
-            enabled: false,
-            provider: 'polar',
-            platformFeePercent: PLATFORM_FEE_PERCENT,
-        },
-        createdAt: ''
-    });
+    const [loading, setLoading] = useState(false);
     const [payoutForm, setPayoutForm] = useState({
         bankCountry: '',
-        bankCode: '',
         bankName: '',
         accountNumber: '',
         accountName: '',
-        momoMsisdn: '',
-        polarAccountId: '',
+        routingNumber: '',
     });
-    const [banks, setBanks] = useState<BankInfo[]>([]);
-    const [banksLoading, setBanksLoading] = useState(false);
-    const [payoutLoading, setPayoutLoading] = useState(false);
     const [payoutLogs, setPayoutLogs] = useState<AgentLog[]>([]);
     const [payoutLogsLoading, setPayoutLogsLoading] = useState(false);
 
-    const resolvedPayoutCountry = useMemo(
-        () => resolveCountryCode(payoutForm.bankCountry, formData.address?.country),
-        [payoutForm.bankCountry, formData.address?.country]
+    const isPayoutConfigured = Boolean(
+        org.paymentConfig?.accountName &&
+        org.paymentConfig?.bankName &&
+        org.paymentConfig?.bankCountry
     );
-    const accountRule = useMemo(
-        () => resolveAccountRule(resolvedPayoutCountry),
-        [resolvedPayoutCountry]
-    );
-    const momoState = useMemo(
-        () => normalizeMomoMsisdn(payoutForm.momoMsisdn, resolvedPayoutCountry),
-        [payoutForm.momoMsisdn, resolvedPayoutCountry]
-    );
-    const payoutProvider = resolvePayoutProvider(resolvedPayoutCountry);
-    const isPolarProvider = payoutProvider === 'polar';
-
-    const mobileMoneyNetworkOptions = useMemo(() => {
-        if (!isPolarProvider) return [];
-        if (!banks.length) return [];
-        const filtered = banks.filter((bank) => MOMO_NETWORK_KEYWORDS.test(bank.name));
-        return filtered.length ? filtered : banks;
-    }, [banks, isPolarProvider]);
 
     useEffect(() => {
-        if (org) {
-            const paymentConfig = org.paymentConfig || {
-                enabled: false,
-                provider: 'polar',
-                platformFeePercent: PLATFORM_FEE_PERCENT,
-            };
-            const inferredCountry = resolveCountryCode(paymentConfig.bankCountry, org.address?.country);
-            const payoutProvider = resolvePayoutProvider(inferredCountry || paymentConfig.bankCountry);
-            const isEnabled = payoutProvider === 'polar'
-                ? Boolean(paymentConfig.mobileNumber || paymentConfig.accountId)
-                : Boolean(paymentConfig.accountId);
-            setFormData({
-                ...org,
-                catalogEnabled: org.catalogEnabled ?? false,
-                preferredLanguage: org.preferredLanguage || 'English',
-                address: org.address || { street: '', city: '', state: '', zip: '', country: '' },
-                paymentConfig: {
-                    ...paymentConfig,
-                    provider: payoutProvider,
-                    bankCountry: inferredCountry || paymentConfig.bankCountry,
-                    platformFeePercent: paymentConfig.platformFeePercent ?? PLATFORM_FEE_PERCENT,
-                    enabled: isEnabled,
-                },
-            });
-            const payoutCountry = inferredCountry || paymentConfig.bankCountry || '';
-            const formattedMobileNumber = paymentConfig.mobileNumber
-                ? normalizeMomoMsisdn(paymentConfig.mobileNumber, payoutCountry).formatted || paymentConfig.mobileNumber
-                : '';
+        if (org?.paymentConfig) {
             setPayoutForm({
-                bankCountry: payoutCountry,
-                bankCode: paymentConfig.bankCode || '',
-                bankName: paymentConfig.bankName || '',
+                bankCountry: org.paymentConfig.bankCountry || '',
+                bankName: org.paymentConfig.bankName || '',
                 accountNumber: '',
-                accountName: paymentConfig.accountName || '',
-                momoMsisdn: formattedMobileNumber,
-                polarAccountId: payoutProvider === 'polar' ? paymentConfig.accountId || '' : '',
+                accountName: org.paymentConfig.accountName || '',
+                routingNumber: org.paymentConfig.routingNumber || '',
             });
         }
     }, [org]);
@@ -280,648 +117,280 @@ const Payouts: React.FC = () => {
             }
         };
         loadPayoutLogs();
-        return () => {
-            cancelled = true;
-        };
-    }, [org]);
+        return () => { cancelled = true; };
+    }, [org.id]);
 
-    useEffect(() => {
-        if (!payoutForm.bankCountry && formData.address?.country) {
-            const resolved = resolveCountryCode('', formData.address.country);
-            if (resolved) {
-                setPayoutForm(prev => ({ ...prev, bankCountry: resolved }));
-            }
-        }
-    }, [formData.address?.country, payoutForm.bankCountry]);
-
-    useEffect(() => {
-        if (isPolarProvider && payoutForm.momoMsisdn) {
-            const formatted = normalizeMomoMsisdn(payoutForm.momoMsisdn, resolvedPayoutCountry).formatted;
-            if (formatted && formatted !== payoutForm.momoMsisdn) {
-                setPayoutForm(prev => ({ ...prev, momoMsisdn: formatted }));
-            }
-        }
-        if (isPolarProvider && payoutForm.accountNumber) {
-            const formatted = formatAccountNumberInput(payoutForm.accountNumber, resolvedPayoutCountry);
-            if (formatted !== payoutForm.accountNumber) {
-                setPayoutForm(prev => ({ ...prev, accountNumber: formatted }));
-            }
-        }
-    }, [isPolarProvider, payoutForm.accountNumber, payoutForm.momoMsisdn, resolvedPayoutCountry]);
-
-    useEffect(() => {
-        if (!isPolarProvider) {
-            setBanks([]);
-            setBanksLoading(false);
-            return;
-        }
-        if (!resolvedPayoutCountry) {
-            setBanks([]);
-            setBanksLoading(false);
-            return;
-        }
-
-        let cancelled = false;
-
-        const loadBanks = async () => {
-            setBanksLoading(true);
-            const data = await fetchBanks(resolvedPayoutCountry, 'polar');
-            if (!cancelled) {
-                setBanks(data);
-                setBanksLoading(false);
-            }
-        };
-
-        loadBanks().catch((error) => {
-            if (!cancelled) {
-                console.error('Failed to load banks', error);
-                setBanks([]);
-                setBanksLoading(false);
-            }
-        });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [resolvedPayoutCountry, isPolarProvider]);
-
-    const payoutValidationError = useMemo(() => {
-        if (!resolvedPayoutCountry) {
-            return t('Set your business country before connecting payouts.');
-        }
-        if (isPolarProvider) {
-            const bankCode = payoutForm.bankCode.trim();
-            const accountNumber = formatAccountNumberInput(payoutForm.accountNumber, resolvedPayoutCountry);
-            const accountName = payoutForm.accountName.trim();
-            const msisdn = momoState.normalized;
-            if (bankCode && accountNumber) {
-                if (!/^\d+$/.test(accountNumber)) return t('Account number should be numeric.');
-                if (accountRule.minLength === accountRule.maxLength && accountNumber.length !== accountRule.minLength) {
-                    return t('Account number should be 10 digits.');
-                }
-                if (accountRule.minLength !== accountRule.maxLength && accountNumber.length < accountRule.minLength) {
-                    return t('Account number should be at least 6 digits.');
-                }
-                if (!accountName) return t('Please enter the bank account name.');
-                return '';
-            }
-            if (msisdn) {
-                if (!accountName) return t('Please enter your MoMo wallet name.');
-                if (momoState.expectedLength && msisdn.length !== momoState.expectedLength) {
-                    return t('MoMo wallet number should include country code.');
-                }
-                return '';
-            }
-            return t('Please enter bank account or mobile money details.');
-        }
-        if (isPolarProvider) {
-            const accountId = payoutForm.polarAccountId.trim();
-            if (!accountId) return t('Please enter your Polar account ID.');
-        }
-        return '';
-    }, [accountRule, isPolarProvider, isPolarProvider, momoState, payoutForm, resolvedPayoutCountry, t]);
-
-    const handleBankChange = (value: string) => {
-        const selected = banks.find((bank) => bank.code === value);
-        setPayoutForm(prev => ({
-            ...prev,
-            bankCode: value,
-            bankName: selected?.name || '',
-        }));
-    };
-
-    const handleConnectPolarPayout = async () => {
+    const handleSave = async () => {
         if (!org.id) return;
-        setPayoutLoading(true);
+
+        if (!payoutForm.bankCountry || !payoutForm.bankName || !payoutForm.accountName) {
+            setMessage({ type: 'error', text: 'Please fill in all required fields.' });
+            return;
+        }
+
+        setLoading(true);
         setMessage(null);
-
-        if (payoutValidationError) {
-            setMessage({ type: 'error', text: payoutValidationError });
-            setPayoutLoading(false);
-            return;
-        }
-
-        const bankCountry = resolvedPayoutCountry;
-        const bankCode = payoutForm.bankCode.trim();
-        const bankName = payoutForm.bankName.trim() || undefined;
-        const accountNumber = formatAccountNumberInput(payoutForm.accountNumber, resolvedPayoutCountry);
-        const accountName = payoutForm.accountName.trim();
-        const mobileNumber = momoState.normalized;
-
-        const payload: PayoutAccountPayload = {
-            orgId: org.id,
-            provider: 'polar',
-            bankCode,
-            bankName,
-            accountNumber: accountNumber || mobileNumber,
-            accountName,
-            bankCountry,
-            mobileNumber: mobileNumber || undefined,
-            mobileNetwork: bankName || undefined,
-        };
-
-        const result = await createPayoutAccount(payload);
-
-        if (!result.success) {
-            setMessage({ type: 'error', text: result.error || t('Failed to connect payout account.') });
-            setPayoutLoading(false);
-            return;
-        }
-
-        setFormData(prev => ({
-            ...prev,
-            paymentConfig: {
-                ...(prev.paymentConfig || {}),
-                enabled: true,
-                provider: 'polar',
-                accountId: result.accountId,
-                bankName: result.bankName || payoutForm.bankName,
-                bankCode: result.bankCode || payoutForm.bankCode,
-                bankCountry: result.bankCountry || bankCountry,
-                accountName: result.accountName || accountName,
-                accountNumberLast4: result.accountNumberLast4,
-                mobileNumber: mobileNumber || undefined,
-                mobileNetwork: bankName || undefined,
-                platformFeePercent: PLATFORM_FEE_PERCENT,
-            },
-        }));
-        setPayoutForm(prev => ({ ...prev, accountNumber: '', momoMsisdn: '' }));
-        setMessage({ type: 'success', text: t('Payout account connected successfully.') });
-        if (refreshOrg) refreshOrg();
-        setPayoutLoading(false);
-    };
-
-    const handleConnectPolarPayout2 = async () => {
-        if (!org.id) return;
-        setPayoutLoading(true);
-        setMessage(null);
-
-        if (payoutValidationError) {
-            setMessage({ type: 'error', text: payoutValidationError });
-            setPayoutLoading(false);
-            return;
-        }
-
-        const accountId = payoutForm.polarAccountId.trim();
-        const bankCountry = resolvedPayoutCountry;
-
-        const updated: Organization = {
-            ...formData,
-            paymentConfig: {
-                ...(formData.paymentConfig || {}),
-                enabled: true,
-                provider: 'polar',
-                bankCountry,
-                accountId,
-                platformFeePercent: PLATFORM_FEE_PERCENT,
-            },
-        };
 
         try {
+            const updated: Organization = {
+                ...org,
+                paymentConfig: {
+                    ...org.paymentConfig,
+                    enabled: true,
+                    provider: 'polar',
+                    bankCountry: payoutForm.bankCountry,
+                    bankName: payoutForm.bankName,
+                    accountName: payoutForm.accountName,
+                    accountNumberLast4: payoutForm.accountNumber ? payoutForm.accountNumber.slice(-4) : org.paymentConfig?.accountNumberLast4,
+                    routingNumber: payoutForm.routingNumber || undefined,
+                    platformFeePercent: PLATFORM_FEE_PERCENT,
+                },
+            };
+
             await updateOrganization(updated);
-            setFormData(updated);
-            setMessage({ type: 'success', text: t('Polar payout connected successfully.') });
+            setMessage({ type: 'success', text: t('Payout account saved successfully.') });
+            setPayoutForm(prev => ({ ...prev, accountNumber: '' }));
             if (refreshOrg) refreshOrg();
         } catch (error: any) {
             console.error(error);
-            setMessage({ type: 'error', text: error.message || t('Failed to connect payout account.') });
+            setMessage({ type: 'error', text: error.message || t('Failed to save payout account.') });
         } finally {
-            setPayoutLoading(false);
+            setLoading(false);
         }
     };
 
-    const handleDisablePayouts = async () => {
+    const handleDisable = async () => {
         if (!org.id) return;
-        const confirmed = await prompt.confirm(t('Are you sure you want to disable payouts? This will stop you from receiving payments.'));
+        const confirmed = await prompt.confirm(t('Are you sure you want to disable payouts?'));
         if (!confirmed) return;
 
-        setPayoutLoading(true);
-        setMessage(null);
-
-        const updated: Organization = {
-            ...formData,
-            paymentConfig: {
-                enabled: false,
-                provider: 'polar',
-                platformFeePercent: PLATFORM_FEE_PERCENT,
-            } as any
-        };
-
+        setLoading(true);
         try {
+            const updated: Organization = {
+                ...org,
+                paymentConfig: {
+                    enabled: false,
+                    provider: 'polar',
+                    platformFeePercent: PLATFORM_FEE_PERCENT,
+                },
+            };
             await updateOrganization(updated);
-            setFormData(updated);
             setPayoutForm({
                 bankCountry: '',
-                bankCode: '',
                 bankName: '',
                 accountNumber: '',
                 accountName: '',
-                momoMsisdn: '',
-                polarAccountId: '',
+                routingNumber: '',
             });
-            setMessage({ type: 'success', text: t('Payout account disabled successfully.') });
+            setMessage({ type: 'success', text: t('Payout account disabled.') });
             if (refreshOrg) refreshOrg();
         } catch (error: any) {
-            console.error(error);
-            setMessage({ type: 'error', text: error.message || t('Failed to disable payout account.') });
+            setMessage({ type: 'error', text: error.message });
         } finally {
-            setPayoutLoading(false);
+            setLoading(false);
         }
     };
 
-    const payoutAccountSummary = (() => {
-        if (isPolarProvider && formData.paymentConfig?.mobileNumber) {
-            const last4 = formData.paymentConfig.mobileNumber.slice(-4);
-            const network = formData.paymentConfig.mobileNetwork ? ` (${formData.paymentConfig.mobileNetwork})` : '';
-            return `Mobile Money${network} - ${t('Ending in')} ${last4 || '----'}`;
-        }
-        if (isPolarProvider && formData.paymentConfig?.accountId) {
-            return `Polar - ${formData.paymentConfig.accountId}`;
-        }
-        if (formData.paymentConfig?.accountId) {
-            return `${formData.paymentConfig?.bankName || t('Bank')} - ${t('Ending in')} ${formData.paymentConfig?.accountNumberLast4 || '----'}`;
-        }
-        return '';
-    })();
-
-    const payoutProviderLabel = 'Polar';
-
-    const canConnectPayout = !payoutValidationError && !payoutLoading;
     const payoutEntries = useMemo(() => payoutLogs.slice(0, 20), [payoutLogs]);
-    const latestPayout = payoutEntries[0];
-    const getPayoutStatusLabel = (action?: string) => {
-        if (!action) return t('Pending');
-        switch (action) {
-            case 'PAYOUT_SENT':
-            case 'PAYOUT_INITIATED':
-                return t('Initiated');
-            case 'PAYOUT_COMPLETED':
-                return t('Completed');
-            case 'PAYOUT_FAILED':
-                return t('Failed');
-            default:
-                return t('Pending');
-        }
+
+    const getStatusStyle = (action?: string) => {
+        if (action === 'PAYOUT_COMPLETED') return 'text-emerald-600 bg-emerald-50';
+        if (action === 'PAYOUT_FAILED') return 'text-red-600 bg-red-50';
+        return 'text-amber-600 bg-amber-50';
     };
-    const getPayoutStatusTone = (action?: string) => {
-        if (!action) return 'text-slate-500';
-        if (action === 'PAYOUT_COMPLETED') return 'text-emerald-600';
-        if (action === 'PAYOUT_FAILED') return 'text-red-600';
-        return 'text-amber-600';
+
+    const getStatusLabel = (action?: string) => {
+        if (action === 'PAYOUT_COMPLETED') return t('Completed');
+        if (action === 'PAYOUT_FAILED') return t('Failed');
+        return t('Pending');
     };
-    const latestPayoutDetails = useMemo<Record<string, any>>(() => {
-        if (!latestPayout?.details) return {};
-        try {
-            return JSON.parse(latestPayout.details);
-        } catch {
-            return {};
-        }
-    }, [latestPayout]);
-    const payoutStatusLabel = latestPayout ? getPayoutStatusLabel(latestPayout.action) : '';
-    const payoutStatusTone = latestPayout ? getPayoutStatusTone(latestPayout.action) : 'text-slate-500';
-    const payoutHistoryRows = useMemo(() => payoutEntries.map((log) => {
-        let details: Record<string, any> = {};
-        try {
-            details = JSON.parse(log.details || '{}');
-        } catch {
-            details = {};
-        }
-        return {
-            log,
-            details,
-            statusLabel: getPayoutStatusLabel(log.action),
-            statusTone: getPayoutStatusTone(log.action),
-        };
-    }), [payoutEntries, t]);
 
     if (!org.id) return <div className="p-8">{t('Loading...')}</div>;
+
     return (
         <div className="w-full space-y-6">
             <h2 className="text-2xl font-bold">{t('Payouts & Payments')}</h2>
 
-            <Card className="p-6 space-y-6">
+            <Card className="p-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-lg">{t('How it works')}</h3>
+                        <p className="text-sm text-muted">Automatic instant payouts powered by Polar</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="flex items-start gap-3 p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                            <CreditCard className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">1. {t('Customers pay via secure checkout')}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                            <Building2 className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">2. {t('Funds are automatically transferred to your bank')}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">3. {t('No manual payouts needed - instant settlement')}</p>
+                        </div>
+                    </div>
+                </div>
+
                 {message && (
-                    <div className={`p-3 rounded-md flex items-center gap-2 text-sm ${message.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-                        }`}>
+                    <div className={`p-3 rounded-lg flex items-center gap-2 text-sm mb-6 ${
+                        message.type === 'error' ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                    }`}>
                         <AlertCircle className="w-4 h-4" />
                         {message.text}
                     </div>
                 )}
 
-                <div>
-                    <p className="text-sm text-slate-500 mb-4">
-                        {t('Payments are disabled until a payout account is connected.')}
-                    </p>
-
-                    <div className="mb-4 flex items-center justify-between rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm">
-                        <span className="text-emerald-800 font-medium">{t('Payout method')}</span>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                            <span className="font-bold text-emerald-900">{payoutProviderLabel} (Instant)</span>
+                {isPayoutConfigured && (
+                    <div className="mb-6 p-4 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800">
+                        <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle className="w-5 h-5 text-emerald-600" />
+                            <span className="font-semibold text-emerald-800 dark:text-emerald-400">Payout account connected</span>
                         </div>
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                            {org.paymentConfig?.bankName} • {org.paymentConfig?.accountName}
+                            {org.paymentConfig?.accountNumberLast4 && ` • ****${org.paymentConfig.accountNumberLast4}`}
+                        </p>
                     </div>
+                )}
 
-                    {formData.paymentConfig?.enabled && payoutAccountSummary && (
-                        <div className="mb-4 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                            <div className="font-medium">{t('Payout account connected')}</div>
-                            <div className="text-xs text-emerald-700/80">
-                                {payoutAccountSummary}
-                                {formData.paymentConfig?.accountName ? ` - ${formData.paymentConfig.accountName}` : ''}
-                            </div>
-                        </div>
-                    )}
+                <div className="space-y-4">
+                    <h4 className="font-medium">{t('Bank Account Details')}</h4>
+                    <p className="text-sm text-muted">{t('Enter your bank details to receive automatic payouts when customers pay.')}</p>
 
-                    <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input
-                            label={t('Receiving Country')}
-                            placeholder={t('e.g. Nigeria or NG')}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Select
+                            label={t('Country')}
+                            options={COUNTRY_OPTIONS}
                             value={payoutForm.bankCountry}
                             onChange={(e) => setPayoutForm(prev => ({ ...prev, bankCountry: e.target.value }))}
                         />
+                        <Input
+                            label={t('Bank Name')}
+                            placeholder={t('Your bank name')}
+                            value={payoutForm.bankName}
+                            onChange={(e) => setPayoutForm(prev => ({ ...prev, bankName: e.target.value }))}
+                        />
                     </div>
 
-                    {isPolarProvider && (
-                        <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {banks.length > 0 || banksLoading ? (
-                                    <Select
-                                        label={t('Bank')}
-                                        options={[
-                                            { label: t('Select a bank'), value: '' },
-                                            ...banks.map((bank) => ({ label: bank.name, value: bank.code })),
-                                        ]}
-                                        value={payoutForm.bankCode}
-                                        onChange={(e) => handleBankChange(e.target.value)}
-                                        disabled={banksLoading}
-                                    />
-                                ) : (
-                                    <Input
-                                        label={t('Bank Code')}
-                                        value={payoutForm.bankCode}
-                                        onChange={(e) => setPayoutForm(prev => ({
-                                            ...prev,
-                                            bankCode: e.target.value,
-                                            bankName: '',
-                                        }))}
-                                    />
-                                )}
-                                <Input
-                                    label={t('Account Number')}
-                                    value={payoutForm.accountNumber}
-                                    inputMode="numeric"
-                                    placeholder={accountRule.example}
-                                    maxLength={accountRule.maxLength}
-                                    onChange={(e) => setPayoutForm(prev => ({
-                                        ...prev,
-                                        accountNumber: formatAccountNumberInput(e.target.value, resolvedPayoutCountry),
-                                    }))}
-                                />
-                            </div>
-
-                            <div className="mt-4">
-                                <Input
-                                    label={t('Account Name')}
-                                    value={payoutForm.accountName}
-                                    onChange={(e) => setPayoutForm(prev => ({ ...prev, accountName: e.target.value }))}
-                                />
-                            </div>
-
-                            <p className="text-xs text-slate-500 mt-4 mb-2">Or connect via Mobile Money:</p>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {mobileMoneyNetworkOptions.length > 0 || banksLoading ? (
-                                    <Select
-                                        label={t('Mobile money network')}
-                                        options={[
-                                            { label: t('Select a network'), value: '' },
-                                            ...mobileMoneyNetworkOptions.map((bank) => ({ label: bank.name, value: bank.code })),
-                                        ]}
-                                        value={payoutForm.bankCode}
-                                        onChange={(e) => handleBankChange(e.target.value)}
-                                        disabled={banksLoading}
-                                    />
-                                ) : (
-                                    <Input
-                                        label={t('Mobile money network')}
-                                        value={payoutForm.bankCode}
-                                        onChange={(e) => setPayoutForm(prev => ({
-                                            ...prev,
-                                            bankCode: e.target.value,
-                                            bankName: e.target.value,
-                                        }))}
-                                    />
-                                )}
-                                <Input
-                                    label={t('MoMo Wallet Number')}
-                                    value={payoutForm.momoMsisdn}
-                                    inputMode="tel"
-                                    placeholder={momoState.example || '+<country code><number>'}
-                                    onChange={(e) => {
-                                        const formatted = normalizeMomoMsisdn(e.target.value, resolvedPayoutCountry).formatted;
-                                        setPayoutForm(prev => ({ ...prev, momoMsisdn: formatted }));
-                                    }}
-                                />
-                            </div>
-
-                            <div className="mt-4 flex items-center gap-3">
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    isLoading={payoutLoading}
-                                    disabled={!canConnectPayout}
-                                    onClick={handleConnectPolarPayout}
-                                >
-                                    {formData.paymentConfig?.accountId || formData.paymentConfig?.mobileNumber ? t('Update Payout Account') : t('Connect Payout Account')}
-                                </Button>
-                                {(formData.paymentConfig?.accountId || formData.paymentConfig?.mobileNumber) && (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="text-red-600 border-red-200 hover:bg-red-50"
-                                        isLoading={payoutLoading}
-                                        onClick={handleDisablePayouts}
-                                    >
-                                        {t('Disable Payouts')}
-                                    </Button>
-                                )}
-                                {banksLoading && (
-                                    <span className="text-xs text-slate-500">{t('Loading banks...')}</span>
-                                )}
-                            </div>
-                        </>
-                    )}
-
-                    {isPolarProvider && (
-                        <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <Input
-                                    label={t('Polar Account ID')}
-                                    value={payoutForm.polarAccountId}
-                                    onChange={(e) => setPayoutForm(prev => ({ ...prev, polarAccountId: e.target.value }))}
-                                />
-                            </div>
-                            <div className="mt-4 flex items-center gap-3">
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    isLoading={payoutLoading}
-                                    disabled={!canConnectPayout}
-                                    onClick={handleConnectPolarPayout2}
-                                >
-                                    {formData.paymentConfig?.accountId ? t('Update Polar Account') : t('Connect Polar Account')}
-                                </Button>
-                                {formData.paymentConfig?.accountId && (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="text-red-600 border-red-200 hover:bg-red-50"
-                                        isLoading={payoutLoading}
-                                        onClick={handleDisablePayouts}
-                                    >
-                                        {t('Disable Payouts')}
-                                    </Button>
-                                )}
-                            </div>
-                        </>
-                    )}
-
-                    {payoutValidationError && (
-                        <p className="mt-3 text-xs text-amber-600">
-                            {payoutValidationError}
-                        </p>
-                    )}
-
-                    <p className="text-xs text-slate-500 mt-2">
-                        {t('Required to receive payments directly into your bank account.')}
-                    </p>
-                    <div className="mt-4 flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm">
-                        <span className="font-medium text-slate-700">{t('Payments enabled')}</span>
-                        <span className={formData.paymentConfig?.enabled ? 'font-semibold text-emerald-600' : 'font-semibold text-slate-400'}>
-                            {formData.paymentConfig?.enabled ? t('Enabled') : t('Disabled')}
-                        </span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                            label={t('Account Number')}
+                            placeholder={t('Your account number')}
+                            value={payoutForm.accountNumber}
+                            onChange={(e) => setPayoutForm(prev => ({ ...prev, accountNumber: e.target.value }))}
+                        />
+                        <Input
+                            label={t('Account Holder Name')}
+                            placeholder={t('Name on the account')}
+                            value={payoutForm.accountName}
+                            onChange={(e) => setPayoutForm(prev => ({ ...prev, accountName: e.target.value }))}
+                        />
                     </div>
-                    <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-100 bg-white px-4 py-3 text-sm">
-                        <span className="text-slate-600">{t('Platform fee')}</span>
-                        <span className="font-semibold text-slate-900">{PLATFORM_FEE_PERCENT}%</span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-2">{t('ZuriBills fee per transaction.')}</p>
 
-                    <div className="mt-4 rounded-lg border border-slate-100 bg-white px-4 py-3 text-sm">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="font-medium text-slate-700">{t('Payout status')}</span>
-                                <Badge status="ACTIVE" label="Real-time" />
-                            </div>
-                            {latestPayout && (
-                                <span className={`text-xs font-semibold ${payoutStatusTone}`}>
-                                    {payoutStatusLabel}
-                                </span>
-                            )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <Input
+                                label={t('Routing Number / Sort Code')}
+                                placeholder={t('Optional for some countries')}
+                                value={payoutForm.routingNumber}
+                                onChange={(e) => setPayoutForm(prev => ({ ...prev, routingNumber: e.target.value }))}
+                            />
                         </div>
-                        {payoutLogsLoading ? (
-                            <p className="mt-2 text-xs text-slate-500">{t('Loading...')}</p>
-                        ) : latestPayout ? (
-                            <div className="mt-2 space-y-2 text-xs text-slate-500">
-                                <div className="font-medium text-slate-700">{t('Latest payout')}</div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <div>
-                                        <span className="text-slate-600">{t('Updated')}:</span>{' '}
-                                        {new Date(latestPayout.timestamp).toLocaleString()}
-                                    </div>
-                                    {latestPayoutDetails?.provider && (
-                                        <div>
-                                            <span className="text-slate-600">{t('Provider')}:</span>{' '}
-                                            {latestPayoutDetails.provider}
-                                        </div>
-                                    )}
-                                    {latestPayoutDetails?.method && (
-                                        <div>
-                                            <span className="text-slate-600">{t('Method')}:</span>{' '}
-                                            {latestPayoutDetails.method}
-                                        </div>
-                                    )}
-                                    {latestPayoutDetails?.reference && (
-                                        <div>
-                                            <span className="text-slate-600">{t('Reference')}:</span>{' '}
-                                            {latestPayoutDetails.reference}
-                                        </div>
-                                    )}
-                                    {latestPayoutDetails?.transferId && (
-                                        <div>
-                                            <span className="text-slate-600">{t('Transfer ID')}:</span>{' '}
-                                            {latestPayoutDetails.transferId}
-                                        </div>
-                                    )}
-                                </div>
-                                {latestPayoutDetails?.error && (
-                                    <div className="text-red-600">{latestPayoutDetails.error}</div>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="mt-2 text-xs text-slate-500">{t('No payouts yet.')}</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-4">
+                        <Button
+                            onClick={handleSave}
+                            isLoading={loading}
+                            disabled={!payoutForm.bankCountry || !payoutForm.bankName || !payoutForm.accountName}
+                        >
+                            {isPayoutConfigured ? t('Update Payout Details') : t('Save Payout Details')}
+                        </Button>
+                        {isPayoutConfigured && (
+                            <Button
+                                variant="outline"
+                                onClick={handleDisable}
+                                isLoading={loading}
+                                className="text-red-600 border-red-200 hover:bg-red-50"
+                            >
+                                {t('Disable Payouts')}
+                            </Button>
                         )}
                     </div>
-
-                    <div className="mt-4 overflow-hidden rounded-lg border border-slate-100 bg-white">
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                            <span className="text-sm font-medium text-slate-700">{t('Payout history')}</span>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-50 border-b border-slate-100">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium text-slate-500">{t('Date')}</th>
-                                        <th className="px-4 py-3 font-medium text-slate-500">{t('Status')}</th>
-                                        <th className="px-4 py-3 font-medium text-slate-500">{t('Amount')}</th>
-                                        <th className="px-4 py-3 font-medium text-slate-500">{t('Provider')}</th>
-                                        <th className="px-4 py-3 font-medium text-slate-500">{t('Method')}</th>
-                                        <th className="px-4 py-3 font-medium text-slate-500">{t('Reference')}</th>
-                                        <th className="px-4 py-3 font-medium text-slate-500">{t('Transfer ID')}</th>
-                                        <th className="px-4 py-3 font-medium text-slate-500">{t('Invoice')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {payoutHistoryRows.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="px-4 py-6 text-center text-xs text-slate-500">
-                                                {t('No payout history yet.')}
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        payoutHistoryRows.map(({ log, details, statusLabel, statusTone }) => (
-                                            <tr key={log.id} className="hover:bg-slate-50/80">
-                                                <td className="px-4 py-3 text-xs text-slate-600">
-                                                    {new Date(log.timestamp).toLocaleString()}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs">
-                                                    <span className={`font-semibold ${statusTone}`}>{statusLabel}</span>
-                                                </td>
-                                                <td className="px-4 py-3 text-xs font-medium text-slate-900">
-                                                    {details.amount ? `${details.currency || ''} ${details.amount.toLocaleString()}` : '—'}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs text-slate-600">
-                                                    {details.provider || '—'}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs text-slate-600">
-                                                    {details.method || '—'}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs text-slate-600">
-                                                    {details.reference || '—'}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs text-slate-600">
-                                                    {details.transferId || '—'}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs text-slate-600">
-                                                    {details.invoiceNumber || '—'}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
+            </Card>
+
+            <Card className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <span className="font-medium">{t('Payments enabled')}</span>
+                    <span className={`font-semibold ${org.paymentConfig?.enabled ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {org.paymentConfig?.enabled ? t('Enabled') : t('Disabled')}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-muted">{t('Platform fee')}</span>
+                    <span className="font-semibold">{PLATFORM_FEE_PERCENT}% {t('per transaction')}</span>
+                </div>
+            </Card>
+
+            <Card className="p-6">
+                <h3 className="font-semibold mb-4">{t('Payout History')}</h3>
+                {payoutLogsLoading ? (
+                    <p className="text-sm text-muted">{t('Loading...')}</p>
+                ) : payoutEntries.length === 0 ? (
+                    <p className="text-sm text-muted">{t('No payouts yet.')}</p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="border-b">
+                                <tr>
+                                    <th className="text-left py-3 font-medium text-muted">{t('Date')}</th>
+                                    <th className="text-left py-3 font-medium text-muted">{t('Status')}</th>
+                                    <th className="text-left py-3 font-medium text-muted">{t('Amount')}</th>
+                                    <th className="text-left py-3 font-medium text-muted">{t('Reference')}</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {payoutEntries.map((log) => {
+                                    let details: Record<string, any> = {};
+                                    try { details = JSON.parse(log.details || '{}'); } catch {}
+                                    return (
+                                        <tr key={log.id}>
+                                            <td className="py-3">{new Date(log.timestamp).toLocaleDateString()}</td>
+                                            <td className="py-3">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(log.action)}`}>
+                                                    {getStatusLabel(log.action)}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 font-medium">
+                                                {details.amount ? `${details.currency || ''} ${details.amount.toLocaleString()}` : '—'}
+                                            </td>
+                                            <td className="py-3 text-muted">{details.reference || '—'}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </Card>
         </div>
     );

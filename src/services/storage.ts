@@ -444,7 +444,7 @@ export const ensureAuthUser = async (payload: {
     securityStamp: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
   };
-  const { error } = await supabase.from('users').insert(mapUserToDb(newUser));
+  const { error } = await supabase.from('users').upsert(mapUserToDb(newUser), { onConflict: 'id' });
   if (error) throw error;
   return newUser;
 };
@@ -579,7 +579,7 @@ export const createAccount = async (account: Omit<Account, 'id' | 'createdAt'> &
     id: account.id || crypto.randomUUID(),
     createdAt: new Date().toISOString(),
   };
-  const { error } = await supabase.from('accounts').insert(mapAccountToDb(newAccount));
+  const { error } = await supabase.from('accounts').upsert(mapAccountToDb(newAccount), { onConflict: 'id' });
   if (error) throw error;
   return newAccount;
 };
@@ -1383,11 +1383,23 @@ export const migrateLegacyLocalStorage = async (): Promise<{ migrated: boolean; 
 export const seedDatabase = async () => {
   const supabase = getSupabaseClient();
   await migrateLegacyLocalStorage();
-  const { count, error: countError } = await supabase
+  const { count: orgCount, error: orgCountError } = await supabase
     .from('organizations')
     .select('id', { count: 'exact', head: true });
-  if (countError) throw countError;
-  if ((count || 0) > 0) return;
+  if (orgCountError) throw orgCountError;
+  if ((orgCount || 0) > 0) return;
+
+  const { count: accountCount, error: accountCountError } = await supabase
+    .from('accounts')
+    .select('id', { count: 'exact', head: true });
+  if (accountCountError) throw accountCountError;
+  if ((accountCount || 0) > 0) return;
+
+  const { count: userCount, error: userCountError } = await supabase
+    .from('users')
+    .select('id', { count: 'exact', head: true });
+  if (userCountError) throw userCountError;
+  if ((userCount || 0) > 0) return;
 
   const ownerUser: User = {
     id: 'user-owner-1',
@@ -1440,11 +1452,26 @@ export const seedDatabase = async () => {
   };
 
   const { error: accountError } = await supabase.from('accounts').insert(mapAccountToDb(account));
-  if (accountError) throw accountError;
+  if (accountError) {
+    if (accountError.code === '23505') {
+      throw new Error('An account with this email already exists. Please sign in instead, or use a different email address.');
+    }
+    throw accountError;
+  }
   const { error: userError } = await supabase.from('users').insert(mapUserToDb(ownerUser));
-  if (userError) throw userError;
+  if (userError) {
+    if (userError.code === '23505') {
+      throw new Error('A user with this email already exists. Please sign in instead, or use a different email address.');
+    }
+    throw userError;
+  }
   const { error: orgError } = await supabase.from('organizations').insert(mapOrganizationToDb(demoOrg));
-  if (orgError) throw orgError;
+  if (orgError) {
+    if (orgError.code === '23505') {
+      throw new Error('An organization with this name already exists. Please choose a different name.');
+    }
+    throw orgError;
+  }
 
   const { error: membershipError } = await supabase.from('org_memberships').insert(mapMembershipToDb({
     id: 'membership-owner-1',
@@ -1454,7 +1481,12 @@ export const seedDatabase = async () => {
     permissions: ['ALL'],
     createdAt: new Date().toISOString(),
   }));
-  if (membershipError) throw membershipError;
+  if (membershipError) {
+    if (membershipError.code === '23505') {
+      throw new Error('This membership already exists.');
+    }
+    throw membershipError;
+  }
 
   const demoServices: Service[] = [
     {

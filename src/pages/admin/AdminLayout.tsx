@@ -144,6 +144,12 @@ const AdminLayout: React.FC = () => {
       }
 
       try {
+        const existingUserId = getCurrentUserId();
+        if (existingUserId) {
+          setAuthReady(true);
+          return;
+        }
+
         const userRecord = await getUserByEmail(email);
         if (!isActive) return;
         if (!userRecord) {
