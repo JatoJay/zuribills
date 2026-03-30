@@ -73,12 +73,12 @@ export const initPolarPayment = async (
 ): Promise<PaymentResult> => {
     try {
         const payload = {
-            invoiceId: config.invoiceId,
-            amount: config.amount,
-            currency: config.currency,
-            email: config.customerEmail,
-            name: config.customerName,
-            description: config.description,
+            i: config.invoiceId,
+            a: config.amount,
+            c: config.currency,
+            e: config.customerEmail,
+            n: config.customerName,
+            d: config.description,
         };
         const jsonStr = JSON.stringify(payload);
         const hexEncoded = Array.from(new TextEncoder().encode(jsonStr))

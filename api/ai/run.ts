@@ -31,9 +31,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Invalid data format' });
     }
 
-    const { invoiceId, amount, currency, email, name, description } = decoded;
+    const { i, a, c, e, n, d } = decoded;
 
-    if (!invoiceId || !amount || !currency || !email) {
+    if (!i || !a || !c || !e) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -42,20 +42,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const reference = `INV-${invoiceId}-${Date.now()}`;
-        const amountInCents = Math.round(Number(amount) * 100);
+        const reference = `INV-${i}-${Date.now()}`;
+        const amountInCents = Math.round(Number(a) * 100);
 
         const payload = {
             organization_id: POLAR_ORG_ID,
             amount: amountInCents,
-            currency: currency.toLowerCase(),
-            customer_email: email,
-            customer_name: name || 'Customer',
-            success_url: `${APP_BASE_URL}/catalog/success/${invoiceId}?reference=${reference}`,
+            currency: c.toLowerCase(),
+            customer_email: e,
+            customer_name: n || 'Customer',
+            success_url: `${APP_BASE_URL}/catalog/success/${i}?reference=${reference}`,
             metadata: {
-                invoice_id: invoiceId,
+                invoice_id: i,
                 reference,
-                description: description || `Payment for Invoice ${invoiceId}`,
+                description: d || `Payment for Invoice ${i}`,
             },
         };
 
