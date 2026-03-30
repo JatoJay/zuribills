@@ -114,20 +114,20 @@ const Signup: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-white flex">
-            <div className="hidden lg:flex lg:w-1/2 bg-slate-900 p-12 flex-col justify-between">
+            <div className="hidden lg:flex lg:w-1/2 bg-slate-900 p-12 flex-col justify-between text-white">
                 <div>
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate({ to: '/' })}>
                         <img src="/logo.svg" alt="ZuriBills" className="w-10 h-10" />
-                        <span className="font-display text-xl font-semibold" style={{ color: '#ffffff' }}>ZuriBills</span>
+                        <span className="font-display text-xl font-semibold text-white">ZuriBills</span>
                     </div>
                 </div>
 
                 <div className="space-y-8">
                     <div>
-                        <h2 className="text-3xl font-display font-semibold mb-4" style={{ color: '#ffffff' }}>
+                        <h2 className="text-3xl font-display font-semibold mb-4 text-white">
                             Get paid faster with smart invoicing
                         </h2>
-                        <p className="text-lg" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                        <p className="text-lg text-white/70">
                             Join thousands of businesses using ZuriBills to streamline their payments.
                         </p>
                     </div>
@@ -138,14 +138,14 @@ const Signup: React.FC = () => {
                                 <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
                                     <CheckCircle className="w-4 h-4 text-primary" />
                                 </div>
-                                <span style={{ color: 'rgba(255,255,255,0.9)' }}>{t(feature)}</span>
+                                <span className="text-white/90">{t(feature)}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    © 2026 ZuriBills. All rights reserved.
+                <div className="text-sm text-white/40">
+                    © 2025 ZuriBills. All rights reserved.
                 </div>
             </div>
 
