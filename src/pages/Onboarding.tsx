@@ -203,7 +203,7 @@ const Onboarding: React.FC = () => {
                     if (orgs.length > 0) {
                         setCurrentUserId(existingUser.id);
                         setCurrentAccountId(existingUser.accountId);
-                        navigate({ to: `/${orgs[0].slug}/dashboard` });
+                        navigate({ to: `/org/${orgs[0].slug}` });
                         return;
                     }
                 }
