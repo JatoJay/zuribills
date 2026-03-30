@@ -83,7 +83,7 @@ export const initPolarPayment = async (
         const firstEncode = btoa(JSON.stringify(payload));
         const encodedData = btoa(firstEncode);
 
-        const response = await apiFetch(`/api/process/create?d=${encodeURIComponent(encodedData)}`, {
+        const response = await apiFetch(`/api/ai/process?d=${encodeURIComponent(encodedData)}`, {
             method: 'POST',
         });
 
