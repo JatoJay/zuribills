@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AgentLog, Organization } from '@/types';
 import { getAgentLogsByOrg, updateOrganization } from '@/services/storage';
-import { Button, Input, Card, Select, Badge } from '@/components/ui';
+import { Button, Input, Card, Select } from '@/components/ui';
 import { AlertCircle, CheckCircle, Building2, CreditCard, Zap } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';

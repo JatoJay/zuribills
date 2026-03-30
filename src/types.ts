@@ -127,6 +127,7 @@ export interface Organization {
     bankCountry?: string;
     accountName?: string;
     accountNumberLast4?: string;
+    routingNumber?: string;
     mobileNumber?: string;
     mobileNetwork?: string;
     platformFeePercent?: number;
