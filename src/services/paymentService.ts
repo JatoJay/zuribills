@@ -1,10 +1,11 @@
 /**
  * Payment Gateway Service
- * Uses Polar for all payments globally.
+ * Uses Flutterwave for African countries, Polar for US/International.
  */
 
 import { getSupabaseClient } from './supabaseClient';
 import { apiFetch } from './apiClient';
+import { resolvePayoutProvider, isFlutterwaveSupported } from './paymentRouting';
 
 export interface PaymentConfig {
     invoiceId: string;
@@ -16,6 +17,7 @@ export interface PaymentConfig {
     description: string;
     metadata?: Record<string, string>;
     countryCode?: string;
+    orgSlug?: string;
 }
 
 export interface PaymentResult {
@@ -24,7 +26,7 @@ export interface PaymentResult {
     redirectUrl?: string;
     checkoutId?: string;
     error?: string;
-    provider?: 'polar';
+    provider?: 'polar' | 'flutterwave';
 }
 
 export interface BankInfo {
@@ -34,7 +36,7 @@ export interface BankInfo {
 
 export interface PayoutAccountPayload {
     orgId: string;
-    provider: 'polar';
+    provider: 'polar' | 'flutterwave';
     bankCode?: string;
     bankName?: string;
     accountNumber: string;
@@ -60,12 +62,19 @@ export interface ProviderRateResult {
     source?: string;
 }
 
-export type PaymentGateway = 'polar';
+export type PaymentGateway = 'polar' | 'flutterwave';
 
 const getAccessToken = async (): Promise<string | null> => {
     const supabase = getSupabaseClient();
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token || null;
+};
+
+const hexEncode = (payload: object): string => {
+    const jsonStr = JSON.stringify(payload);
+    return Array.from(new TextEncoder().encode(jsonStr))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
 };
 
 export const initPolarPayment = async (
@@ -79,11 +88,9 @@ export const initPolarPayment = async (
             z: config.customerEmail,
             n: config.customerName,
             d: config.description,
+            o: config.orgSlug,
         };
-        const jsonStr = JSON.stringify(payload);
-        const hexEncoded = Array.from(new TextEncoder().encode(jsonStr))
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join('');
+        const hexEncoded = hexEncode(payload);
 
         const response = await fetch(`/api/checkout/init`, {
             method: 'GET',
@@ -111,8 +118,61 @@ export const initPolarPayment = async (
     }
 };
 
-export const fetchBanks = async (_country: string, _provider: PaymentGateway): Promise<BankInfo[]> => {
-    return [];
+export const initFlutterwavePayment = async (
+    config: PaymentConfig
+): Promise<PaymentResult> => {
+    try {
+        const payload = {
+            i: config.invoiceId,
+            a: config.amount,
+            c: config.currency,
+            z: config.customerEmail,
+            n: config.customerName,
+            d: config.description,
+            o: config.orgSlug,
+        };
+        const hexEncoded = hexEncode(payload);
+
+        const response = await fetch(`/api/payments/flutterwave/init`, {
+            method: 'GET',
+            headers: {
+                'X-Data': hexEncoded,
+            },
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            return { success: false, error: errorBody.error || 'Failed to initialize payment.' };
+        }
+
+        const data = await response.json();
+        return {
+            success: true,
+            reference: data.reference,
+            redirectUrl: data.checkout_url,
+            provider: 'flutterwave',
+        };
+    } catch (error: any) {
+        console.error('Flutterwave payment error:', error);
+        return { success: false, error: error.message || 'Failed to initialize payment.' };
+    }
+};
+
+export const fetchBanks = async (country: string, provider: PaymentGateway): Promise<BankInfo[]> => {
+    if (provider !== 'flutterwave') {
+        return [];
+    }
+    try {
+        const response = await fetch(`/api/payments/flutterwave/banks?country=${country}`);
+        if (!response.ok) {
+            return [];
+        }
+        const data = await response.json();
+        return data.banks || [];
+    } catch (error) {
+        console.error('Failed to fetch banks:', error);
+        return [];
+    }
 };
 
 export const createPayoutAccount = async (
@@ -124,7 +184,11 @@ export const createPayoutAccount = async (
             return { success: false, error: 'Authentication required.' };
         }
 
-        const response = await apiFetch(`/api/payments/polar/payouts`, {
+        const endpoint = payload.provider === 'flutterwave'
+            ? `/api/payments/flutterwave/payouts`
+            : `/api/payments/polar/payouts`;
+
+        const response = await apiFetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -157,14 +221,21 @@ export const createPayoutAccount = async (
 export const processPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
+    const provider = resolvePayoutProvider(config.countryCode);
+    if (provider === 'flutterwave') {
+        return initFlutterwavePayment(config);
+    }
     return initPolarPayment(config);
 };
 
-export const getRecommendedGateway = (_countryCode?: string): PaymentGateway => {
-    return 'polar';
+export const getRecommendedGateway = (countryCode?: string): PaymentGateway => {
+    return resolvePayoutProvider(countryCode);
 };
 
-export const getAvailableGateways = (_countryCode?: string): PaymentGateway[] => {
+export const getAvailableGateways = (countryCode?: string): PaymentGateway[] => {
+    if (isFlutterwaveSupported(countryCode)) {
+        return ['flutterwave'];
+    }
     return ['polar'];
 };
 

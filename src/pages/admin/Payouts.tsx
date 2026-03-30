@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AgentLog, Organization } from '@/types';
 import { getAgentLogsByOrg, updateOrganization } from '@/services/storage';
+import { fetchBanks, BankInfo } from '@/services/paymentService';
+import { resolvePayoutProvider, getPayoutNotice, isFlutterwaveSupported } from '@/services/paymentRouting';
 import { Button, Input, Card, Select } from '@/components/ui';
-import { AlertCircle, CheckCircle, Building2, CreditCard, Zap } from 'lucide-react';
+import { AlertCircle, CheckCircle, Building2, CreditCard, Zap, Clock } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePrompt } from '@/context/PromptContext';
@@ -73,6 +75,7 @@ const Payouts: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [payoutForm, setPayoutForm] = useState({
         bankCountry: '',
+        bankCode: '',
         bankName: '',
         accountNumber: '',
         accountName: '',
@@ -80,6 +83,12 @@ const Payouts: React.FC = () => {
     });
     const [payoutLogs, setPayoutLogs] = useState<AgentLog[]>([]);
     const [payoutLogsLoading, setPayoutLogsLoading] = useState(false);
+    const [banks, setBanks] = useState<BankInfo[]>([]);
+    const [banksLoading, setBanksLoading] = useState(false);
+
+    const selectedProvider = resolvePayoutProvider(payoutForm.bankCountry);
+    const payoutNotice = getPayoutNotice(selectedProvider);
+    const showBankDropdown = isFlutterwaveSupported(payoutForm.bankCountry);
 
     const isPayoutConfigured = Boolean(
         org.paymentConfig?.accountName &&
@@ -91,6 +100,7 @@ const Payouts: React.FC = () => {
         if (org?.paymentConfig) {
             setPayoutForm({
                 bankCountry: org.paymentConfig.bankCountry || '',
+                bankCode: org.paymentConfig.bankCode || '',
                 bankName: org.paymentConfig.bankName || '',
                 accountNumber: '',
                 accountName: org.paymentConfig.accountName || '',
@@ -98,6 +108,27 @@ const Payouts: React.FC = () => {
             });
         }
     }, [org]);
+
+    useEffect(() => {
+        if (!payoutForm.bankCountry || !showBankDropdown) {
+            setBanks([]);
+            return;
+        }
+        let cancelled = false;
+        const loadBanks = async () => {
+            setBanksLoading(true);
+            try {
+                const bankList = await fetchBanks(payoutForm.bankCountry, 'flutterwave');
+                if (!cancelled) setBanks(bankList);
+            } catch {
+                if (!cancelled) setBanks([]);
+            } finally {
+                if (!cancelled) setBanksLoading(false);
+            }
+        };
+        loadBanks();
+        return () => { cancelled = true; };
+    }, [payoutForm.bankCountry, showBankDropdown]);
 
     useEffect(() => {
         if (!org.id) return;
@@ -137,10 +168,12 @@ const Payouts: React.FC = () => {
                 paymentConfig: {
                     ...org.paymentConfig,
                     enabled: true,
-                    provider: 'polar',
+                    provider: selectedProvider,
                     bankCountry: payoutForm.bankCountry,
+                    bankCode: payoutForm.bankCode || undefined,
                     bankName: payoutForm.bankName,
                     accountName: payoutForm.accountName,
+                    accountNumber: payoutForm.accountNumber || org.paymentConfig?.accountNumber,
                     accountNumberLast4: payoutForm.accountNumber ? payoutForm.accountNumber.slice(-4) : org.paymentConfig?.accountNumberLast4,
                     routingNumber: payoutForm.routingNumber || undefined,
                     platformFeePercent: PLATFORM_FEE_PERCENT,
@@ -170,13 +203,14 @@ const Payouts: React.FC = () => {
                 ...org,
                 paymentConfig: {
                     enabled: false,
-                    provider: 'polar',
+                    provider: selectedProvider,
                     platformFeePercent: PLATFORM_FEE_PERCENT,
                 },
             };
             await updateOrganization(updated);
             setPayoutForm({
                 bankCountry: '',
+                bankCode: '',
                 bankName: '',
                 accountNumber: '',
                 accountName: '',
@@ -218,7 +252,7 @@ const Payouts: React.FC = () => {
                     </div>
                     <div>
                         <h3 className="font-semibold text-lg">{t('How it works')}</h3>
-                        <p className="text-sm text-muted">Automatic instant payouts powered by Polar</p>
+                        <p className="text-sm text-muted">Automatic payouts powered by {selectedProvider === 'flutterwave' ? 'Flutterwave' : 'Polar'}</p>
                     </div>
                 </div>
 
@@ -275,19 +309,42 @@ const Payouts: React.FC = () => {
                     <h4 className="font-medium">{t('Bank Account Details')}</h4>
                     <p className="text-sm text-muted">{t('Enter your bank details to receive automatic payouts when customers pay.')}</p>
 
+                    {payoutNotice && payoutForm.bankCountry && (
+                        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-amber-600" />
+                            <span className="text-sm text-amber-700 dark:text-amber-400">{payoutNotice}</span>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Select
                             label={t('Country')}
                             options={COUNTRY_OPTIONS}
                             value={payoutForm.bankCountry}
-                            onChange={(e) => setPayoutForm(prev => ({ ...prev, bankCountry: e.target.value }))}
+                            onChange={(e) => setPayoutForm(prev => ({ ...prev, bankCountry: e.target.value, bankCode: '', bankName: '' }))}
                         />
-                        <Input
-                            label={t('Bank Name')}
-                            placeholder={t('Your bank name')}
-                            value={payoutForm.bankName}
-                            onChange={(e) => setPayoutForm(prev => ({ ...prev, bankName: e.target.value }))}
-                        />
+                        {showBankDropdown ? (
+                            <Select
+                                label={t('Bank Name')}
+                                options={[
+                                    { label: banksLoading ? 'Loading banks...' : 'Select bank', value: '' },
+                                    ...banks.map(b => ({ label: b.name, value: b.code }))
+                                ]}
+                                value={payoutForm.bankCode}
+                                onChange={(e) => {
+                                    const bank = banks.find(b => b.code === e.target.value);
+                                    setPayoutForm(prev => ({ ...prev, bankCode: e.target.value, bankName: bank?.name || '' }));
+                                }}
+                                disabled={banksLoading}
+                            />
+                        ) : (
+                            <Input
+                                label={t('Bank Name')}
+                                placeholder={t('Your bank name')}
+                                value={payoutForm.bankName}
+                                onChange={(e) => setPayoutForm(prev => ({ ...prev, bankName: e.target.value }))}
+                            />
+                        )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

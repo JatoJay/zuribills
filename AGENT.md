@@ -36,13 +36,22 @@
 - **class-validator** - Request validation with decorators
 - **class-transformer** - DTO transformation
 
-### Payment Provider
-- **Polar.sh** - Primary payment gateway for all countries
+### Payment Providers
+- **Flutterwave** - Payment gateway for African countries (NG, GH, KE, ZA, RW, UG, TZ, ZM, CM, CI, SN, BJ, TG, ML, BF)
   - Handles checkout sessions and payment processing
-  - All payments flow through a single ZuriBills Polar account
-  - Merchants do NOT need their own Polar accounts
-  - Merchant bank details are collected for manual/automated payouts
+  - Auto-transfers funds to merchant bank accounts after payment (instant)
+  - Webhook endpoint: `/api/payments/flutterwave/webhook`
+  - Banks list endpoint: `/api/payments/flutterwave/banks`
+
+- **Polar.sh** - Payment gateway for US/International countries
+  - Handles checkout sessions and payment processing
+  - Payouts sent within 3 business days
   - Webhook endpoint: `/api/payments/polar/webhook`
+
+- **Routing Logic** (`src/services/paymentRouting.ts`):
+  - `resolvePayoutProvider(countryCode)` - Returns 'flutterwave' or 'polar' based on country
+  - African countries → Flutterwave (instant payouts)
+  - US/International → Polar (3 business days)
 
 ---
 
@@ -429,32 +438,59 @@ No test framework is currently configured. When adding tests:
 ## Payment & Payout Model
 
 ### How Payments Work
+
+#### Flutterwave (African Countries)
 1. Customer clicks "Pay Now" on invoice
-2. Frontend calls `/api/checkout/init` with invoice details (hex-encoded via X-Data header to bypass Vercel WAF)
+2. Frontend calls `/api/payments/flutterwave/init` with invoice details (hex-encoded via X-Data header)
+3. Backend creates Flutterwave checkout session and returns checkout URL
+4. Customer completes payment on Flutterwave's hosted checkout page
+5. Flutterwave sends webhook to `/api/payments/flutterwave/webhook` on successful payment
+6. Webhook verifies transaction, updates invoice status to PAID
+7. **Auto-transfer**: Webhook automatically transfers funds to merchant's bank account (minus 0.7% platform fee)
+
+#### Polar (US/International)
+1. Customer clicks "Pay Now" on invoice
+2. Frontend calls `/api/checkout/init` with invoice details (hex-encoded via X-Data header)
 3. Backend creates Polar checkout session and returns checkout URL
 4. Customer completes payment on Polar's hosted checkout page
 5. Polar sends webhook to `/api/payments/polar/webhook` on successful payment
 6. Webhook updates invoice status to PAID and logs the payout
+7. Payouts to merchants processed within 3 business days
 
 ### Payout Flow
-- **All payments go to ZuriBills' single Polar account**
+- **Flutterwave (Africa)**: Instant auto-transfer to merchant bank after payment
+- **Polar (US/International)**: Payouts sent within 3 business days
 - Merchants configure their bank details in Settings → Payouts
-- Bank details stored: Country, Bank Name, Account Number, Account Holder Name, Routing Number
-- Payouts to merchants are handled separately (manual or via integrated payout provider)
-- Merchants do NOT need their own Polar accounts - reduces onboarding friction
+- For African countries: Bank dropdown populated from Flutterwave API
+- For US/International: Manual bank name entry
+- Platform fee: 0.7% deducted from each transaction
 
 ### Payout Configuration (paymentConfig)
 ```typescript
 paymentConfig: {
-  enabled: boolean;          // Payments enabled for this org
-  provider: 'polar';         // Always 'polar'
-  bankCountry: string;       // e.g., 'NG', 'US', 'GB'
-  bankName: string;          // e.g., 'Access Bank'
-  accountName: string;       // Account holder name
-  accountNumberLast4?: string; // Last 4 digits (for display)
-  routingNumber?: string;    // Optional routing/sort code
-  platformFeePercent: number; // ZuriBills fee (default 0.7%)
+  enabled: boolean;              // Payments enabled for this org
+  provider: 'polar' | 'flutterwave'; // Based on country
+  bankCountry: string;           // e.g., 'NG', 'US', 'GB'
+  bankCode?: string;             // Flutterwave bank code (for African countries)
+  bankName: string;              // e.g., 'Access Bank'
+  accountName: string;           // Account holder name
+  accountNumber?: string;        // Full account number (for transfers)
+  accountNumberLast4?: string;   // Last 4 digits (for display)
+  routingNumber?: string;        // Optional routing/sort code (US/UK)
+  platformFeePercent: number;    // ZuriBills fee (default 0.7%)
 }
+```
+
+### Environment Variables for Payments
+```bash
+# Flutterwave (African payments)
+FLUTTERWAVE_SECRET_KEY=FLWSECK-xxx
+FLUTTERWAVE_WEBHOOK_SECRET=xxx
+
+# Polar (US/International payments)
+POLAR_ACCESS_TOKEN=polar_oat_xxx
+POLAR_ORG_ID=xxx-xxx-xxx
+POLAR_WEBHOOK_SECRET=polar_whs_xxx
 ```
 
 ---

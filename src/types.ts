@@ -120,12 +120,13 @@ export interface Organization {
   };
   paymentConfig?: {
     enabled: boolean;
-    provider: 'polar';
+    provider: 'polar' | 'flutterwave';
     accountId?: string;
     bankName?: string;
     bankCode?: string;
     bankCountry?: string;
     accountName?: string;
+    accountNumber?: string;
     accountNumberLast4?: string;
     routingNumber?: string;
     mobileNumber?: string;

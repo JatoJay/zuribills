@@ -1,4 +1,4 @@
-export type PayoutProvider = 'polar';
+export type PayoutProvider = 'flutterwave' | 'polar';
 
 export const SUPPORTED_CURRENCIES = [
   'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'NZD', 'CHF', 'NOK', 'SEK', 'DKK',
@@ -100,6 +100,11 @@ const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   UAE: 'AE',
 };
 
+const FLUTTERWAVE_COUNTRIES = [
+  'NG', 'GH', 'KE', 'ZA', 'RW', 'UG', 'TZ', 'ZM',
+  'CM', 'CI', 'SN', 'BJ', 'TG', 'ML', 'BF',
+];
+
 export const normalizeCountryCode = (countryCode?: string) =>
   (countryCode || '').trim().toUpperCase();
 
@@ -112,12 +117,21 @@ export const resolveCountryCode = (countryCode?: string, countryName?: string) =
   return '';
 };
 
-export const resolvePayoutProvider = (_countryCode?: string): PayoutProvider => {
+export const resolvePayoutProvider = (countryCode?: string): PayoutProvider => {
+  const normalized = normalizeCountryCode(countryCode);
+  if (FLUTTERWAVE_COUNTRIES.includes(normalized)) {
+    return 'flutterwave';
+  }
   return 'polar';
 };
 
-export const isPolarSupported = (_countryCode?: string) => {
-  return true;
+export const isFlutterwaveSupported = (countryCode?: string) => {
+  const normalized = normalizeCountryCode(countryCode);
+  return FLUTTERWAVE_COUNTRIES.includes(normalized);
+};
+
+export const isPolarSupported = (countryCode?: string) => {
+  return !isFlutterwaveSupported(countryCode);
 };
 
 export const shouldDefaultToUsd = (countryCode?: string) => {
@@ -132,4 +146,11 @@ export const resolveDefaultCurrency = (countryCode?: string, fallbackCurrency = 
     return CURRENCY_BY_COUNTRY[normalized];
   }
   return fallbackCurrency || 'USD';
+};
+
+export const getPayoutNotice = (provider: PayoutProvider): string | null => {
+  if (provider === 'polar') {
+    return 'Payments will be sent to your account within 3 business days.';
+  }
+  return null;
 };
