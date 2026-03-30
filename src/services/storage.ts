@@ -651,15 +651,6 @@ export const createOrganization = async (org: Omit<Organization, 'id' | 'created
   const { error: membershipError } = await supabase.from('org_memberships').insert(mapMembershipToDb(membership));
   if (membershipError) throw membershipError;
 
-  await createService({
-    organizationId: newOrg.id,
-    name: 'Consultation Hour',
-    description: 'Standard consultation rate per hour.',
-    price: 150,
-    category: 'Consulting',
-    isActive: true,
-  });
-
   return newOrg;
 };
 
