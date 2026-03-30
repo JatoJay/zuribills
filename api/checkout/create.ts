@@ -19,9 +19,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed', receivedMethod: req.method });
     }
 
-    const { invoiceId, amount, currency, buyer, name, description } = req.body || {};
+    const { invoiceId, amount, curr, buyer, name, description } = req.body || {};
 
-    if (!invoiceId || !amount || !currency || !buyer) {
+    if (!invoiceId || !amount || !curr || !buyer) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const payload = {
             organization_id: POLAR_ORG_ID,
             amount: amountInCents,
-            currency: currency.toLowerCase(),
+            currency: curr.toLowerCase(),
             customer_email: buyer,
             customer_name: name || 'Customer',
             success_url: `${APP_BASE_URL}/catalog/success/${invoiceId}?reference=${reference}`,
