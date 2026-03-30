@@ -72,7 +72,7 @@ export const initPolarPayment = async (
     config: PaymentConfig
 ): Promise<PaymentResult> => {
     try {
-        const response = await apiFetch('/api/payments/polar/initialize', {
+        const response = await apiFetch('/api/checkout/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
