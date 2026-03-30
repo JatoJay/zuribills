@@ -320,6 +320,7 @@ const InvoiceView: React.FC = () => {
         && (
             paymentConfig?.accountId
             || paymentConfig?.mobileNumber
+            || (paymentConfig?.bankName && paymentConfig?.accountName)
         )
     );
     const requiresPhone = false;
