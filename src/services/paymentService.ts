@@ -80,7 +80,8 @@ export const initPolarPayment = async (
             name: config.customerName,
             description: config.description,
         };
-        const encodedData = btoa(JSON.stringify(payload));
+        const firstEncode = btoa(JSON.stringify(payload));
+        const encodedData = btoa(firstEncode);
 
         const response = await apiFetch('/api/checkout/create', {
             method: 'POST',
