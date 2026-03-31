@@ -929,33 +929,33 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
               {t('MOST POPULAR')}
             </div>
           )}
-          <h3 className="text-xl font-display font-semibold mb-2 text-slate-900">
+          <h3 className="text-xl font-display font-semibold mb-2" style={{ color: '#0f172a' }}>
             {billingCycle === 'monthly' ? t('Monthly Plan') : t('Yearly Plan')}
           </h3>
-          <p className="text-sm mb-6 text-slate-500">
+          <p className="text-sm mb-6" style={{ color: '#64748b' }}>
             {billingCycle === 'monthly' ? t('Perfect for short-term projects and starters.') : t('Best value for growing businesses.')}
           </p>
           <div className="flex items-baseline gap-1 mb-2">
-            <span className="text-4xl font-display font-semibold text-slate-900">
+            <span className="text-4xl font-display font-semibold" style={{ color: '#0f172a' }}>
               {loadingRate ? (billingCycle === 'monthly' ? '$2' : '$1.67') : formatPrice(billingCycle === 'monthly' ? 2 : 1.67)}
             </span>
-            <span className="text-sm text-slate-500">/mo</span>
+            <span className="text-sm" style={{ color: '#64748b' }}>/mo</span>
           </div>
           {billingCycle === 'yearly' && (
-            <p className="text-xs mb-6 text-slate-500">
+            <p className="text-xs mb-6" style={{ color: '#64748b' }}>
               {loadingRate ? t('Billed $20 yearly') : `${t('Billed')} ${formatPrice(20)} ${t('yearly')}`}
             </p>
           )}
           {billingCycle === 'monthly' && <div className="mb-6" />}
           <ul className="space-y-4 mb-8">
             {PRICING_FEATURES.map((feat, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm text-slate-900">
+              <li key={i} className="flex items-center gap-3 text-sm" style={{ color: '#0f172a' }}>
                 <CheckCircle className="w-5 h-5 text-primary" /> {t(feat)}
               </li>
             ))}
           </ul>
           <div className="mb-4">
-            <span className="text-xs text-slate-500">
+            <span className="text-xs" style={{ color: '#64748b' }}>
               {t('3-day free trial included')}
             </span>
           </div>
