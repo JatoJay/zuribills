@@ -17,7 +17,7 @@ import { requiresMFAVerification } from '@/services/mfaService';
 import TwoFactorVerify from '@/components/TwoFactorVerify';
 import { UserRole } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
-import { ArrowRight, Building2, ShieldCheck, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Building2, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
