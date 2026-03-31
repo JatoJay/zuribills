@@ -619,7 +619,7 @@ const StackedFeatureCard: React.FC<{
           </div>
         </div>
 
-        <div className="absolute bottom-6 left-8 right-8 flex items-center justify-between z-30">
+        <div className="absolute bottom-6 left-8 right-8 flex items-center justify-center lg:justify-between z-30">
           <div className="flex items-center gap-2">
             {Array.from({ length: totalCards }).map((_, i) => (
               <div
@@ -633,7 +633,7 @@ const StackedFeatureCard: React.FC<{
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2">
             <button className="w-10 h-10 rounded-full border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center transition-colors">
               <ArrowRight className="w-4 h-4 text-slate-400 rotate-180" />
             </button>
