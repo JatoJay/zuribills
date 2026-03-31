@@ -31,3 +31,29 @@ export const sendInvoiceEmail = async (invoice: Invoice, options: SendInvoiceEma
         throw new Error(message);
     }
 };
+
+type SendWelcomeEmailOptions = {
+    email: string;
+    userName?: string;
+    orgName?: string;
+    orgSlug?: string;
+};
+
+export const sendWelcomeEmail = async (options: SendWelcomeEmailOptions): Promise<void> => {
+    const response = await apiFetch('/api/email/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            to: options.email,
+            userName: options.userName,
+            orgName: options.orgName,
+            orgSlug: options.orgSlug,
+        }),
+    });
+
+    if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        const message = payload?.error || 'Failed to send welcome email.';
+        throw new Error(message);
+    }
+};

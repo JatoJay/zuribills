@@ -7,6 +7,7 @@ import { ShieldCheck, Clock3, Sparkles, CheckCircle } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePrompt } from '@/context/PromptContext';
 import { resolveDefaultCurrency, resolvePayoutProvider } from '@/services/paymentRouting';
+import { sendWelcomeEmail } from '@/services/email';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
 import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 import { getSupabaseClient } from '@/services/supabaseClient';
@@ -382,6 +383,18 @@ const Onboarding: React.FC = () => {
                     startedAt: trialStartDate.toISOString(),
                 },
             });
+
+            try {
+                await sendWelcomeEmail({
+                    email: contactEmail,
+                    userName: formData.name.trim(),
+                    orgName: formData.name.trim(),
+                    orgSlug: slug,
+                });
+            } catch (emailError) {
+                console.error('Failed to send welcome email:', emailError);
+            }
+
             navigate({ to: `/org/${slug}` });
         } catch (err: any) {
             console.error('Organization creation failed:', err);
