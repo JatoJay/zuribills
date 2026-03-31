@@ -320,7 +320,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <span className="text-[11px] font-bold" style={{ color: '#000' }}>My Catalog</span>
           </div>
         </div>
-        <div className="flex-1 p-3 space-y-2 overflow-hidden">
+        <div className="flex-1 p-3 pb-8 space-y-2 overflow-hidden">
           {[
             { name: 'Brand Strategy', price: '$2,400', color: 'bg-emerald-500' },
             { name: 'Web Design', price: '$1,800', color: 'bg-blue-500' },
@@ -365,7 +365,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <span className="text-[11px] font-bold" style={{ color: '#000' }}>AI Agent</span>
           </div>
         </div>
-        <div className="flex-1 p-3 space-y-2 overflow-hidden">
+        <div className="flex-1 p-3 pb-8 space-y-2 overflow-hidden">
           <div className="bg-white rounded-lg border border-slate-200 p-2.5 shadow-sm">
             <div className="flex items-start gap-2">
               <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
@@ -408,7 +408,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <span className="text-[11px] font-bold" style={{ color: '#000' }}>Payment</span>
           </div>
         </div>
-        <div className="flex-1 p-3 flex flex-col">
+        <div className="flex-1 p-3 pb-8 flex flex-col">
           <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm text-center flex-1 flex flex-col justify-center">
             <motion.div
               className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2"
@@ -449,7 +449,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
           <span className="text-[11px] font-bold" style={{ color: '#000' }}>Analytics</span>
         </div>
       </div>
-      <div className="flex-1 p-3 space-y-2 overflow-hidden">
+      <div className="flex-1 p-3 pb-8 space-y-2 overflow-hidden">
         <div className="grid grid-cols-2 gap-1.5">
           <div className="bg-white rounded-md border border-slate-200 p-1.5 shadow-sm">
             <p className="text-[7px] uppercase font-bold" style={{ color: '#64748b' }}>Revenue</p>
