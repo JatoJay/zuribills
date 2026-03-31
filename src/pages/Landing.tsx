@@ -215,10 +215,7 @@ const NavBar: React.FC<{
             className="flex items-center gap-3 cursor-pointer"
             onClick={() => navigate({ to: '/' })}
           >
-            <img src="/logo.svg" alt="ZuriBills" className="w-9 h-9" />
-            <span className="font-display text-lg font-semibold tracking-tight">
-              <span className="text-black">Zuri</span><span className="text-primary">Bills</span>
-            </span>
+            <img src="/logo.png" alt="ZuriBills" className="h-9" />
           </div>
 
           <div className="hidden md:flex items-center gap-8">
@@ -1617,8 +1614,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
             {/* Top Integrated Header Row */}
             <div className="py-12 flex flex-col md:flex-row justify-between items-center gap-6 text-left">
               <div className="flex items-center gap-2.5">
-                <img src="/logo.svg" alt="ZuriBills" className="w-7 h-7" />
-                <span className="font-display font-bold text-xl tracking-tight text-white">ZuriBills</span>
+                <img src="/logo-white.png" alt="ZuriBills" className="h-7" />
               </div>
               <div className="text-[11px] uppercase tracking-[0.2em] text-white/40 font-semibold">
                 © 2026 ZuriBills • Made with ❤️ by X-Labs
