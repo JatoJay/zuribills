@@ -108,14 +108,46 @@ export interface GeolocationResult {
   currency: CurrencyInfo;
 }
 
+const BROWSER_LANG_TO_LANGUAGE: Record<string, string> = {
+  en: 'English',
+  fr: 'French',
+  es: 'Spanish',
+  pt: 'Portuguese',
+  de: 'German',
+  it: 'Italian',
+  nl: 'Dutch',
+  ru: 'Russian',
+  ar: 'Arabic',
+  hi: 'Hindi',
+  bn: 'Bengali',
+  zh: 'Chinese (Simplified)',
+  ja: 'Japanese',
+  ko: 'Korean',
+  tr: 'Turkish',
+  id: 'Indonesian',
+  vi: 'Vietnamese',
+  sw: 'Swahili',
+  rw: 'Kinyarwanda',
+};
+
+const getBrowserPreferredLanguage = (): string | null => {
+  const browserLang = navigator.language || (navigator as any).userLanguage;
+  if (!browserLang) return null;
+
+  const langCode = browserLang.split('-')[0].toLowerCase();
+  return BROWSER_LANG_TO_LANGUAGE[langCode] || null;
+};
+
 export const detectLocationLanguage = async (): Promise<GeolocationResult | null> => {
+  const browserLanguage = getBrowserPreferredLanguage();
+
   try {
     const response = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) });
     if (response.ok) {
       const data = await response.json();
       if (data.country_code) {
         const countryCode = data.country_code;
-        const language = COUNTRY_TO_LANGUAGE[countryCode] || 'English';
+        const language = browserLanguage || COUNTRY_TO_LANGUAGE[countryCode] || 'English';
         const currency = COUNTRY_TO_CURRENCY[countryCode] || { code: 'USD', symbol: '$' };
         return { countryCode, language, currency };
       }
@@ -130,13 +162,17 @@ export const detectLocationLanguage = async (): Promise<GeolocationResult | null
       const data = await response.json();
       if (data.countryCode) {
         const countryCode = data.countryCode;
-        const language = COUNTRY_TO_LANGUAGE[countryCode] || 'English';
+        const language = browserLanguage || COUNTRY_TO_LANGUAGE[countryCode] || 'English';
         const currency = COUNTRY_TO_CURRENCY[countryCode] || { code: 'USD', symbol: '$' };
         return { countryCode, language, currency };
       }
     }
   } catch (error) {
     console.warn('Fallback geolocation failed:', error);
+  }
+
+  if (browserLanguage) {
+    return { countryCode: 'US', language: browserLanguage, currency: { code: 'USD', symbol: '$' } };
   }
 
   return null;
