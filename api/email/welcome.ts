@@ -43,8 +43,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             <td style="padding: 40px 20px;">
                 <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                     <tr>
-                        <td style="padding: 32px 40px; text-align: center; background-color: #0EA5A4;">
-                            <img src="${APP_BASE_URL}/logo-white.png" alt="ZuriBills" width="80" height="80" style="display: block; margin: 0 auto;">
+                        <td style="padding: 24px 40px; text-align: center; background-color: #0EA5A4;">
+                            <div style="display: inline-block; background: #ffffff; padding: 12px 20px; border-radius: 12px;">
+                                <img src="${APP_BASE_URL}/logo.png" alt="ZuriBills" height="50" style="display: block; margin: 0 auto;">
+                            </div>
                         </td>
                     </tr>
                     <tr>
