@@ -570,7 +570,10 @@ const StackedFeatureCard: React.FC<{
                 </a>
               </div>
 
-              <button className="mt-6 h-12 px-7 bg-[#0b0b0b] text-white rounded-xl font-semibold text-[14px] hover:bg-[#1a1a1a] transition-colors shadow-lg">
+              <button
+                onClick={() => window.location.href = '/signup'}
+                className="mt-6 h-12 px-7 bg-[#0b0b0b] text-white rounded-xl font-semibold text-[14px] hover:bg-[#1a1a1a] transition-colors shadow-lg"
+              >
                 {t(`Start with ${feature.brand}`)}
               </button>
             </div>
