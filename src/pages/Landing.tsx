@@ -609,7 +609,7 @@ const StackedFeatureCard: React.FC<{
               <CheckCircle className={`w-5 h-5 ${feature.labelColor}`} />
             </motion.div>
 
-            <div className="relative z-10 w-[220px] h-[460px]">
+            <div className="relative z-10 w-[220px] h-[520px]">
               <div className="absolute inset-0 bg-[#1a1a1a] rounded-[36px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.4)]">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#1a1a1a] rounded-b-2xl z-20" />
                 <div className="absolute inset-[3px] bg-white rounded-[33px] overflow-hidden">
