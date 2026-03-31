@@ -67,7 +67,9 @@ const getOrganization = async (orgId: string) => {
 };
 
 const updateInvoiceStatus = async (invoiceId: string, status: string, paymentDetails: Record<string, any>) => {
-    await supabaseFetch(`/invoices?id=eq.${invoiceId}`, {
+    console.log('Updating invoice status:', { invoiceId, status, reference: paymentDetails.reference });
+
+    const response = await supabaseFetch(`/invoices?id=eq.${invoiceId}`, {
         method: 'PATCH',
         body: JSON.stringify({
             status,
@@ -76,6 +78,14 @@ const updateInvoiceStatus = async (invoiceId: string, status: string, paymentDet
             payment_reference: paymentDetails.reference,
         }),
     });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to update invoice status:', { invoiceId, status: response.status, error: errorText });
+        throw new Error(`Failed to update invoice: ${errorText}`);
+    }
+
+    console.log('Invoice status updated successfully:', invoiceId);
 };
 
 const createPaymentRecord = async (invoiceId: string, orgId: string, details: Record<string, any>) => {
