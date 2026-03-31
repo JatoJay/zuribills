@@ -344,7 +344,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             </motion.div>
           ))}
         </div>
-        <div className="p-4 pt-2 pb-6">
+        <div className="p-4 pt-2 pb-10">
           <button className="w-full h-11 bg-emerald-500 rounded-xl text-white font-bold text-[12px]">
             Share Catalog Link
           </button>
@@ -364,7 +364,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <span className="text-[13px] font-bold text-black">AI Agent</span>
           </div>
         </div>
-        <div className="flex-1 p-4 pb-6 space-y-3 overflow-hidden">
+        <div className="flex-1 p-4 pb-10 space-y-3 overflow-hidden">
           <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
@@ -437,7 +437,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
               <p className="text-[10px] text-slate-500 mt-1">Funds sent to your bank</p>
             </div>
           </div>
-          <div className="mt-3 mb-4 bg-orange-50 rounded-xl p-3 border border-orange-100">
+          <div className="mt-3 mb-8 bg-orange-50 rounded-xl p-3 border border-orange-100">
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-orange-700 font-medium">Today&apos;s payouts</span>
               <span className="text-[12px] font-bold text-orange-700">$2,840</span>
@@ -492,7 +492,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
           </div>
         </div>
       </div>
-      <div className="p-3 pt-1 pb-6">
+      <div className="p-3 pt-1 pb-10">
         <button className="w-full h-10 bg-teal-500 rounded-lg text-white font-bold text-[11px]">
           Export Tax Report
         </button>
