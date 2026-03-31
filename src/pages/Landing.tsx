@@ -922,68 +922,49 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
         )}
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8 items-stretch overflow-visible py-6">
-        <div className={`relative p-8 rounded-3xl border transition-all duration-500 ${billingCycle === 'monthly' ? 'bg-gradient-to-br from-slate-900 to-slate-800 text-white border-primary/50 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] scale-[1.03] z-10' : 'bg-white/95 border-black/[0.06] hover:border-primary/30 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1'}`}>
-          <h3 className="text-xl font-display font-semibold mb-2" style={{ color: billingCycle === 'monthly' ? '#ffffff' : '#0f172a' }}>{t('Monthly Plan')}</h3>
-          <p className="text-sm mb-6" style={{ color: billingCycle === 'monthly' ? 'rgba(255,255,255,0.8)' : '#64748b' }}>{t('Perfect for short-term projects and starters.')}</p>
-          <div className="flex items-baseline gap-1 mb-6">
-            <span className="text-4xl font-display font-semibold" style={{ color: billingCycle === 'monthly' ? '#ffffff' : '#0f172a' }}>{loadingRate ? '$2' : formatPrice(2)}</span>
-            <span className="text-sm" style={{ color: billingCycle === 'monthly' ? 'rgba(255,255,255,0.7)' : '#64748b' }}>/mo</span>
-          </div>
-          <ul className="space-y-4 mb-8">
-            {PRICING_FEATURES.map((feat, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm" style={{ color: billingCycle === 'monthly' ? 'rgba(255,255,255,0.9)' : '#0f172a' }}>
-                <CheckCircle className="w-5 h-5 text-primary" /> {t(feat)}
-              </li>
-            ))}
-          </ul>
-          <div className="mb-4">
-            <span className="text-xs" style={{ color: billingCycle === 'monthly' ? 'rgba(255,255,255,0.6)' : '#64748b' }}>
-              {t('3-day free trial included')}
-            </span>
-          </div>
-          <Button
-            variant={billingCycle === 'monthly' ? 'primary' : 'outline'}
-            className="w-full"
-            onClick={() => handleSelectPlan('monthly')}
-          >
-            {t('Choose Monthly')}
-          </Button>
-        </div>
-
-        <div className={`relative p-8 rounded-3xl border transition-all duration-500 ${billingCycle === 'yearly' ? 'bg-white border-primary/50 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] scale-[1.03] z-10' : 'bg-white/95 border-black/[0.06] hover:border-primary/30 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1'}`}>
+      <div className="max-w-md mx-auto py-6">
+        <div className="relative p-8 rounded-3xl border bg-white border-primary/50 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)]">
           {billingCycle === 'yearly' && (
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-[var(--on-primary)] text-xs font-bold px-3 py-1 rounded-full shadow-soft">
               {t('MOST POPULAR')}
             </div>
           )}
-          <h3 className="text-xl font-display font-semibold mb-2" style={{ color: '#0f172a' }}>{t('Yearly Plan')}</h3>
-          <p className="text-sm mb-6" style={{ color: '#64748b' }}>{t('Best value for growing businesses.')}</p>
-          <div className="flex items-baseline gap-1 mb-2">
-            <span className="text-4xl font-display font-semibold" style={{ color: '#0f172a' }}>{loadingRate ? '$1.67' : formatPrice(1.67)}</span>
-            <span className="text-sm" style={{ color: '#64748b' }}>/mo</span>
-          </div>
-          <p className="text-xs mb-6" style={{ color: '#64748b' }}>
-            {loadingRate ? t('Billed $20 yearly') : `${t('Billed')} ${formatPrice(20)} ${t('yearly')}`}
+          <h3 className="text-xl font-display font-semibold mb-2 text-slate-900">
+            {billingCycle === 'monthly' ? t('Monthly Plan') : t('Yearly Plan')}
+          </h3>
+          <p className="text-sm mb-6 text-slate-500">
+            {billingCycle === 'monthly' ? t('Perfect for short-term projects and starters.') : t('Best value for growing businesses.')}
           </p>
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className="text-4xl font-display font-semibold text-slate-900">
+              {loadingRate ? (billingCycle === 'monthly' ? '$2' : '$1.67') : formatPrice(billingCycle === 'monthly' ? 2 : 1.67)}
+            </span>
+            <span className="text-sm text-slate-500">/mo</span>
+          </div>
+          {billingCycle === 'yearly' && (
+            <p className="text-xs mb-6 text-slate-500">
+              {loadingRate ? t('Billed $20 yearly') : `${t('Billed')} ${formatPrice(20)} ${t('yearly')}`}
+            </p>
+          )}
+          {billingCycle === 'monthly' && <div className="mb-6" />}
           <ul className="space-y-4 mb-8">
             {PRICING_FEATURES.map((feat, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm" style={{ color: '#0f172a' }}>
+              <li key={i} className="flex items-center gap-3 text-sm text-slate-900">
                 <CheckCircle className="w-5 h-5 text-primary" /> {t(feat)}
               </li>
             ))}
           </ul>
           <div className="mb-4">
-            <span className="text-xs" style={{ color: '#64748b' }}>
+            <span className="text-xs text-slate-500">
               {t('3-day free trial included')}
             </span>
           </div>
           <Button
-            variant={billingCycle === 'yearly' ? 'primary' : 'outline'}
+            variant="primary"
             className="w-full"
-            onClick={() => handleSelectPlan('yearly')}
+            onClick={() => handleSelectPlan(billingCycle)}
           >
-            {t('Choose Yearly')}
+            {billingCycle === 'monthly' ? t('Choose Monthly') : t('Choose Yearly')}
           </Button>
         </div>
       </div>
