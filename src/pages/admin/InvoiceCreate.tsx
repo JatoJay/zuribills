@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { Service, InvoiceItem, InvoiceStatus, Invoice, Client } from '@/types';
 import { getServices, createInvoice, getClients, updateInvoice } from '@/services/storage';
+import { sendInvoiceEmail } from '@/services/email';
 import { Button, Input, Card, formatCurrency } from '@/components/ui';
 import { Trash2, Plus, ArrowLeft, Sparkles, Shield } from 'lucide-react';
 import { parseInvoicePrompt, validateInvoiceCompliance, ComplianceResult } from '@/services/geminiService';
@@ -263,7 +264,14 @@ const InvoiceCreate: React.FC = () => {
                  date: original.date, // Keep creation date?
              });
         } else {
-             await createInvoice(invoiceData, org.eInvoicingConfig);
+             const createdInvoice = await createInvoice(invoiceData, org.eInvoicingConfig);
+             if (createdInvoice) {
+                 try {
+                     await sendInvoiceEmail(createdInvoice, { orgName: org.name });
+                 } catch (emailError) {
+                     console.error('Failed to send invoice email:', emailError);
+                 }
+             }
         }
         setLoading(false);
         navigate({ to: '/org/$slug/invoices', params: { slug: org.slug } });
