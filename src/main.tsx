@@ -181,8 +181,18 @@ declare module '@tanstack/react-router' {
     }
 }
 
+const hidePreloader = () => {
+    const preloader = document.getElementById('preloader');
+    if (preloader) {
+        preloader.style.opacity = '0';
+        setTimeout(() => preloader.remove(), 300);
+    }
+};
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <RouterProvider router={router} />
     </StrictMode>,
-)
+);
+
+hidePreloader();
