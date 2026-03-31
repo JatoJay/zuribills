@@ -342,8 +342,18 @@ const AdminLayout: React.FC = () => {
     }
   };
 
-  if (!authReady) return <div className="p-8">{t('Loading...')}</div>;
-  if (!org) return <div className="p-8">{t('Loading...')}</div>;
+  if (!authReady || !org) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <img src="/logo.png" alt="ZuriBills" className="h-16 mx-auto animate-pulse" />
+          <div className="mt-4 w-10 h-1 bg-border rounded-full mx-auto overflow-hidden">
+            <div className="w-full h-full bg-primary rounded-full animate-[loading_1s_ease-in-out_infinite]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
   const trialEndTime = org.trial?.endsAt ? new Date(org.trial.endsAt).getTime() : Number.NaN;
   const hasTrial = Number.isFinite(trialEndTime);
   const subscriptionActive = org.subscription?.status === 'active';

@@ -326,6 +326,13 @@ h3,
     color: var(--text);
 }
 
+/* Loading animation */
+@keyframes loading {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(0); }
+    100% { transform: translateX(100%); }
+}
+
 /* Print styles */
 @media print {
     .no-print {
