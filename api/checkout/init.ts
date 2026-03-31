@@ -39,24 +39,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const supportedCurrencies = ['usd', 'eur', 'gbp'];
-    const currency = c.toLowerCase();
-    if (!supportedCurrencies.includes(currency)) {
-        return res.status(400).json({ error: `Currency ${c} is not supported. Supported currencies: USD, EUR, GBP` });
-    }
-
     if (!POLAR_ACCESS_TOKEN || !POLAR_ORG_ID) {
         return res.status(500).json({ error: 'Payment service not configured' });
     }
 
     try {
         const reference = `INV-${i}-${Date.now()}`;
-        const amountInCents = Math.round(Number(a) * 100);
+        let amountInCents = Math.round(Number(a) * 100);
+        let checkoutCurrency = 'usd';
+
+        const originalCurrency = c.toLowerCase();
+        if (originalCurrency !== 'usd') {
+            const exchangeRates: Record<string, number> = {
+                eur: 1.08,
+                gbp: 1.27,
+                cad: 0.74,
+                aud: 0.65,
+                ngn: 0.00063,
+                ghs: 0.063,
+                kes: 0.0065,
+                zar: 0.053,
+            };
+            const rate = exchangeRates[originalCurrency] || 1;
+            amountInCents = Math.round(amountInCents * rate);
+        }
 
         const payload = {
             organization_id: POLAR_ORG_ID,
             amount: amountInCents,
-            currency,
+            currency: checkoutCurrency,
             customer_email: z,
             customer_name: n || 'Customer',
             success_url: `${APP_BASE_URL}/catalog/success/${i}?reference=${reference}`,
