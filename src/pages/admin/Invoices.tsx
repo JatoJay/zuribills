@@ -204,7 +204,7 @@ const Invoices: React.FC = () => {
 
         for (const invoice of selectedInvoices) {
             try {
-                await sendInvoiceEmail(invoice, { orgName: org.name });
+                await sendInvoiceEmail(invoice, { orgName: org.name, orgSlug: org.slug });
                 if (invoice.status === InvoiceStatus.DRAFT) {
                     await updateInvoiceStatus(invoice.id, InvoiceStatus.SENT);
                 }
@@ -244,7 +244,7 @@ const Invoices: React.FC = () => {
         if (!sendingInvoice) return;
         setIsSending(true);
         try {
-            await sendInvoiceEmail(sendingInvoice, { body: emailBody, orgName: org.name });
+            await sendInvoiceEmail(sendingInvoice, { body: emailBody, orgName: org.name, orgSlug: org.slug });
             await updateInvoiceStatus(sendingInvoice.id, InvoiceStatus.SENT);
             setSendingInvoice(null);
             loadInvoices();

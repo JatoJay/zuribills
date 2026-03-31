@@ -4,6 +4,7 @@ import { apiFetch } from './apiClient';
 type SendInvoiceEmailOptions = {
     body?: string;
     orgName?: string;
+    orgSlug?: string;
 };
 
 export const sendInvoiceEmail = async (invoice: Invoice, options: SendInvoiceEmailOptions = {}): Promise<void> => {
@@ -19,6 +20,8 @@ export const sendInvoiceEmail = async (invoice: Invoice, options: SendInvoiceEma
             body: options.body,
             invoiceNumber: invoice.invoiceNumber,
             clientName: invoice.clientName,
+            invoiceId: invoice.id,
+            orgSlug: options.orgSlug,
         }),
     });
 

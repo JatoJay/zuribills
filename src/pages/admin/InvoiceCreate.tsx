@@ -267,7 +267,7 @@ const InvoiceCreate: React.FC = () => {
              const createdInvoice = await createInvoice(invoiceData, org.eInvoicingConfig);
              if (createdInvoice) {
                  try {
-                     await sendInvoiceEmail(createdInvoice, { orgName: org.name });
+                     await sendInvoiceEmail(createdInvoice, { orgName: org.name, orgSlug: org.slug });
                  } catch (emailError) {
                      console.error('Failed to send invoice email:', emailError);
                  }
