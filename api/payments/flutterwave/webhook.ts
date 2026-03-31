@@ -91,8 +91,12 @@ const transferToMerchant = async (
     }
 
     const paymentConfig = org.payment_config;
-    if (!paymentConfig.bank_code || !paymentConfig.account_number) {
-        console.log('Incomplete payout details for org:', orgId);
+    const bankCode = paymentConfig.bankCode || paymentConfig.bank_code;
+    const accountNumber = paymentConfig.accountNumber || paymentConfig.account_number;
+    const accountName = paymentConfig.accountName || paymentConfig.account_name;
+
+    if (!bankCode || !accountNumber) {
+        console.log('Incomplete payout details for org:', orgId, { bankCode, accountNumber });
         return { success: false, error: 'Incomplete payout account' };
     }
 
@@ -100,6 +104,14 @@ const transferToMerchant = async (
     const merchantAmount = amount - platformFee;
 
     const transferRef = `ZB-TRF-${invoiceId}-${Date.now()}`;
+
+    console.log('Initiating transfer:', {
+        orgId,
+        bankCode,
+        accountNumber: accountNumber.slice(-4),
+        amount: merchantAmount,
+        currency,
+    });
 
     try {
         const response = await fetch('https://api.flutterwave.com/v3/transfers', {
@@ -109,16 +121,18 @@ const transferToMerchant = async (
                 'Authorization': `Bearer ${FLW_SECRET_KEY}`,
             },
             body: JSON.stringify({
-                account_bank: paymentConfig.bank_code,
-                account_number: paymentConfig.account_number,
+                account_bank: bankCode,
+                account_number: accountNumber,
                 amount: merchantAmount,
                 currency: currency,
                 reference: transferRef,
                 narration: `ZuriBills payout for invoice ${invoiceId}`,
+                debit_currency: currency,
                 meta: {
                     invoice_id: invoiceId,
                     original_tx_ref: txRef,
                     platform_fee: platformFee,
+                    account_name: accountName,
                 },
             }),
         });
@@ -134,8 +148,8 @@ const transferToMerchant = async (
                 merchantAmount,
                 currency,
                 invoiceId,
-                bankCode: paymentConfig.bank_code,
-                accountName: paymentConfig.account_name,
+                bankCode,
+                accountName,
                 timestamp: new Date().toISOString(),
             });
             return { success: true, transferRef, merchantAmount };
