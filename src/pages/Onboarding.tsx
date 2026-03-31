@@ -598,7 +598,7 @@ const Onboarding: React.FC = () => {
                                         <div className="text-xs uppercase tracking-wider text-primary font-semibold">{t('Selected Plan')}</div>
                                         <button
                                             type="button"
-                                            onClick={() => navigate({ to: '/', hash: 'pricing' })}
+                                            onClick={() => navigate({ to: '/signup' })}
                                             className="text-xs text-primary hover:text-primary/80 font-medium"
                                         >
                                             {t('Change plan')}

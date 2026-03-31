@@ -4,13 +4,10 @@ import { Button, Input } from '../components/ui';
 import { askBusinessAnalyst } from '@/services/geminiService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useParallax } from '@/hooks/useParallax';
-import { SUPPORTED_LANGUAGES } from '@/constants/languages';
-import { LANGUAGE_SOURCE_KEY } from '@/context/TranslationContext';
 import { motion, useScroll, useTransform, MotionValue } from 'framer-motion';
 import {
   CheckCircle,
   Zap,
-  Globe,
   Layers,
   Play,
   ArrowRight,
@@ -26,6 +23,7 @@ import {
   Languages,
   MessageSquare
 } from 'lucide-react';
+import LanguageSelector from '@/components/LanguageSelector';
 
 const NAV_ITEMS = ['Features', 'How it works', 'AI Assistant', 'FAQ', 'Pricing'];
 
@@ -202,10 +200,7 @@ const FAQ_ITEMS = [
 
 const NavBar: React.FC<{
   t: (text: string) => string;
-  language: string;
-  languages: string[];
-  onLanguageChange: (nextLanguage: string) => void;
-}> = ({ t, language, languages, onLanguageChange }) => {
+}> = ({ t }) => {
   const navigate = useNavigate();
   return (
     <nav className="fixed w-full z-[100] bg-white/80 backdrop-blur-2xl border-b border-black/[0.04] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
@@ -234,21 +229,7 @@ const NavBar: React.FC<{
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-full border border-black/[0.06] bg-white/90 px-3 py-1.5 text-xs text-muted shadow-sm hover:shadow-md transition-shadow duration-300">
-              <Globe className="w-3.5 h-3.5" />
-              <select
-                aria-label={t('Language')}
-                value={language}
-                onChange={(e) => onLanguageChange(e.target.value)}
-                className="bg-transparent text-foreground text-xs sm:text-sm focus:outline-none w-[92px] sm:w-[140px]"
-              >
-                {languages.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <LanguageSelector />
             <button
               onClick={() => navigate({ to: '/login' })}
               className="hidden md:inline text-sm font-medium text-muted hover:text-foreground transition-colors"
@@ -1089,19 +1070,13 @@ const Landing: React.FC = () => {
     'Learn more',
     'Get started'
   ]), []);
-  const { t, language, setLanguage, isTranslating } = useTranslation(translationStrings);
+  const { t, language, isTranslating } = useTranslation(translationStrings);
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
     forceUpdate(n => n + 1);
   }, [language, isTranslating]);
 
-  const languageOptions = useMemo(() => {
-    if (SUPPORTED_LANGUAGES.includes(language)) {
-      return SUPPORTED_LANGUAGES;
-    }
-    return [language, ...SUPPORTED_LANGUAGES];
-  }, [language]);
   const [slug, setSlug] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -1124,22 +1099,12 @@ const Landing: React.FC = () => {
     }
   };
 
-  const handleLanguageChange = (nextLanguage: string) => {
-    localStorage.setItem(LANGUAGE_SOURCE_KEY, 'user');
-    setLanguage(nextLanguage);
-  };
-
   return (
     <div
       className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-black"
       style={{ ...LIGHT_THEME, overflowX: 'clip' } as React.CSSProperties}
     >
-      <NavBar
-        t={t}
-        language={language}
-        languages={languageOptions}
-        onLanguageChange={handleLanguageChange}
-      />
+      <NavBar t={t} />
 
       <section className="relative pt-40 pb-32 bg-gradient-to-b from-white via-white to-slate-50/50 overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-40" />

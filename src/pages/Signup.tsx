@@ -4,6 +4,7 @@ import { Button, Input } from '@/components/ui';
 import { getSupabaseClient } from '@/services/supabaseClient';
 import { useTranslation } from '@/hooks/useTranslation';
 import { ArrowRight, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import LanguageSelector from '@/components/LanguageSelector';
 
 const Signup: React.FC = () => {
     const navigate = useNavigate();
@@ -114,22 +115,22 @@ const Signup: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-white flex">
-            <div className="hidden lg:flex lg:w-1/2 bg-slate-900 p-12 flex-col justify-between text-white">
+            <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-between" style={{ backgroundColor: '#0f172a' }}>
                 <div>
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate({ to: '/' })}>
                         <img src="/logo.svg" alt="ZuriBills" className="w-9 h-9" />
                         <span className="font-display text-lg font-semibold tracking-tight">
-                            <span className="text-white">Zuri</span><span className="text-primary">Bills</span>
+                            <span style={{ color: '#ffffff' }}>Zuri</span><span className="text-primary">Bills</span>
                         </span>
                     </div>
                 </div>
 
                 <div className="space-y-8">
                     <div>
-                        <h2 className="text-3xl font-display font-semibold mb-4 text-white">
+                        <h2 className="text-3xl font-display font-semibold mb-4" style={{ color: '#ffffff' }}>
                             Get paid faster with smart invoicing
                         </h2>
-                        <p className="text-lg text-white/70">
+                        <p className="text-lg" style={{ color: 'rgba(255,255,255,0.7)' }}>
                             Join thousands of businesses using ZuriBills to streamline their payments.
                         </p>
                     </div>
@@ -140,25 +141,29 @@ const Signup: React.FC = () => {
                                 <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
                                     <CheckCircle className="w-4 h-4 text-primary" />
                                 </div>
-                                <span className="text-white/90">{t(feature)}</span>
+                                <span style={{ color: 'rgba(255,255,255,0.9)' }}>{t(feature)}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className="text-sm text-white/40">
+                <div className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
                     © 2025 ZuriBills. All rights reserved.
                 </div>
             </div>
 
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-                <div className="w-full max-w-md">
-                    <div className="lg:hidden flex items-center gap-3 mb-8 cursor-pointer" onClick={() => navigate({ to: '/' })}>
+            <div className="w-full lg:w-1/2 flex flex-col p-8">
+                <div className="flex items-center justify-between mb-8 lg:justify-end">
+                    <div className="lg:hidden flex items-center gap-3 cursor-pointer" onClick={() => navigate({ to: '/' })}>
                         <img src="/logo.svg" alt="ZuriBills" className="w-9 h-9" />
                         <span className="font-display text-lg font-semibold tracking-tight">
                             <span className="text-black">Zuri</span><span className="text-primary">Bills</span>
                         </span>
                     </div>
+                    <LanguageSelector />
+                </div>
+                <div className="flex-1 flex items-center justify-center">
+                <div className="w-full max-w-md">
 
                     <div className="mb-8">
                         <h1 className="text-3xl font-display font-semibold text-black mb-2">
@@ -246,6 +251,7 @@ const Signup: React.FC = () => {
                             {t('Sign in')}
                         </button>
                     </div>
+                </div>
                 </div>
             </div>
         </div>

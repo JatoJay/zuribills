@@ -13,6 +13,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
+    if (req.method !== 'GET' && req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
     const dataHeader = req.headers['x-data'] as string;
     const dataQuery = req.query.d as string;
     const data = dataHeader || dataQuery || '';
@@ -35,6 +39,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    const supportedCurrencies = ['usd', 'eur', 'gbp'];
+    const currency = c.toLowerCase();
+    if (!supportedCurrencies.includes(currency)) {
+        return res.status(400).json({ error: `Currency ${c} is not supported. Supported currencies: USD, EUR, GBP` });
+    }
+
     if (!POLAR_ACCESS_TOKEN || !POLAR_ORG_ID) {
         return res.status(500).json({ error: 'Payment service not configured' });
     }
@@ -46,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const payload = {
             organization_id: POLAR_ORG_ID,
             amount: amountInCents,
-            currency: c.toLowerCase(),
+            currency,
             customer_email: z,
             customer_name: n || 'Customer',
             success_url: `${APP_BASE_URL}/catalog/success/${i}?reference=${reference}`,

@@ -3,7 +3,7 @@ import { Service } from '@/types';
 import { getServices, createService, updateService, deleteService } from '@/services/storage';
 import { Button, Input, Card, formatCurrency } from '@/components/ui';
 import { generateServiceDescription } from '@/services/geminiService';
-import { Plus, Trash2, Wand2, Search, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Wand2, Search, Edit2, Upload, X } from 'lucide-react';
 import { useAdminContext } from './AdminLayout';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePrompt } from '@/context/PromptContext';
@@ -24,7 +24,10 @@ const Services: React.FC = () => {
         'Description',
         'Generate with AI',
         'Price',
-        'Image URL',
+        'Service Image',
+        'Upload image (max 500KB)',
+        'Image size must be less than 500KB.',
+        'Remove image',
         'Cancel',
         'Save Service',
         'Update Service',
@@ -49,6 +52,7 @@ const Services: React.FC = () => {
     });
     const [loading, setLoading] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
+    const imageInputRef = useRef<HTMLInputElement>(null);
 
     const loadServices = async (orgId: string) => {
         const requestId = ++loadRequestId.current;
@@ -257,12 +261,53 @@ const Services: React.FC = () => {
                                 required
                             />
 
-                            <Input
-                                label={t('Image URL')}
-                                placeholder="https://example.com/image.jpg"
-                                value={serviceForm.imageUrl}
-                                onChange={e => setServiceForm({ ...serviceForm, imageUrl: e.target.value })}
-                            />
+                            <div>
+                                <label className="text-sm font-medium mb-2 block text-foreground">{t('Service Image')}</label>
+                                {serviceForm.imageUrl ? (
+                                    <div className="relative rounded-lg overflow-hidden border border-border">
+                                        <img src={serviceForm.imageUrl} alt="Preview" className="w-full h-32 object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setServiceForm({ ...serviceForm, imageUrl: '' })}
+                                            className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                                            title={t('Remove image')}
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => imageInputRef.current?.click()}
+                                        className="w-full h-24 rounded-lg border-2 border-dashed border-border bg-surface hover:bg-surface-variant/50 flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer"
+                                    >
+                                        <Upload className="w-5 h-5 text-muted" />
+                                        <span className="text-xs text-muted">{t('Upload image (max 500KB)')}</span>
+                                    </button>
+                                )}
+                                <input
+                                    ref={imageInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            if (file.size > 500 * 1024) {
+                                                alert(t('Image size must be less than 500KB.'));
+                                                e.target.value = '';
+                                                return;
+                                            }
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => {
+                                                setServiceForm({ ...serviceForm, imageUrl: reader.result as string });
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                        e.target.value = '';
+                                    }}
+                                />
+                            </div>
 
                             <div className="flex gap-3 mt-6">
                                 <Button type="button" variant="outline" onClick={handleCloseModal} className="flex-1">{t('Cancel')}</Button>

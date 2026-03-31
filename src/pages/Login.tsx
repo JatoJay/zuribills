@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, Input, Card } from '@/components/ui';
 import ThemeToggle from '@/components/ThemeToggle';
+import LanguageSelector from '@/components/LanguageSelector';
 import { getSupabaseClient } from '@/services/supabaseClient';
 import {
   getOrganizationBySlug,
@@ -442,10 +443,11 @@ const Login: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <LanguageSelector />
             <ThemeToggle />
             <button
               onClick={() => navigate({ to: '/' })}
-              className="text-sm font-medium text-muted hover:text-foreground transition-colors"
+              className="text-sm font-medium text-muted hover:text-foreground transition-colors hidden sm:inline"
             >
               {t('Back to Home')}
             </button>
