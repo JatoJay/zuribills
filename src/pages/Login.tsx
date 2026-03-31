@@ -435,10 +435,8 @@ const Login: React.FC = () => {
 
       <header className="relative z-20 border-b border-border bg-background/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center shadow-sm">
-              <Sparkles className="w-4 h-4" />
-            </div>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate({ to: '/' })}>
+            <img src="/logo.svg" alt="ZuriBills" className="w-9 h-9" />
             <span className="font-display text-lg font-semibold tracking-tight">
               <span className="text-foreground">Zuri</span><span className="text-primary">Bills</span>
             </span>

@@ -117,8 +117,10 @@ const Signup: React.FC = () => {
             <div className="hidden lg:flex lg:w-1/2 bg-slate-900 p-12 flex-col justify-between text-white">
                 <div>
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate({ to: '/' })}>
-                        <img src="/logo.svg" alt="ZuriBills" className="w-10 h-10" />
-                        <span className="font-display text-xl font-semibold text-white">ZuriBills</span>
+                        <img src="/logo.svg" alt="ZuriBills" className="w-9 h-9" />
+                        <span className="font-display text-lg font-semibold tracking-tight">
+                            <span className="text-white">Zuri</span><span className="text-primary">Bills</span>
+                        </span>
                     </div>
                 </div>
 
@@ -152,8 +154,8 @@ const Signup: React.FC = () => {
             <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
                 <div className="w-full max-w-md">
                     <div className="lg:hidden flex items-center gap-3 mb-8 cursor-pointer" onClick={() => navigate({ to: '/' })}>
-                        <img src="/logo.svg" alt="ZuriBills" className="w-10 h-10" />
-                        <span className="font-display text-xl font-semibold">
+                        <img src="/logo.svg" alt="ZuriBills" className="w-9 h-9" />
+                        <span className="font-display text-lg font-semibold tracking-tight">
                             <span className="text-black">Zuri</span><span className="text-primary">Bills</span>
                         </span>
                     </div>

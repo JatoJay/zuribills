@@ -430,10 +430,10 @@ const Onboarding: React.FC = () => {
 
             <header className="relative z-20 border-b border-slate-200/70 bg-white/90 backdrop-blur">
                 <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5">
-                    <div className="flex items-center gap-3">
-                        <img src="/logo.svg" alt="ZuriBills" className="w-10 h-10" />
-                        <span className="font-display text-lg font-semibold tracking-tight text-black">
-                            Zuri<span className="text-primary">Bills</span>
+                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate({ to: '/' })}>
+                        <img src="/logo.svg" alt="ZuriBills" className="w-9 h-9" />
+                        <span className="font-display text-lg font-semibold tracking-tight">
+                            <span className="text-black">Zuri</span><span className="text-primary">Bills</span>
                         </span>
                     </div>
                     <button
