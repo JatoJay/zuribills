@@ -54,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             <h2 style="margin: 0 0 20px; color: #1a1a1a; font-size: 20px; font-weight: 600;">
                                 ${invoiceNumber ? `Invoice ${invoiceNumber}` : 'Invoice'}
                             </h2>
-                            ${clientName ? `<p style="margin: 0 0 20px; color: #666666; font-size: 16px;">Dear ${clientName},</p>` : ''}
+                            ${(!body && clientName) ? `<p style="margin: 0 0 20px; color: #666666; font-size: 16px;">Dear ${clientName},</p>` : ''}
                             <div style="margin: 0 0 30px; color: #333333; font-size: 16px; line-height: 1.6;">
                                 ${body ? body.replace(/\n/g, '<br>') : 'Please find your invoice attached. Thank you for your business!'}
                             </div>
