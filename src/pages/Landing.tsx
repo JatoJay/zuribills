@@ -37,7 +37,7 @@ const PRODUCT_FEATURES = [
     categoryIcon: <Layers className="w-4 h-4 text-emerald-500" />,
     brand: 'Client Catalogs',
     title: 'Professional service catalogs that convert browsers to buyers',
-    description: 'Build stunning digital catalogs that showcase your services, packages, and pricing. Share a single link and let clients explore, select, and pay — all in one seamless experience.',
+    description: 'Build stunning digital catalogs that showcase your services, packages, and pricing. Share a single link and let clients explore, select, and pay, all in one seamless experience.',
     image: '/features/catalog-mock.png',
     bgColor: 'bg-emerald-500/5',
     labelColor: 'text-emerald-500',
@@ -47,7 +47,7 @@ const PRODUCT_FEATURES = [
     categoryIcon: <Bot className="w-4 h-4 text-blue-500" />,
     brand: 'AI Payment Agent',
     title: 'Automated follow-ups that recover 40% more overdue payments',
-    description: 'Your AI assistant monitors every invoice 24/7. It detects overdue payments, drafts personalized reminder emails, and helps you get paid faster — without lifting a finger.',
+    description: 'Your AI assistant monitors every invoice 24/7. It detects overdue payments, drafts personalized reminder emails, and helps you get paid faster without lifting a finger.',
     image: '/features/ai-mock.png',
     bgColor: 'bg-blue-500/5',
     labelColor: 'text-blue-500',
@@ -56,7 +56,7 @@ const PRODUCT_FEATURES = [
     category: 'Payments',
     categoryIcon: <Zap className="w-4 h-4 text-orange-500" />,
     brand: 'Instant Payouts',
-    title: 'Get paid instantly — no more waiting 3-5 business days',
+    title: 'Get paid instantly. No more waiting 3-5 business days',
     description: 'Accept cards, bank transfers, and mobile money. When clients pay, funds hit your bank account or mobile wallet in real-time. No delays, no hassle.',
     image: '/features/payment-mock.png',
     bgColor: 'bg-orange-500/5',
@@ -67,7 +67,7 @@ const PRODUCT_FEATURES = [
     categoryIcon: <BarChart3 className="w-4 h-4 text-teal-500" />,
     brand: 'Business Intelligence',
     title: 'Tax-ready reports and cash flow insights in one dashboard',
-    description: 'Track revenue, expenses, and profit margins at a glance. Generate professional financial reports for tax filing, audits, or investor meetings — all automatically.',
+    description: 'Track revenue, expenses, and profit margins at a glance. Generate professional financial reports for tax filing, audits, or investor meetings, all automatically.',
     image: '/features/analytics-mock.png',
     bgColor: 'bg-teal-500/5',
     labelColor: 'text-teal-500',
@@ -96,7 +96,7 @@ const HOW_IT_WORKS_STEPS = [
 ];
 
 const AI_BULLETS = [
-  'Ask questions in plain English — get instant answers',
+  'Ask questions in plain English and get instant answers',
   'Automatic overdue payment detection and alerts',
   'AI-drafted follow-up emails that get responses',
   'Revenue forecasting and business trend insights',
@@ -1085,7 +1085,7 @@ const Landing: React.FC = () => {
     'Admin Dashboard Interface',
     'Who We Serve',
     'Built for people who do real work',
-    'Whether you run a boutique, freelance on the side, or craft custom pieces — ZuriBills helps you look professional and get paid faster.',
+    'Whether you run a boutique, freelance on the side, or craft custom pieces, ZuriBills helps you look professional and get paid faster.',
     ...AUDIENCE_CARDS.flatMap(card => [card.title, card.description]),
     'FAQ',
     'Answers for growing teams.',
@@ -1188,7 +1188,7 @@ const Landing: React.FC = () => {
               {t('Built for growing businesses, freelancers & artisans')}
             </div>
             <h1 className="text-5xl md:text-[3.5rem] lg:text-6xl font-display font-bold leading-[1.1] tracking-tight mb-6">
-              {t('Be in control')} — <br className="hidden md:block" /><span className="bg-gradient-to-r from-primary via-primary to-emerald-500 bg-clip-text text-transparent">{t('from services to paid invoices')}</span>
+              {t('Be in control')}: <br className="hidden md:block" /><span className="bg-gradient-to-r from-primary via-primary to-emerald-500 bg-clip-text text-transparent">{t('from services to paid invoices')}</span>
             </h1>
             <p className="text-lg md:text-xl text-slate-600 mb-8 max-w-xl leading-relaxed">
               {t('One canvas for services, expenses, pricing, checkout, and follow-ups. Share a beautiful catalog, get paid faster, and file taxes with clean inflow/outflow reports.')}
@@ -1471,7 +1471,7 @@ const Landing: React.FC = () => {
               {t('Built for people who do real work')}
             </h2>
             <p className="text-slate-500 text-lg leading-relaxed max-w-2xl mx-auto">
-              {t('Whether you run a boutique, freelance on the side, or craft custom pieces — ZuriBills helps you look professional and get paid faster.')}
+              {t('Whether you run a boutique, freelance on the side, or craft custom pieces, ZuriBills helps you look professional and get paid faster.')}
             </p>
           </div>
 
@@ -1579,7 +1579,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
                 onClick={() => navigate({ to: '/signup' })}
                 className="h-14 px-10 rounded-full bg-primary text-[#0b0b0b] font-bold text-base hover:bg-primary/90 hover:scale-[1.03] transition-all duration-300 border-none shadow-xl shadow-primary/30"
               >
-                {t('Start free — no credit card')}
+                {t('Start free, no credit card')}
               </Button>
               <Button
                 variant="outline"
