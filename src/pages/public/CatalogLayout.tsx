@@ -108,48 +108,46 @@ const CatalogLayout: React.FC = () => {
                             <div className="font-bold text-xl text-foreground">{org.name}</div>
                             <div className="flex items-center gap-3">
                                 <ThemeToggle />
+                                {showCart && (
+                                    <button
+                                        onClick={() => setIsCartOpen(!isCartOpen)}
+                                        className="relative p-2 rounded-full hover:bg-surface transition-colors"
+                                    >
+                                        <ShoppingCart className="w-5 h-5 text-foreground" />
+                                        {cart.length > 0 && (
+                                            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-xs font-bold flex items-center justify-center" style={{ color: '#0f172a' }}>
+                                                {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                                            </span>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </header>
 
-                    {/* Main Layout Area */}
-                    <div className="flex flex-1 relative overflow-hidden print:block print:overflow-visible">
-                        {/* Content Scroll Area */}
-                        <div className="flex-1 overflow-y-auto h-[calc(100vh-4rem)] print:h-auto print:overflow-visible">
-                            <main className={isSuccessRoute ? "w-full max-w-none px-4 py-8 flex justify-center print:block print:p-0" : "max-w-7xl mx-auto px-4 py-8 print:max-w-none print:p-0"}>
-                                <Outlet />
-                            </main>
-                        </div>
-
-                        {/* Desktop Sidebar (Resizes Content) */}
-                        {showCart && (
-                            <aside className={`
-                                hidden lg:flex flex-col w-96 border-l border-border bg-surface
-                                transition-all duration-300 ease-in-out h-[calc(100vh-4rem)]
-                                ${isCartOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 w-0 border-none overflow-hidden'}
-                            `}>
-                            {isCartOpen && <CartContent cart={cart} org={org} removeFromCart={removeFromCart} cartTotal={cartTotal} closeCart={() => setIsCartOpen(false)} isMobile={false} slug={slug} t={t} />}
-                        </aside>
-                        )}
-
-                        {/* Mobile Overlay (Modal) */}
-                        {showCart && isCartOpen && (
-                            <div className="lg:hidden fixed inset-0 z-50 flex justify-end">
-                                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
-                                <div className="relative w-full max-w-md bg-surface h-full shadow-2xl flex flex-col border-l border-border animate-slide-in-right">
-                                    <CartContent cart={cart} org={org} removeFromCart={removeFromCart} cartTotal={cartTotal} closeCart={() => setIsCartOpen(false)} isMobile={true} slug={slug} t={t} />
-                                </div>
-                            </div>
-                        )}
+                    {/* Main Content */}
+                    <div className="flex-1 overflow-y-auto print:overflow-visible">
+                        <main className={isSuccessRoute ? "w-full max-w-none px-4 py-8 flex justify-center print:block print:p-0" : "max-w-7xl mx-auto px-4 py-8 print:max-w-none print:p-0"}>
+                            <Outlet />
+                        </main>
                     </div>
+
+                    {/* Cart Popover */}
+                    {showCart && isCartOpen && (
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setIsCartOpen(false)} />
+                            <div className="fixed top-20 right-4 z-50 w-full max-w-sm bg-surface rounded-xl shadow-2xl border border-border flex flex-col max-h-[calc(100vh-6rem)] animate-fade-in-up">
+                                <CartContent cart={cart} org={org} removeFromCart={removeFromCart} cartTotal={cartTotal} closeCart={() => setIsCartOpen(false)} slug={slug} t={t} />
+                            </div>
+                        </>
+                    )}
                 </div>
             </CatalogContext.Provider>
         </CartContext.Provider>
     );
 };
 
-// Extracted Cart Content for reuse
-const CartContent = ({ cart, org, removeFromCart, cartTotal, closeCart, isMobile, slug, t }: any) => {
+const CartContent = ({ cart, org, removeFromCart, cartTotal, closeCart, slug, t }: any) => {
     const navigate = useNavigate();
 
     const handleCheckout = () => {
@@ -159,36 +157,34 @@ const CartContent = ({ cart, org, removeFromCart, cartTotal, closeCart, isMobile
 
     return (
         <>
-            <div className="p-4 border-b border-border flex justify-between items-center bg-surface/50">
+            <div className="p-4 border-b border-border flex justify-between items-center bg-surface/50 rounded-t-xl">
                 <h2 className="font-bold text-lg text-foreground">{t('Your Cart')}</h2>
-                {isMobile && (
-                    <button onClick={closeCart} className="p-2 hover:bg-surface/80 rounded-full transition-colors text-muted">
-                        <X className="w-5 h-5" />
-                    </button>
-                )}
+                <button onClick={closeCart} className="p-2 hover:bg-surface/80 rounded-full transition-colors text-muted">
+                    <X className="w-5 h-5" />
+                </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-80">
                 {cart.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-muted space-y-4">
-                        <ShoppingCart className="w-16 h-16 opacity-20" />
-                        <p>{t('Your cart is empty')}</p>
+                    <div className="py-8 flex flex-col items-center justify-center text-muted space-y-4">
+                        <ShoppingCart className="w-12 h-12 opacity-20" />
+                        <p className="text-sm">{t('Your cart is empty')}</p>
                     </div>
                 ) : (
                     cart.map((item: any) => (
-                        <div key={item.id} className="flex gap-4 items-center border-b border-border pb-4 last:border-0">
+                        <div key={item.id} className="flex gap-3 items-center border-b border-border pb-3 last:border-0">
                             {item.imageUrl && (
                                 <div className="w-10 h-10 rounded-md overflow-hidden shrink-0 border border-border">
                                     <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                                 </div>
                             )}
-                            <div className="flex-1">
-                                <h4 className="font-medium text-foreground text-sm">{item.name}</h4>
-                                <p className="text-xs text-muted mt-1">
+                            <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-foreground text-sm truncate">{item.name}</h4>
+                                <p className="text-xs text-muted mt-0.5">
                                     {formatCurrency(item.price, org.currency)} x {item.quantity}
                                 </p>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
                                 <span className="font-bold text-foreground text-sm">
                                     {formatCurrency(item.price * item.quantity, org.currency)}
                                 </span>
@@ -204,14 +200,14 @@ const CartContent = ({ cart, org, removeFromCart, cartTotal, closeCart, isMobile
                 )}
             </div>
 
-            <div className="p-6 border-t border-border bg-surface/50">
-                <div className="flex justify-between items-center mb-6">
-                    <span className="text-muted">{t('Total')}</span>
-                    <span className="text-2xl font-bold text-foreground">
+            <div className="p-4 border-t border-border bg-surface/50 rounded-b-xl">
+                <div className="flex justify-between items-center mb-4">
+                    <span className="text-muted text-sm">{t('Total')}</span>
+                    <span className="text-xl font-bold text-foreground">
                         {formatCurrency(cartTotal, org.currency)}
                     </span>
                 </div>
-                <Button className="w-full h-12 text-lg bg-primary hover:bg-secondary text-background shadow-neon" disabled={cart.length === 0} onClick={handleCheckout}>
+                <Button className="w-full h-10 bg-primary hover:bg-secondary text-background" disabled={cart.length === 0} onClick={handleCheckout}>
                     {t('Checkout')}
                 </Button>
             </div>
