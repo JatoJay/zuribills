@@ -567,7 +567,7 @@ const StackedFeatureCard: React.FC<{
             </div>
           </div>
 
-          <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+          <div className="hidden lg:flex flex-1 relative items-center justify-center overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className={`absolute w-[400px] h-[400px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/20`} />
               <div className={`absolute w-[300px] h-[300px] rounded-full border ${feature.labelColor.replace('text-', 'border-')}/15`} />
