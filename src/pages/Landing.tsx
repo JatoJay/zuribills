@@ -317,7 +317,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <div className="w-6 h-6 rounded-md bg-emerald-500 flex items-center justify-center">
               <Layers className="w-3 h-3 text-white" />
             </div>
-            <span className="text-[11px] font-bold text-black">My Catalog</span>
+            <span className="text-[11px] font-bold" style={{ color: '#000' }}>My Catalog</span>
           </div>
         </div>
         <div className="flex-1 p-3 space-y-2 overflow-hidden">
@@ -338,9 +338,9 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
                   <Layers className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-slate-900 truncate">{item.name}</p>
+                  <p className="text-[10px] font-bold truncate" style={{ color: '#0f172a' }}>{item.name}</p>
                 </div>
-                <span className="text-[10px] font-bold text-slate-900">{item.price}</span>
+                <span className="text-[10px] font-bold" style={{ color: '#0f172a' }}>{item.price}</span>
               </div>
             </motion.div>
           ))}
@@ -362,7 +362,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center">
               <Bot className="w-3 h-3 text-white" />
             </div>
-            <span className="text-[11px] font-bold text-black">AI Agent</span>
+            <span className="text-[11px] font-bold" style={{ color: '#000' }}>AI Agent</span>
           </div>
         </div>
         <div className="flex-1 p-3 space-y-2 overflow-hidden">
@@ -372,7 +372,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
                 <Bot className="w-3 h-3 text-blue-600" />
               </div>
               <div>
-                <p className="text-[9px] text-black leading-relaxed font-medium">
+                <p className="text-[9px] leading-relaxed font-medium" style={{ color: '#000' }}>
                   <span className="font-bold">INV-1042</span> is 3 days overdue.
                 </p>
                 <p className="text-[9px] text-blue-600 font-semibold mt-0.5">Send a reminder?</p>
@@ -383,7 +383,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <button className="flex-1 h-8 bg-blue-500 rounded-lg text-white font-bold text-[9px]">
               Send
             </button>
-            <button className="flex-1 h-8 bg-slate-100 rounded-lg text-slate-700 font-bold text-[9px]">
+            <button className="flex-1 h-8 bg-slate-100 rounded-lg font-bold text-[9px]" style={{ color: '#334155' }}>
               View
             </button>
           </div>
@@ -405,7 +405,7 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             <div className="w-6 h-6 rounded-md bg-orange-500 flex items-center justify-center">
               <Zap className="w-3 h-3 text-white" />
             </div>
-            <span className="text-[11px] font-bold text-black">Payment</span>
+            <span className="text-[11px] font-bold" style={{ color: '#000' }}>Payment</span>
           </div>
         </div>
         <div className="flex-1 p-3 flex flex-col">
@@ -418,9 +418,9 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             >
               <CheckCircle className="w-5 h-5 text-green-500" />
             </motion.div>
-            <p className="text-[8px] text-slate-600 uppercase tracking-wider font-semibold">Confirmed</p>
-            <p className="text-[18px] font-bold text-slate-900">$1,200</p>
-            <p className="text-[9px] text-slate-600 font-medium">Acme Corp</p>
+            <p className="text-[8px] uppercase tracking-wider font-semibold" style={{ color: '#64748b' }}>Confirmed</p>
+            <p className="text-[18px] font-bold" style={{ color: '#0f172a' }}>$1,200</p>
+            <p className="text-[9px] font-medium" style={{ color: '#64748b' }}>Acme Corp</p>
             <div className="mt-2 pt-2 border-t border-slate-100">
               <div className="flex items-center justify-center gap-1 text-orange-500">
                 <Zap className="w-3 h-3" />
@@ -446,24 +446,24 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
           <div className="w-6 h-6 rounded-md bg-teal-500 flex items-center justify-center">
             <BarChart3 className="w-3 h-3 text-white" />
           </div>
-          <span className="text-[11px] font-bold text-black">Analytics</span>
+          <span className="text-[11px] font-bold" style={{ color: '#000' }}>Analytics</span>
         </div>
       </div>
       <div className="flex-1 p-3 space-y-2 overflow-hidden">
         <div className="grid grid-cols-2 gap-1.5">
           <div className="bg-white rounded-md border border-slate-200 p-1.5 shadow-sm">
-            <p className="text-[7px] text-slate-600 uppercase font-bold">Revenue</p>
-            <p className="text-[12px] font-black text-black">$12.4k</p>
+            <p className="text-[7px] uppercase font-bold" style={{ color: '#64748b' }}>Revenue</p>
+            <p className="text-[12px] font-black" style={{ color: '#000' }}>$12.4k</p>
             <p className="text-[8px] text-green-600 font-bold">↑ 22%</p>
           </div>
           <div className="bg-white rounded-md border border-slate-200 p-1.5 shadow-sm">
-            <p className="text-[7px] text-slate-600 uppercase font-bold">Expenses</p>
-            <p className="text-[12px] font-black text-black">$3.2k</p>
+            <p className="text-[7px] uppercase font-bold" style={{ color: '#64748b' }}>Expenses</p>
+            <p className="text-[12px] font-black" style={{ color: '#000' }}>$3.2k</p>
             <p className="text-[8px] text-red-600 font-bold">↑ 8%</p>
           </div>
         </div>
         <div className="bg-white rounded-md border border-slate-200 p-2 shadow-sm">
-          <p className="text-[8px] text-slate-700 mb-1 font-bold">Cash Flow</p>
+          <p className="text-[8px] mb-1 font-bold" style={{ color: '#334155' }}>Cash Flow</p>
           <div className="flex items-end gap-0.5 h-10">
             {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
               <motion.div
