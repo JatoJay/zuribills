@@ -1616,8 +1616,11 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           <div className="max-w-7xl mx-auto px-10 md:px-16">
             {/* Top Integrated Header Row */}
             <div className="py-12 flex flex-col md:flex-row justify-between items-center gap-6 text-left">
-              <div className="flex items-center gap-2.5">
-                <img src="/logo-white.png" alt="ZuriBills" className="h-7" />
+              <div className="flex items-center gap-3">
+                <img src="/logo.svg" alt="ZuriBills" className="w-8 h-8" />
+                <span className="font-display text-lg font-semibold tracking-tight">
+                  <span className="text-white">Zuri</span><span className="text-primary">Bills</span>
+                </span>
               </div>
               <div className="text-[11px] uppercase tracking-[0.2em] text-white/40 font-semibold">
                 © 2026 ZuriBills • Made with ❤️ by X-Labs
