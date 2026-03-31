@@ -312,43 +312,41 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
   if (featureIndex === 0) {
     return (
       <div className="h-full bg-gradient-to-b from-slate-50 to-white flex flex-col">
-        <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+        <div className="px-3 pt-3 pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-              <Layers className="w-4 h-4 text-white" />
+            <div className="w-6 h-6 rounded-md bg-emerald-500 flex items-center justify-center">
+              <Layers className="w-3 h-3 text-white" />
             </div>
-            <span className="text-[13px] font-bold text-black">My Catalog</span>
+            <span className="text-[11px] font-bold text-black">My Catalog</span>
           </div>
         </div>
-        <div className="flex-1 p-4 space-y-3 overflow-hidden">
+        <div className="flex-1 p-3 space-y-2 overflow-hidden">
           {[
-            { name: 'Brand Strategy', price: '$2,400', color: 'bg-emerald-500', desc: 'Full brand identity' },
-            { name: 'Web Design', price: '$1,800', color: 'bg-blue-500', desc: 'Custom website' },
-            { name: 'SEO Audit', price: '$500', color: 'bg-purple-500', desc: 'Site optimization' },
-            { name: 'Social Media', price: '$350', color: 'bg-orange-500', desc: 'Monthly package' },
+            { name: 'Brand Strategy', price: '$2,400', color: 'bg-emerald-500' },
+            { name: 'Web Design', price: '$1,800', color: 'bg-blue-500' },
+            { name: 'SEO Audit', price: '$500', color: 'bg-purple-500' },
           ].map((item, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm"
+              className="bg-white rounded-lg border border-slate-200 p-2 shadow-sm"
             >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl ${item.color} flex items-center justify-center`}>
-                  <Layers className="w-5 h-5 text-white" />
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg ${item.color} flex items-center justify-center`}>
+                  <Layers className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-bold text-slate-900 truncate">{item.name}</p>
-                  <p className="text-[10px] text-slate-500">{item.desc}</p>
+                  <p className="text-[10px] font-bold text-slate-900 truncate">{item.name}</p>
                 </div>
-                <span className="text-[12px] font-bold text-slate-900">{item.price}</span>
+                <span className="text-[10px] font-bold text-slate-900">{item.price}</span>
               </div>
             </motion.div>
           ))}
         </div>
-        <div className="p-4 pt-2 pb-10">
-          <button className="w-full h-11 bg-emerald-500 rounded-xl text-white font-bold text-[12px]">
+        <div className="p-3 pt-1">
+          <button className="w-full h-9 bg-emerald-500 rounded-lg text-white font-bold text-[10px]">
             Share Catalog Link
           </button>
         </div>
@@ -359,49 +357,40 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
   if (featureIndex === 1) {
     return (
       <div className="h-full bg-gradient-to-b from-blue-50 to-white flex flex-col">
-        <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+        <div className="px-3 pt-3 pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
+            <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center">
+              <Bot className="w-3 h-3 text-white" />
             </div>
-            <span className="text-[13px] font-bold text-black">AI Agent</span>
+            <span className="text-[11px] font-bold text-black">AI Agent</span>
           </div>
         </div>
-        <div className="flex-1 p-4 pb-10 space-y-3 overflow-hidden">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                <Bot className="w-4 h-4 text-blue-600" />
+        <div className="flex-1 p-3 space-y-2 overflow-hidden">
+          <div className="bg-white rounded-lg border border-slate-200 p-2.5 shadow-sm">
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                <Bot className="w-3 h-3 text-blue-600" />
               </div>
               <div>
-                <p className="text-[11px] text-black leading-relaxed font-medium">
-                  <span className="font-bold">Invoice #1042</span> from Acme Corp is 3 days overdue.
+                <p className="text-[9px] text-black leading-relaxed font-medium">
+                  <span className="font-bold">INV-1042</span> is 3 days overdue.
                 </p>
-                <p className="text-[11px] text-blue-600 font-semibold mt-1">Want me to send a reminder?</p>
+                <p className="text-[9px] text-blue-600 font-semibold mt-0.5">Send a reminder?</p>
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button className="flex-1 h-10 bg-blue-500 rounded-xl text-white font-bold text-[11px]">
-              Send Reminder
+          <div className="flex gap-1.5">
+            <button className="flex-1 h-8 bg-blue-500 rounded-lg text-white font-bold text-[9px]">
+              Send
             </button>
-            <button className="flex-1 h-10 bg-slate-100 rounded-xl text-slate-700 font-bold text-[11px]">
-              View Invoice
+            <button className="flex-1 h-8 bg-slate-100 rounded-lg text-slate-700 font-bold text-[9px]">
+              View
             </button>
           </div>
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white">
-            <p className="text-[10px] opacity-90 mb-1">This Week&apos;s Revenue</p>
-            <p className="text-[22px] font-bold">$3,450.00</p>
-            <p className="text-[10px] opacity-90 mt-1">↑ 15% vs last week</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-slate-500">Pending invoices</span>
-              <span className="text-[12px] font-bold text-slate-900">3</span>
-            </div>
-            <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div className="w-2/3 h-full bg-blue-500 rounded-full" />
-            </div>
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-2.5 text-white">
+            <p className="text-[8px] opacity-90">This Week</p>
+            <p className="text-[16px] font-bold">$3,450</p>
+            <p className="text-[8px] opacity-90">↑ 15%</p>
           </div>
         </div>
       </div>
@@ -411,39 +400,38 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
   if (featureIndex === 2) {
     return (
       <div className="h-full bg-gradient-to-b from-orange-50 to-white flex flex-col">
-        <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+        <div className="px-3 pt-3 pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
+            <div className="w-6 h-6 rounded-md bg-orange-500 flex items-center justify-center">
+              <Zap className="w-3 h-3 text-white" />
             </div>
-            <span className="text-[13px] font-bold text-black">Payment Received</span>
+            <span className="text-[11px] font-bold text-black">Payment</span>
           </div>
         </div>
-        <div className="flex-1 p-4 flex flex-col">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm text-center flex-1 flex flex-col justify-center">
+        <div className="flex-1 p-3 flex flex-col">
+          <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm text-center flex-1 flex flex-col justify-center">
             <motion.div
-              className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4"
+              className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', delay: 0.2 }}
             >
-              <CheckCircle className="w-7 h-7 text-green-500" />
+              <CheckCircle className="w-5 h-5 text-green-500" />
             </motion.div>
-            <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1 font-semibold">Payment Confirmed</p>
-            <p className="text-[24px] font-bold text-slate-900">$1,200.00</p>
-            <p className="text-[11px] text-slate-600 mt-1 font-medium">From Acme Corp</p>
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <div className="flex items-center justify-center gap-2 text-orange-500">
-                <Zap className="w-4 h-4" />
-                <span className="text-[11px] font-bold">Instant Payout</span>
+            <p className="text-[8px] text-slate-600 uppercase tracking-wider font-semibold">Confirmed</p>
+            <p className="text-[18px] font-bold text-slate-900">$1,200</p>
+            <p className="text-[9px] text-slate-600 font-medium">Acme Corp</p>
+            <div className="mt-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-center gap-1 text-orange-500">
+                <Zap className="w-3 h-3" />
+                <span className="text-[9px] font-bold">Instant</span>
               </div>
-              <p className="text-[10px] text-slate-500 mt-1">Funds sent to your bank</p>
             </div>
           </div>
-          <div className="mt-3 mb-8 bg-orange-50 rounded-xl p-3 border border-orange-100">
+          <div className="mt-2 bg-orange-50 rounded-lg p-2 border border-orange-100">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] text-orange-700 font-medium">Today&apos;s payouts</span>
-              <span className="text-[12px] font-bold text-orange-700">$2,840</span>
+              <span className="text-[8px] text-orange-700 font-medium">Today</span>
+              <span className="text-[10px] font-bold text-orange-700">$2,840</span>
             </div>
           </div>
         </div>
@@ -453,30 +441,30 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
 
   return (
     <div className="h-full bg-gradient-to-b from-teal-50 to-white flex flex-col">
-      <div className="px-4 pt-4 pb-2 border-b border-slate-100">
+      <div className="px-3 pt-3 pb-2 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-teal-500 flex items-center justify-center">
-            <BarChart3 className="w-3.5 h-3.5 text-white" />
+          <div className="w-6 h-6 rounded-md bg-teal-500 flex items-center justify-center">
+            <BarChart3 className="w-3 h-3 text-white" />
           </div>
-          <span className="text-[12px] font-bold text-black">Analytics</span>
+          <span className="text-[11px] font-bold text-black">Analytics</span>
         </div>
       </div>
       <div className="flex-1 p-3 space-y-2 overflow-hidden">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-sm">
-            <p className="text-[8px] text-slate-600 uppercase font-bold tracking-wide">Revenue</p>
-            <p className="text-[14px] font-black text-black leading-tight">$12.4k</p>
-            <p className="text-[9px] text-green-600 font-bold">↑ 22%</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="bg-white rounded-md border border-slate-200 p-1.5 shadow-sm">
+            <p className="text-[7px] text-slate-600 uppercase font-bold">Revenue</p>
+            <p className="text-[12px] font-black text-black">$12.4k</p>
+            <p className="text-[8px] text-green-600 font-bold">↑ 22%</p>
           </div>
-          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-sm">
-            <p className="text-[8px] text-slate-600 uppercase font-bold tracking-wide">Expenses</p>
-            <p className="text-[14px] font-black text-black leading-tight">$3.2k</p>
-            <p className="text-[9px] text-red-600 font-bold">↑ 8%</p>
+          <div className="bg-white rounded-md border border-slate-200 p-1.5 shadow-sm">
+            <p className="text-[7px] text-slate-600 uppercase font-bold">Expenses</p>
+            <p className="text-[12px] font-black text-black">$3.2k</p>
+            <p className="text-[8px] text-red-600 font-bold">↑ 8%</p>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
-          <p className="text-[9px] text-slate-700 mb-2 font-bold">Monthly Cash Flow</p>
-          <div className="flex items-end gap-1 h-16">
+        <div className="bg-white rounded-md border border-slate-200 p-2 shadow-sm">
+          <p className="text-[8px] text-slate-700 mb-1 font-bold">Cash Flow</p>
+          <div className="flex items-end gap-0.5 h-10">
             {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
               <motion.div
                 key={i}
@@ -488,16 +476,16 @@ const PhoneMockupContent: React.FC<{ featureIndex: number; t: any }> = ({ featur
             ))}
           </div>
         </div>
-        <div className="bg-teal-100 rounded-lg p-2.5 border border-teal-200">
+        <div className="bg-teal-100 rounded-md p-2 border border-teal-200">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] text-teal-800 font-bold">Net profit</span>
-            <span className="text-[12px] font-black text-teal-800">$9.2k</span>
+            <span className="text-[8px] text-teal-800 font-bold">Net profit</span>
+            <span className="text-[10px] font-black text-teal-800">$9.2k</span>
           </div>
         </div>
       </div>
-      <div className="p-3 pt-1 pb-10">
-        <button className="w-full h-10 bg-teal-500 rounded-lg text-white font-bold text-[11px]">
-          Export Tax Report
+      <div className="p-3 pt-1">
+        <button className="w-full h-8 bg-teal-500 rounded-lg text-white font-bold text-[9px]">
+          Export Report
         </button>
       </div>
     </div>
@@ -612,7 +600,7 @@ const StackedFeatureCard: React.FC<{
               <CheckCircle className={`w-5 h-5 ${feature.labelColor}`} />
             </motion.div>
 
-            <div className="relative z-10 w-[220px] h-[520px]">
+            <div className="relative z-10 w-[200px] h-[420px]">
               <div className="absolute inset-0 bg-[#1a1a1a] rounded-[36px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.4)]">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#1a1a1a] rounded-b-2xl z-20" />
                 <div className="absolute inset-[3px] bg-white rounded-[33px] overflow-hidden">
