@@ -46,7 +46,7 @@ const PRODUCT_FEATURES = [
     category: 'Automation',
     categoryIcon: <Bot className="w-4 h-4 text-blue-500" />,
     brand: 'AI Payment Agent',
-    title: 'Automated follow-ups that recover 40% more overdue payments',
+    title: 'Automated followups that recover 40% more overdue payments',
     description: 'Your AI assistant monitors every invoice 24/7. It detects overdue payments, drafts personalized reminder emails, and helps you get paid faster — without lifting a finger.',
     image: '/features/ai-mock.png',
     bgColor: 'bg-blue-500/5',
@@ -56,8 +56,8 @@ const PRODUCT_FEATURES = [
     category: 'Payments',
     categoryIcon: <Zap className="w-4 h-4 text-orange-500" />,
     brand: 'Instant Payouts',
-    title: 'Get paid instantly — no more waiting 3-5 business days',
-    description: 'Accept cards, bank transfers, and mobile money. When clients pay, funds hit your bank account or mobile wallet in real-time. No delays, no hassle.',
+    title: 'Get paid instantly, no more waiting 3 to 5 business days',
+    description: 'Accept cards, bank transfers, and mobile money. When clients pay, funds hit your bank account or mobile wallet instantly. No delays, no hassle.',
     image: '/features/payment-mock.png',
     bgColor: 'bg-orange-500/5',
     labelColor: 'text-orange-500',
@@ -66,7 +66,7 @@ const PRODUCT_FEATURES = [
     category: 'Intelligence',
     categoryIcon: <BarChart3 className="w-4 h-4 text-teal-500" />,
     brand: 'Business Intelligence',
-    title: 'Tax-ready reports and cash flow insights in one dashboard',
+    title: 'Reports ready for tax season and cash flow insights in one dashboard',
     description: 'Track revenue, expenses, and profit margins at a glance. Generate professional financial reports for tax filing, audits, or investor meetings — all automatically.',
     image: '/features/analytics-mock.png',
     bgColor: 'bg-teal-500/5',
@@ -90,7 +90,7 @@ const HOW_IT_WORKS_STEPS = [
   {
     step: '03',
     title: 'Track everything automatically',
-    description: 'Monitor payments, expenses, and generate tax-ready reports effortlessly.',
+    description: 'Monitor payments, expenses, and generate reports ready for tax season effortlessly.',
     icon: <ShieldCheck className="w-5 h-5" />,
   },
 ];
@@ -98,14 +98,14 @@ const HOW_IT_WORKS_STEPS = [
 const AI_BULLETS = [
   'Ask questions in plain English — get instant answers',
   'Automatic overdue payment detection and alerts',
-  'AI-drafted follow-up emails that get responses',
+  'Automatic followup emails that get responses',
   'Revenue forecasting and business trend insights',
 ];
 
 const ANALYTICS_BULLETS = [
-  'Real-time revenue dashboard with visual charts',
+  'Live revenue dashboard with visual charts',
   'Expense tracking with receipt uploads and vendor history',
-  'One-click export for monthly and yearly tax reports',
+  'Export monthly and yearly tax reports with one click',
 ];
 
 
@@ -119,9 +119,9 @@ const LOCAL_LANGUAGES = [
 
 const PRICING_FEATURES = [
   'Unlimited invoices & clients',
-  'AI-powered payment reminders',
+  'Automatic payment reminders',
   'Professional client portal',
-  'Tax-ready financial reports',
+  'Financial reports ready for tax season',
   'Custom branding & logo',
 ];
 
@@ -160,7 +160,7 @@ const AUDIENCE_CARDS = [
   {
     icon: <Layers className="w-6 h-6" />,
     title: 'Small Business Owners',
-    description: 'Boutiques, salons, restaurants, and shops that want to track sales, expenses, and stay tax-ready.',
+    description: 'Boutiques, salons, restaurants, and shops that want to track sales, expenses, and stay ready for tax season.',
     stat: 'Save 10+ hrs/month',
     color: 'emerald',
   },
@@ -180,7 +180,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Can my team access the platform?',
-    answer: 'Yes! Invite unlimited team members with role-based permissions. Control who can view invoices, manage expenses, or access financial reports.',
+    answer: 'Yes! Invite unlimited team members with permissions based on their role. Control who can view invoices, manage expenses, or access financial reports.',
   },
   {
     question: 'Do you support multiple currencies?',
@@ -188,15 +188,15 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How secure is my financial data?',
-    answer: 'Bank-level security with 256-bit encryption, row-level database security, and SOC 2 compliant infrastructure. Your data is never shared or sold.',
+    answer: 'Bank level security with 256 bit encryption, database security at the row level, and SOC 2 compliant infrastructure. Your data is never shared or sold.',
   },
   {
     question: 'Do I need accounting experience?',
-    answer: 'Not at all! ZuriBills is designed for non-accountants. Our AI assistant helps you understand your finances and generates professional reports automatically.',
+    answer: 'Not at all! ZuriBills is designed for people who are not accountants. Our AI assistant helps you understand your finances and generates professional reports automatically.',
   },
   {
     question: 'Is there a free trial?',
-    answer: 'Yes! Start with a 3-day free trial with full access to all features. No credit card required. Cancel anytime.',
+    answer: 'Yes! Start with a 3 day free trial with full access to all features. No credit card required. Cancel anytime.',
   },
 ];
 
@@ -948,7 +948,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           </ul>
           <div className="mb-4">
             <span className="text-xs" style={{ color: billingCycle === 'monthly' ? 'rgba(255,255,255,0.6)' : '#64748b' }}>
-              {t('3-day free trial included')}
+              {t('3 day free trial included')}
             </span>
           </div>
           <Button
@@ -984,7 +984,7 @@ const PricingTable: React.FC<{ t: (text: string) => string }> = ({ t }) => {
           </ul>
           <div className="mb-4">
             <span className="text-xs" style={{ color: '#64748b' }}>
-              {t('3-day free trial included')}
+              {t('3 day free trial included')}
             </span>
           </div>
           <Button
@@ -1035,7 +1035,7 @@ const Landing: React.FC = () => {
     'Yearly',
     'Save 10%',
     'Monthly Plan',
-    'Perfect for short-term projects and starters.',
+    'Perfect for short term projects and starters.',
     'Yearly Plan',
     'Best value for growing businesses.',
     'Billed $54 yearly',
@@ -1080,7 +1080,7 @@ const Landing: React.FC = () => {
     ...LOCAL_LANGUAGES.flatMap(language => [language.label]),
     'Analytics',
     'Everything you need to run the back office.',
-    'Track revenue, manage expenses, and export tax-ready cash-flow reports with a dashboard designed for clarity.',
+    'Track revenue, manage expenses, and export reports ready for tax season with a dashboard designed for clarity.',
     ...ANALYTICS_BULLETS,
     'Admin Dashboard Interface',
     'Who We Serve',
