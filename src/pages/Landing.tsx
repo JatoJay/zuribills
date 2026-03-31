@@ -215,7 +215,10 @@ const NavBar: React.FC<{
             className="flex items-center gap-3 cursor-pointer"
             onClick={() => navigate({ to: '/' })}
           >
-            <img src="/logo.png" alt="ZuriBills" className="h-9" />
+            <img src="/logo.svg" alt="ZuriBills" className="w-9 h-9" />
+            <span className="font-display text-lg font-semibold tracking-tight">
+              <span className="text-black">Zuri</span><span className="text-primary">Bills</span>
+            </span>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
