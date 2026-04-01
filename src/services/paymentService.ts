@@ -18,6 +18,7 @@ export interface PaymentConfig {
     metadata?: Record<string, string>;
     countryCode?: string;
     orgSlug?: string;
+    organizationId?: string;
 }
 
 export interface PaymentResult {
@@ -89,6 +90,7 @@ export const initPolarPayment = async (
             n: config.customerName,
             d: config.description,
             o: config.orgSlug,
+            oid: config.organizationId,
         };
         const hexEncoded = hexEncode(payload);
 

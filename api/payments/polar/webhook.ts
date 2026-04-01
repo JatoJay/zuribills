@@ -48,9 +48,18 @@ const logPayout = async (orgId: string, action: string, details: Record<string, 
 };
 
 const getInvoiceByReference = async (reference: string) => {
-    const invoiceId = reference.split('-')[1];
+    const parts = reference.split('-');
+    const invoiceId = parts.length >= 2 && parts[0] === 'INV' ? parts[1] : null;
     if (!invoiceId) return null;
 
+    const response = await supabaseFetch(`/invoices?id=eq.${invoiceId}&select=*`);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data?.[0] || null;
+};
+
+const getInvoiceById = async (invoiceId: string) => {
     const response = await supabaseFetch(`/invoices?id=eq.${invoiceId}&select=*`);
     if (!response.ok) return null;
 
@@ -149,7 +158,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(200).json({ received: true, skipped: true });
                 }
 
-                const invoice = await getInvoiceByReference(reference);
+                const invoice = await getInvoiceById(invoiceId) || await getInvoiceByReference(reference);
+
+                if (invoice?.status === 'PAID') {
+                    console.log('Invoice already paid, skipping duplicate webhook:', invoiceId);
+                    return res.status(200).json({ received: true, skipped: true, reason: 'already_paid' });
+                }
+
                 const orgId = invoice?.organization_id || metadata.organization_id;
 
                 if (!orgId) {
@@ -180,8 +195,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     invoiceNumber: invoice?.invoice_number,
                     amount: order.amount / 100,
                     currency: order.currency?.toUpperCase(),
-                    bankName: org?.payment_config?.bankName,
-                    accountName: org?.payment_config?.accountName,
+                    bankName: org?.payment_config?.bankName || org?.payment_config?.bank_name,
+                    accountName: org?.payment_config?.accountName || org?.payment_config?.account_name,
                     timestamp: new Date().toISOString(),
                 });
 

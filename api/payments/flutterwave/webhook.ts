@@ -47,17 +47,28 @@ const getInvoice = async (invoiceId: string) => {
     return data?.[0] || null;
 };
 
-const updateInvoiceStatus = async (invoiceId: string, status: string, paymentDetails: Record<string, any>) => {
-    console.log('Updating invoice status:', { invoiceId, status, reference: paymentDetails.reference });
+const updateInvoiceStatus = async (
+    invoiceId: string,
+    status: string,
+    paymentDetails: Record<string, any>,
+    payoutStatus?: 'pending' | 'processing' | 'completed' | 'failed'
+) => {
+    console.log('Updating invoice status:', { invoiceId, status, reference: paymentDetails.reference, payoutStatus });
+
+    const updatePayload: Record<string, any> = {
+        status,
+        payment_date: new Date().toISOString(),
+        payment_method: 'flutterwave',
+        payment_reference: paymentDetails.reference,
+    };
+
+    if (payoutStatus) {
+        updatePayload.payout_status = payoutStatus;
+    }
 
     const response = await supabaseFetch(`/invoices?id=eq.${invoiceId}`, {
         method: 'PATCH',
-        body: JSON.stringify({
-            status,
-            payment_date: new Date().toISOString(),
-            payment_method: 'flutterwave',
-            payment_reference: paymentDetails.reference,
-        }),
+        body: JSON.stringify(updatePayload),
     });
 
     if (!response.ok) {
@@ -67,6 +78,18 @@ const updateInvoiceStatus = async (invoiceId: string, status: string, paymentDet
     }
 
     console.log('Invoice status updated successfully:', invoiceId);
+};
+
+const updatePayoutStatus = async (invoiceId: string, payoutStatus: string, payoutDetails?: Record<string, any>) => {
+    const updatePayload: Record<string, any> = { payout_status: payoutStatus };
+    if (payoutDetails?.transferRef) {
+        updatePayload.payout_reference = payoutDetails.transferRef;
+    }
+
+    await supabaseFetch(`/invoices?id=eq.${invoiceId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updatePayload),
+    });
 };
 
 const verifyTransaction = async (transactionId: string) => {
@@ -219,13 +242,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({ received: true, skipped: true });
             }
 
+            const invoice = await getInvoice(invoiceId);
+
+            if (invoice?.status === 'PAID') {
+                console.log('Invoice already paid, skipping duplicate webhook:', invoiceId);
+                return res.status(200).json({ received: true, skipped: true, reason: 'already_paid' });
+            }
+
             const verification = await verifyTransaction(transactionId);
             if (verification.status !== 'success' || verification.data?.status !== 'successful') {
                 console.error('Transaction verification failed:', verification);
                 return res.status(200).json({ received: true, error: 'Verification failed' });
             }
 
-            const invoice = await getInvoice(invoiceId);
             const orgId = invoice?.organization_id;
 
             await updateInvoiceStatus(invoiceId, 'PAID', {
@@ -233,7 +262,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 transactionId,
                 amount: event.data.amount,
                 currency: event.data.currency,
-            });
+            }, 'pending');
 
             if (orgId) {
                 await logPayout(orgId, 'PAYMENT_RECEIVED', {
@@ -247,6 +276,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     timestamp: new Date().toISOString(),
                 });
 
+                await updatePayoutStatus(invoiceId, 'processing');
+
                 const transferResult = await transferToMerchant(
                     orgId,
                     event.data.amount,
@@ -256,8 +287,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 );
 
                 if (transferResult.success) {
+                    await updatePayoutStatus(invoiceId, 'completed', { transferRef: transferResult.transferRef });
                     console.log(`Auto-transfer initiated for invoice ${invoiceId}: ${transferResult.merchantAmount} ${event.data.currency}`);
                 } else {
+                    await updatePayoutStatus(invoiceId, 'failed');
                     console.error(`Auto-transfer failed for invoice ${invoiceId}:`, transferResult.error);
                 }
             }

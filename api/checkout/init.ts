@@ -33,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Invalid data format' });
     }
 
-    const { i, a, c, z, n, d } = decoded;
+    const { i, a, c, z, n, d, o, oid } = decoded;
 
     if (!i || !a || !c || !z) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -46,23 +46,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         const reference = `INV-${i}-${Date.now()}`;
         let amountInCents = Math.round(Number(a) * 100);
-        let checkoutCurrency = 'usd';
+        const checkoutCurrency = 'usd';
 
         const originalCurrency = c.toLowerCase();
         if (originalCurrency !== 'usd') {
-            const exchangeRates: Record<string, number> = {
-                eur: 1.08,
-                gbp: 1.27,
-                cad: 0.74,
-                aud: 0.65,
-                ngn: 0.00063,
-                ghs: 0.063,
-                kes: 0.0065,
-                zar: 0.053,
-            };
-            const rate = exchangeRates[originalCurrency] || 1;
+            let rate = 1;
+            try {
+                const rateResponse = await fetch(
+                    `https://open.er-api.com/v6/latest/${originalCurrency.toUpperCase()}`,
+                    { signal: AbortSignal.timeout(5000) }
+                );
+                if (rateResponse.ok) {
+                    const rateData = await rateResponse.json();
+                    rate = rateData.rates?.USD || 1;
+                }
+            } catch (rateError) {
+                console.warn('Failed to fetch live rate, using fallback:', rateError);
+                const fallbackRates: Record<string, number> = {
+                    eur: 1.08, gbp: 1.27, cad: 0.74, aud: 0.65,
+                    ngn: 0.00063, ghs: 0.063, kes: 0.0065, zar: 0.053,
+                };
+                rate = fallbackRates[originalCurrency] || 1;
+            }
             amountInCents = Math.round(amountInCents * rate);
         }
+
+        const orgSlug = o || '';
+        const successUrl = orgSlug
+            ? `${APP_BASE_URL}/catalog/${orgSlug}/success/${i}?reference=${reference}`
+            : `${APP_BASE_URL}/catalog/success/${i}?reference=${reference}`;
 
         const payload = {
             organization_id: POLAR_ORG_ID,
@@ -70,9 +82,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             currency: checkoutCurrency,
             customer_email: z,
             customer_name: n || 'Customer',
-            success_url: `${APP_BASE_URL}/catalog/success/${i}?reference=${reference}`,
+            success_url: successUrl,
             metadata: {
                 invoice_id: i,
+                organization_id: oid || '',
                 reference,
                 description: d || `Payment for Invoice ${i}`,
             },
