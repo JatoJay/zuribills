@@ -132,6 +132,7 @@ export const initFlutterwavePayment = async (
             n: config.customerName,
             d: config.description,
             o: config.orgSlug,
+            oid: config.organizationId,
         };
         const hexEncoded = hexEncode(payload);
 

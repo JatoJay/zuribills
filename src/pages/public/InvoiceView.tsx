@@ -260,6 +260,8 @@ const InvoiceView: React.FC = () => {
             customerPhone: momoPhone.trim(),
             description: `Payment for Invoice ${data.invoice.invoiceNumber}`,
             countryCode,
+            orgSlug: slug,
+            organizationId: data.org.id,
         });
 
         if (result.reference) {

@@ -4,7 +4,7 @@ import { getCashFlowReportBySlug } from '@/services/reports';
 import { getExpenses, getInvoices } from '@/services/storage';
 import { CashFlowReport, Expense, ReportPeriod, Invoice } from '@/types';
 import { useAdminContext } from './AdminLayout';
-import { Download, FileText, RefreshCw, Receipt } from 'lucide-react';
+import { Download, FileText, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 
 const monthOptions = [
@@ -86,17 +86,6 @@ const Reports: React.FC = () => {
     'December',
     'All',
     'Category',
-    'VAT Report',
-    'Export VAT report for tax filing with FIRS.',
-    'Export VAT CSV',
-    'Invoice #',
-    'Client',
-    'Client TIN',
-    'Date',
-    'Subtotal',
-    'VAT Amount',
-    'Total',
-    'Status',
   ]), []);
   const { t } = useTranslation(translationStrings);
   const now = new Date();
@@ -213,52 +202,6 @@ const Reports: React.FC = () => {
     anchor.href = url;
     const label = period === 'monthly' ? `${year}-${month}` : year;
     anchor.download = `cashflow-${label}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadVatCsv = () => {
-    const selectedYear = Number(year);
-    const selectedMonth = period === 'monthly' ? Number(month) : null;
-
-    const filteredInvoices = invoices.filter(inv => {
-      const invDate = new Date(inv.date);
-      if (invDate.getFullYear() !== selectedYear) return false;
-      if (selectedMonth !== null && invDate.getMonth() + 1 !== selectedMonth) return false;
-      return inv.taxAmount > 0;
-    });
-
-    const rows: string[][] = [
-      [t('VAT Report'), `${org.name}`, `${t('Tax ID:')} ${org.taxId || 'N/A'}`],
-      [t('Period'), period === 'monthly' ? `${localizedMonthOptions.find(m => m.value === month)?.label} ${year}` : year, ''],
-      ['', '', ''],
-      [t('Invoice #'), t('Date'), t('Client'), t('Client TIN'), t('Subtotal'), t('VAT Amount'), t('Total'), t('Status')],
-      ...filteredInvoices.map(inv => [
-        inv.invoiceNumber,
-        new Date(inv.date).toLocaleDateString(),
-        inv.clientName,
-        inv.clientTin || '',
-        inv.subtotal.toFixed(2),
-        inv.taxAmount.toFixed(2),
-        inv.total.toFixed(2),
-        inv.status,
-      ]),
-      ['', '', '', '', '', '', '', ''],
-      [t('Totals'), '', '', '',
-        filteredInvoices.reduce((sum, inv) => sum + inv.subtotal, 0).toFixed(2),
-        filteredInvoices.reduce((sum, inv) => sum + inv.taxAmount, 0).toFixed(2),
-        filteredInvoices.reduce((sum, inv) => sum + inv.total, 0).toFixed(2),
-        `${filteredInvoices.length} ${t('invoices')}`
-      ],
-    ];
-
-    const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    const label = period === 'monthly' ? `${year}-${month}` : year;
-    anchor.download = `vat-report-${label}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
@@ -629,23 +572,6 @@ const Reports: React.FC = () => {
               )}
             </tbody>
           </table>
-        </div>
-      </Card>
-
-      <Card className="p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-              <Receipt className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">{t('VAT Report')}</h3>
-              <p className="text-sm text-muted">{t('Export VAT report for tax filing with FIRS.')}</p>
-            </div>
-          </div>
-          <Button onClick={downloadVatCsv} variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
-            <Download className="w-4 h-4 mr-2" /> {t('Export VAT CSV')}
-          </Button>
         </div>
       </Card>
     </div>
