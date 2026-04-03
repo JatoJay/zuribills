@@ -228,17 +228,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
 
-    console.log('Flutterwave webhook received:', event.event);
+    console.log('Flutterwave webhook received:', event.event, JSON.stringify(event.data || {}).slice(0, 1000));
 
     try {
         if (event.event === 'charge.completed' && event.data?.status === 'successful') {
             const transactionId = event.data.id;
-            const txRef = event.data.tx_ref;
-            const meta = event.data.meta || {};
-            const invoiceId = meta.invoice_id;
+            const txRef = event.data.tx_ref || '';
+
+            let meta = event.data.meta || {};
+            if (Array.isArray(meta)) {
+                meta = meta.reduce((acc: Record<string, any>, item: any) => {
+                    if (item && typeof item === 'object') {
+                        Object.assign(acc, item);
+                    }
+                    return acc;
+                }, {});
+            }
+
+            let invoiceId = meta.invoice_id;
+            if (!invoiceId && txRef.startsWith('ZB-')) {
+                const parts = txRef.split('-');
+                if (parts.length >= 2) {
+                    invoiceId = parts[1];
+                }
+            }
+
+            console.log('Parsed meta:', { invoiceId, txRef, meta });
 
             if (!invoiceId) {
-                console.log('No invoice_id in meta, skipping');
+                console.log('No invoice_id found, skipping');
                 return res.status(200).json({ received: true, skipped: true });
             }
 
