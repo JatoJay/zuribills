@@ -143,10 +143,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const eventType = event.type || event.event;
 
-    console.log('Polar webhook received:', eventType);
+    console.log('Polar webhook received:', eventType, JSON.stringify(event.data?.metadata || event.data || {}).slice(0, 500));
 
     try {
         switch (eventType) {
+            case 'checkout.created': {
+                console.log('Checkout created:', event.data?.id);
+                break;
+            }
+
+            case 'checkout_session.async_payment_succeeded':
+            case 'checkout.completed':
             case 'order.paid': {
                 const order = event.data;
                 const metadata = order.metadata || {};
@@ -206,14 +213,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'checkout.updated': {
                 const checkout = event.data;
-                if (checkout.status === 'succeeded') {
+                const status = checkout.status;
+                console.log('Checkout updated with status:', status);
+
+                if (status === 'succeeded' || status === 'confirmed') {
                     const metadata = checkout.metadata || {};
                     const invoiceId = metadata.invoice_id;
 
                     if (invoiceId) {
+                        const invoice = await getInvoiceById(invoiceId);
+                        if (invoice?.status === 'PAID') {
+                            console.log('Invoice already paid, skipping:', invoiceId);
+                            break;
+                        }
+
+                        const orgId = invoice?.organization_id || metadata.organization_id;
+
                         await updateInvoiceStatus(invoiceId, 'PAID', {
                             reference: metadata.reference || checkout.id,
+                            amount: checkout.amount,
+                            currency: checkout.currency,
                         });
+
+                        if (orgId) {
+                            await createPaymentRecord(invoiceId, orgId, {
+                                reference: metadata.reference || checkout.id,
+                                amount: checkout.amount,
+                                currency: checkout.currency,
+                                checkoutId: checkout.id,
+                            });
+                        }
+
                         console.log(`Checkout succeeded for invoice ${invoiceId}`);
                     }
                 }
