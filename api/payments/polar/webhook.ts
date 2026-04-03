@@ -167,12 +167,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 const invoice = await getInvoiceById(invoiceId) || await getInvoiceByReference(reference);
 
-                if (invoice?.status === 'PAID') {
+                if (!invoice) {
+                    console.error('Invoice not found:', invoiceId);
+                    return res.status(200).json({ received: true, error: 'Invoice not found', invoiceId });
+                }
+
+                if (invoice.status === 'PAID') {
                     console.log('Invoice already paid, skipping duplicate webhook:', invoiceId);
                     return res.status(200).json({ received: true, skipped: true, reason: 'already_paid' });
                 }
 
-                const orgId = invoice?.organization_id || metadata.organization_id;
+                const orgId = invoice.organization_id || metadata.organization_id;
 
                 if (!orgId) {
                     console.error('Could not determine organization');

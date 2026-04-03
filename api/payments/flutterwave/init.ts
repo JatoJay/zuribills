@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Invalid data format' });
     }
 
-    const { i: invoiceId, a: amount, c: currency, z: customerEmail, n: customerName, d: description, o: orgSlug } = decoded;
+    const { i: invoiceId, a: amount, c: currency, z: customerEmail, n: customerName, d: description, o: orgSlug, oid: organizationId } = decoded;
 
     if (!invoiceId || !amount || !currency || !customerEmail) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -57,6 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             },
             meta: {
                 invoice_id: invoiceId,
+                organization_id: organizationId || '',
                 reference,
                 org_slug: orgSlug,
             },

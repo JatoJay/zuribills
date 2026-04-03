@@ -262,7 +262,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const invoice = await getInvoice(invoiceId);
 
-            if (invoice?.status === 'PAID') {
+            if (!invoice) {
+                console.error('Invoice not found:', invoiceId);
+                return res.status(200).json({ received: true, error: 'Invoice not found', invoiceId });
+            }
+
+            if (invoice.status === 'PAID') {
                 console.log('Invoice already paid, skipping duplicate webhook:', invoiceId);
                 return res.status(200).json({ received: true, skipped: true, reason: 'already_paid' });
             }
@@ -273,7 +278,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({ received: true, error: 'Verification failed' });
             }
 
-            const orgId = invoice?.organization_id;
+            const orgId = invoice.organization_id || meta.organization_id;
 
             await updateInvoiceStatus(invoiceId, 'PAID', {
                 reference: txRef,
