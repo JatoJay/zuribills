@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Select } from '@/components/ui';
 import { getCashFlowReportBySlug } from '@/services/reports';
-import { getExpenses, getInvoices } from '@/services/storage';
-import { CashFlowReport, Expense, ReportPeriod, Invoice } from '@/types';
+import { getExpenses } from '@/services/storage';
+import { CashFlowReport, Expense, ReportPeriod } from '@/types';
 import { useAdminContext } from './AdminLayout';
 import { Download, FileText, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -96,7 +96,6 @@ const Reports: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [vendorFilter, setVendorFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
 
@@ -160,7 +159,6 @@ const Reports: React.FC = () => {
   useEffect(() => {
     if (org) {
       getExpenses(org.id).then(setExpenses);
-      getInvoices(org.id).then(setInvoices);
     }
   }, [org]);
 
