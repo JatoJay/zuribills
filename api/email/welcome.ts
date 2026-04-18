@@ -1,13 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import {
+    applyCors,
+    requireAuth,
+    escapeHtml,
+    stripCRLF,
+    checkRateLimit,
+    EMAIL_REGEX,
+    SLUG_REGEX,
+} from '../_lib/security';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ZuriBills <noreply@zuribills.com>';
 const APP_BASE_URL = process.env.VITE_APP_BASE_URL || 'https://zuribills.com';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    applyCors(req, res);
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -17,18 +24,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    if (!checkRateLimit(req, res, 'email-welcome', 5, 60_000)) return;
+
     if (!RESEND_API_KEY) {
         console.error('RESEND_API_KEY not configured');
         return res.status(500).json({ error: 'Email service not configured' });
     }
 
-    const { to, userName, orgName, orgSlug } = req.body;
+    const user = await requireAuth(req, res);
+    if (!user) return;
 
-    if (!to) {
-        return res.status(400).json({ error: 'Missing required field: to' });
+    const { userName, orgName, orgSlug } = req.body || {};
+
+    if (!user.email || !EMAIL_REGEX.test(user.email)) {
+        return res.status(400).json({ error: 'Authenticated user has no valid email' });
+    }
+    if (orgSlug && (typeof orgSlug !== 'string' || !SLUG_REGEX.test(orgSlug))) {
+        return res.status(400).json({ error: 'Invalid orgSlug' });
     }
 
-    const dashboardLink = orgSlug ? `${APP_BASE_URL}/org/${orgSlug}` : APP_BASE_URL;
+    const safeUserName = userName ? escapeHtml(String(userName).slice(0, 128)) : 'there';
+    const safeOrgName = orgName ? stripCRLF(String(orgName)).slice(0, 128) : '';
+    const safeOrgSlug = orgSlug || '';
+
+    const dashboardLink = safeOrgSlug
+        ? `${APP_BASE_URL}/org/${encodeURIComponent(safeOrgSlug)}`
+        : APP_BASE_URL;
+
+    const subject = stripCRLF(`Welcome to ZuriBills${safeOrgName ? `, ${safeOrgName}` : ''}!`).slice(0, 200);
 
     const htmlBody = `
 <!DOCTYPE html>
@@ -52,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     <tr>
                         <td style="padding: 40px;">
                             <h2 style="margin: 0 0 20px; color: #1a1a1a; font-size: 24px; font-weight: 600;">Welcome to ZuriBills!</h2>
-                            <p style="margin: 0 0 20px; color: #666666; font-size: 16px;">Hi ${userName || 'there'},</p>
+                            <p style="margin: 0 0 20px; color: #666666; font-size: 16px;">Hi ${safeUserName},</p>
                             <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
                                 Thank you for joining ZuriBills! We're excited to have you on board.
                             </p>
@@ -100,27 +123,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             },
             body: JSON.stringify({
                 from: FROM_EMAIL,
-                to: [to],
-                subject: `Welcome to ZuriBills${orgName ? `, ${orgName}` : ''}!`,
+                to: [user.email],
+                subject,
                 html: htmlBody,
             }),
+            signal: AbortSignal.timeout(10_000),
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('Resend API error:', data);
-            return res.status(response.status).json({
-                error: data.message || 'Failed to send email'
-            });
+            console.error('Resend API error');
+            return res.status(502).json({ error: 'Failed to send email' });
         }
 
         return res.status(200).json({
             success: true,
-            messageId: data.id
+            messageId: data.id,
         });
     } catch (error: any) {
-        console.error('Email send error:', error);
+        console.error('Email send error:', error?.message || 'unknown');
         return res.status(500).json({ error: 'Failed to send email' });
     }
 }

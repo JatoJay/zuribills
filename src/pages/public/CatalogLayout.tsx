@@ -175,7 +175,7 @@ const CartContent = ({ cart, org, removeFromCart, cartTotal, closeCart, slug, t 
                         <div key={item.id} className="flex gap-3 items-center border-b border-border pb-3 last:border-0">
                             {item.imageUrl && (
                                 <div className="w-10 h-10 rounded-md overflow-hidden shrink-0 border border-border">
-                                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                    <img src={item.imageUrl} alt={item.name} loading="lazy" className="w-full h-full object-cover" />
                                 </div>
                             )}
                             <div className="flex-1 min-w-0">

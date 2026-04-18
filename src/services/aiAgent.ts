@@ -16,16 +16,10 @@ const generateReminderEmail = (invoice: Invoice, daysOverdue: number, orgName: s
 export const runInvoiceAgent = async (orgId: string): Promise<AgentLog[]> => {
     console.log('AI Agent: Starting analysis...');
     const invoices = await getInvoices(orgId);
-    
-    // Fetch org details for the email signature
-    const allInvoices = await getInvoices(orgId);
-    if (allInvoices.length === 0) return [];
-    
-    // We need the org name for the email. Since getInvoices doesn't return it, 
-    // we'll rely on the caller or a quick lookup.
-    // To keep it simple and safe, we'll try to get it from the first invoice's org context if possible
-    // or just use a generic name.
-    const orgName = "Your Business"; 
+
+    if (invoices.length === 0) return [];
+
+    const orgName = "Your Business";
 
     const now = new Date();
     const newLogs: AgentLog[] = [];

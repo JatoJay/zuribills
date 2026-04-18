@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { applyCors, checkRateLimit, CURRENCY_REGEX } from '../_lib/security';
 
 const FALLBACK_RATES: Record<string, number> = {
     USD: 1,
@@ -13,10 +14,11 @@ const FALLBACK_RATES: Record<string, number> = {
     RWF: 1350,
 };
 
+const RATE_TTL_MS = 10 * 60 * 1000;
+const ratesCache = new Map<string, { rates: Record<string, number>; expiresAt: number }>();
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    applyCors(req, res);
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -26,25 +28,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    if (!checkRateLimit(req, res, 'rates', 60, 60_000)) return;
+
     const from = ((req.query.from as string) || 'USD').toUpperCase();
     const to = ((req.query.to as string) || 'USD').toUpperCase();
-    const amount = Number(req.query.amount) || 1;
+    const amountRaw = Number(req.query.amount);
+    const amount = Number.isFinite(amountRaw) && amountRaw > 0 && amountRaw <= 1_000_000_000
+        ? amountRaw
+        : 1;
+
+    if (!CURRENCY_REGEX.test(from) || !CURRENCY_REGEX.test(to)) {
+        return res.status(400).json({ error: 'Invalid currency code' });
+    }
 
     if (from === to) {
         return res.status(200).json({ rate: 1, converted: amount, source: 'same_currency' });
     }
 
+    const now = Date.now();
+    const cached = ratesCache.get(from);
+    if (cached && cached.expiresAt > now) {
+        const rate = cached.rates[to];
+        if (typeof rate === 'number' && Number.isFinite(rate) && rate > 0) {
+            return res.status(200).json({
+                rate,
+                converted: amount * rate,
+                source: 'cached',
+                from,
+                to,
+            });
+        }
+    }
+
     try {
         const response = await fetch(
-            `https://open.er-api.com/v6/latest/${from}`,
+            `https://open.er-api.com/v6/latest/${encodeURIComponent(from)}`,
             { signal: AbortSignal.timeout(5000) }
         );
 
         if (response.ok) {
             const data = await response.json();
-            const rate = data.rates?.[to];
+            const rates = data?.rates;
+            if (rates && typeof rates === 'object') {
+                ratesCache.set(from, { rates, expiresAt: now + RATE_TTL_MS });
+            }
+            const rate = rates?.[to];
 
-            if (rate) {
+            if (typeof rate === 'number' && Number.isFinite(rate) && rate > 0 && rate < 1_000_000) {
                 return res.status(200).json({
                     rate,
                     converted: amount * rate,
@@ -55,7 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }
     } catch (error) {
-        console.warn('Failed to fetch live rates:', error);
+        console.warn('Failed to fetch live rates');
     }
 
     const fromRate = FALLBACK_RATES[from] || 1;

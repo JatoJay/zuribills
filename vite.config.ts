@@ -98,6 +98,20 @@ export default defineConfig({
     optimizeDeps: {
         include: ['react', 'react-dom', '@tanstack/react-router'],
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vendor-react': ['react', 'react-dom'],
+                    'vendor-router': ['@tanstack/react-router'],
+                    'vendor-recharts': ['recharts'],
+                    'vendor-supabase': ['@supabase/supabase-js'],
+                    'vendor-motion': ['framer-motion'],
+                    'vendor-icons': ['lucide-react'],
+                },
+            },
+        },
+    },
     server: {
         port: 3004,
         allowedHosts: ['.trycloudflare.com'],

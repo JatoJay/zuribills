@@ -1,15 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHmac } from 'crypto';
+import { timingSafeStringEqual, ID_REGEX } from '../../_lib/security';
 
 const POLAR_WEBHOOK_SECRET = process.env.POLAR_WEBHOOK_SECRET;
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+export const config = {
+    api: {
+        bodyParser: false,
+    },
+};
+
+const readRawBody = async (req: VercelRequest): Promise<string> => {
+    return await new Promise((resolve, reject) => {
+        let data = '';
+        req.setEncoding('utf8');
+        req.on('data', (chunk: string) => { data += chunk; });
+        req.on('end', () => resolve(data));
+        req.on('error', reject);
+    });
+};
+
 const verifyWebhookSignature = (payload: string, signature: string, secret: string): boolean => {
-    const expectedSignature = createHmac('sha256', secret)
-        .update(payload)
-        .digest('hex');
-    return signature === expectedSignature || signature === `sha256=${expectedSignature}`;
+    const expected = createHmac('sha256', secret).update(payload).digest('hex');
+    const provided = signature.replace(/^sha256=/, '');
+    return timingSafeStringEqual(provided, expected);
 };
 
 const supabaseFetch = async (path: string, options: RequestInit = {}) => {
@@ -26,6 +42,7 @@ const supabaseFetch = async (path: string, options: RequestInit = {}) => {
             'Prefer': 'return=minimal',
             ...options.headers,
         },
+        signal: AbortSignal.timeout(10_000),
     });
     return response;
 };
@@ -47,38 +64,26 @@ const logPayout = async (orgId: string, action: string, details: Record<string, 
     }
 };
 
-const getInvoiceByReference = async (reference: string) => {
-    const parts = reference.split('-');
-    const invoiceId = parts.length >= 2 && parts[0] === 'INV' ? parts[1] : null;
-    if (!invoiceId) return null;
-
-    const response = await supabaseFetch(`/invoices?id=eq.${invoiceId}&select=*`);
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    return data?.[0] || null;
-};
-
 const getInvoiceById = async (invoiceId: string) => {
-    const response = await supabaseFetch(`/invoices?id=eq.${invoiceId}&select=*`);
+    if (!ID_REGEX.test(invoiceId)) return null;
+    const response = await supabaseFetch(`/invoices?id=eq.${encodeURIComponent(invoiceId)}&select=*`);
     if (!response.ok) return null;
-
     const data = await response.json();
     return data?.[0] || null;
 };
 
 const getOrganization = async (orgId: string) => {
-    const response = await supabaseFetch(`/organizations?id=eq.${orgId}&select=*`);
+    if (!ID_REGEX.test(orgId)) return null;
+    const response = await supabaseFetch(`/organizations?id=eq.${encodeURIComponent(orgId)}&select=*`);
     if (!response.ok) return null;
-
     const data = await response.json();
     return data?.[0] || null;
 };
 
 const updateInvoiceStatus = async (invoiceId: string, status: string, paymentDetails: Record<string, any>) => {
-    console.log('Updating invoice status:', { invoiceId, status, reference: paymentDetails.reference });
+    console.log('Updating invoice status:', { invoiceId, status });
 
-    const response = await supabaseFetch(`/invoices?id=eq.${invoiceId}`, {
+    const response = await supabaseFetch(`/invoices?id=eq.${encodeURIComponent(invoiceId)}`, {
         method: 'PATCH',
         body: JSON.stringify({
             status,
@@ -91,7 +96,7 @@ const updateInvoiceStatus = async (invoiceId: string, status: string, paymentDet
     if (!response.ok) {
         const errorText = await response.text();
         console.error('Failed to update invoice status:', { invoiceId, status: response.status, error: errorText });
-        throw new Error(`Failed to update invoice: ${errorText}`);
+        throw new Error(`Failed to update invoice`);
     }
 
     console.log('Invoice status updated successfully:', invoiceId);
@@ -115,6 +120,11 @@ const createPaymentRecord = async (invoiceId: string, orgId: string, details: Re
     });
 };
 
+const amountWithinTolerance = (paidCents: number, expectedAmount: number) => {
+    const expectedCents = Math.round(expectedAmount * 100);
+    return Math.abs(paidCents - expectedCents) <= 1;
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -129,21 +139,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: 'Webhook not configured' });
     }
 
-    const signature = req.headers['polar-signature'] as string ||
-                      req.headers['x-polar-signature'] as string ||
-                      req.headers['webhook-signature'] as string || '';
+    let rawBody: string;
+    try {
+        rawBody = await readRawBody(req);
+    } catch (err) {
+        console.error('Failed to read webhook body:', err);
+        return res.status(400).json({ error: 'Invalid body' });
+    }
 
-    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const signature = (req.headers['polar-signature'] as string)
+        || (req.headers['x-polar-signature'] as string)
+        || (req.headers['webhook-signature'] as string)
+        || '';
 
-    if (signature && !verifyWebhookSignature(rawBody, signature, POLAR_WEBHOOK_SECRET)) {
-        console.error('Invalid webhook signature');
+    if (!signature || !verifyWebhookSignature(rawBody, signature, POLAR_WEBHOOK_SECRET)) {
+        console.error('Invalid or missing webhook signature');
         return res.status(401).json({ error: 'Invalid signature' });
     }
 
-    const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    let event: any;
+    try {
+        event = JSON.parse(rawBody);
+    } catch {
+        return res.status(400).json({ error: 'Invalid JSON' });
+    }
+
     const eventType = event.type || event.event;
 
-    console.log('Polar webhook received:', eventType, JSON.stringify(event.data?.metadata || event.data || {}).slice(0, 500));
+    console.log('Polar webhook received:', eventType);
 
     try {
         switch (eventType) {
@@ -155,21 +178,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'checkout_session.async_payment_succeeded':
             case 'checkout.completed':
             case 'order.paid': {
-                const order = event.data;
+                const order = event.data || {};
                 const metadata = order.metadata || {};
-                const reference = metadata.reference || order.id;
+                const reference = String(metadata.reference || order.id || '');
                 const invoiceId = metadata.invoice_id;
 
-                if (!invoiceId) {
-                    console.log('No invoice_id in metadata, skipping');
+                if (!invoiceId || typeof invoiceId !== 'string' || !ID_REGEX.test(invoiceId)) {
+                    console.log('No valid invoice_id in metadata, skipping');
                     return res.status(200).json({ received: true, skipped: true });
                 }
 
-                const invoice = await getInvoiceById(invoiceId) || await getInvoiceByReference(reference);
+                const invoice = await getInvoiceById(invoiceId);
 
                 if (!invoice) {
                     console.error('Invoice not found:', invoiceId);
-                    return res.status(200).json({ received: true, error: 'Invoice not found', invoiceId });
+                    return res.status(200).json({ received: true, error: 'Invoice not found' });
                 }
 
                 if (invoice.status === 'PAID') {
@@ -177,36 +200,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(200).json({ received: true, skipped: true, reason: 'already_paid' });
                 }
 
-                const orgId = invoice.organization_id || metadata.organization_id;
+                const paidCents = Number(order.amount);
+                if (!Number.isFinite(paidCents) || paidCents <= 0) {
+                    console.error('Invalid order amount:', order.amount);
+                    return res.status(200).json({ received: true, error: 'Invalid amount' });
+                }
+
+                if (!amountWithinTolerance(paidCents, Number(invoice.total))) {
+                    console.error('Amount mismatch:', { paidCents, invoiceTotal: invoice.total, invoiceId });
+                    await logPayout(invoice.organization_id, 'PAYMENT_AMOUNT_MISMATCH', {
+                        provider: 'polar',
+                        invoiceId,
+                        paidCents,
+                        expectedTotal: invoice.total,
+                        timestamp: new Date().toISOString(),
+                    });
+                    return res.status(200).json({ received: true, error: 'Amount mismatch' });
+                }
+
+                const orgId = invoice.organization_id;
 
                 if (!orgId) {
                     console.error('Could not determine organization');
                     return res.status(200).json({ received: true, error: 'No org found' });
                 }
 
-                const org = await getOrganization(orgId);
+                const [org] = await Promise.all([
+                    getOrganization(orgId),
+                    updateInvoiceStatus(invoiceId, 'PAID', {
+                        reference,
+                        amount: order.amount,
+                        currency: order.currency,
+                    }),
+                    createPaymentRecord(invoiceId, orgId, {
+                        reference,
+                        amount: order.amount,
+                        currency: order.currency,
+                        checkoutId: order.checkout_id || order.id,
+                    }),
+                ]);
 
-                await updateInvoiceStatus(invoiceId, 'PAID', {
-                    reference,
-                    amount: order.amount,
-                    currency: order.currency,
-                });
-
-                await createPaymentRecord(invoiceId, orgId, {
-                    reference,
-                    amount: order.amount,
-                    currency: order.currency,
-                    checkoutId: order.checkout_id || order.id,
-                });
-
-                await logPayout(orgId, 'PAYOUT_COMPLETED', {
+                void logPayout(orgId, 'PAYOUT_COMPLETED', {
                     provider: 'polar',
                     method: 'auto_transfer',
                     reference,
                     invoiceId,
                     invoiceNumber: invoice?.invoice_number,
                     amount: order.amount / 100,
-                    currency: order.currency?.toUpperCase(),
+                    currency: (order.currency || '').toUpperCase(),
                     bankName: org?.payment_config?.bankName || org?.payment_config?.bank_name,
                     accountName: org?.payment_config?.accountName || org?.payment_config?.account_name,
                     timestamp: new Date().toISOString(),
@@ -217,7 +258,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             case 'checkout.updated': {
-                const checkout = event.data;
+                const checkout = event.data || {};
                 const status = checkout.status;
                 console.log('Checkout updated with status:', status);
 
@@ -225,27 +266,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const metadata = checkout.metadata || {};
                     const invoiceId = metadata.invoice_id;
 
-                    if (invoiceId) {
+                    if (invoiceId && typeof invoiceId === 'string' && ID_REGEX.test(invoiceId)) {
                         const invoice = await getInvoiceById(invoiceId);
-                        if (invoice?.status === 'PAID') {
+                        if (!invoice) break;
+                        if (invoice.status === 'PAID') {
                             console.log('Invoice already paid, skipping:', invoiceId);
                             break;
                         }
 
-                        const orgId = invoice?.organization_id || metadata.organization_id;
+                        const paidCents = Number(checkout.amount);
+                        if (!amountWithinTolerance(paidCents, Number(invoice.total))) {
+                            console.error('checkout.updated amount mismatch:', { paidCents, invoiceTotal: invoice.total });
+                            break;
+                        }
 
-                        await updateInvoiceStatus(invoiceId, 'PAID', {
-                            reference: metadata.reference || checkout.id,
-                            amount: checkout.amount,
-                            currency: checkout.currency,
-                        });
+                        const orgId = invoice.organization_id;
 
                         if (orgId) {
-                            await createPaymentRecord(invoiceId, orgId, {
+                            await Promise.all([
+                                updateInvoiceStatus(invoiceId, 'PAID', {
+                                    reference: metadata.reference || checkout.id,
+                                    amount: checkout.amount,
+                                    currency: checkout.currency,
+                                }),
+                                createPaymentRecord(invoiceId, orgId, {
+                                    reference: metadata.reference || checkout.id,
+                                    amount: checkout.amount,
+                                    currency: checkout.currency,
+                                    checkoutId: checkout.id,
+                                }),
+                            ]);
+                        } else {
+                            await updateInvoiceStatus(invoiceId, 'PAID', {
                                 reference: metadata.reference || checkout.id,
                                 amount: checkout.amount,
                                 currency: checkout.currency,
-                                checkoutId: checkout.id,
                             });
                         }
 
@@ -256,23 +311,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             case 'order.refunded': {
-                const order = event.data;
+                const order = event.data || {};
                 const metadata = order.metadata || {};
                 const invoiceId = metadata.invoice_id;
 
-                if (invoiceId) {
-                    await updateInvoiceStatus(invoiceId, 'REFUNDED', {
-                        reference: metadata.reference || order.id,
-                    });
-
-                    const orgId = metadata.organization_id;
+                if (invoiceId && typeof invoiceId === 'string' && ID_REGEX.test(invoiceId)) {
+                    const [, invoice] = await Promise.all([
+                        updateInvoiceStatus(invoiceId, 'REFUNDED', {
+                            reference: metadata.reference || order.id,
+                        }),
+                        getInvoiceById(invoiceId),
+                    ]);
+                    const orgId = invoice?.organization_id;
                     if (orgId) {
-                        await logPayout(orgId, 'PAYOUT_REFUNDED', {
+                        void logPayout(orgId, 'PAYOUT_REFUNDED', {
                             provider: 'polar',
                             reference: metadata.reference,
                             invoiceId,
-                            amount: order.amount / 100,
-                            currency: order.currency?.toUpperCase(),
+                            amount: Number(order.amount) / 100,
+                            currency: (order.currency || '').toUpperCase(),
                             timestamp: new Date().toISOString(),
                         });
                     }
@@ -282,9 +339,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             case 'checkout.expired': {
-                const checkout = event.data;
-                const metadata = checkout.metadata || {};
-                console.log(`Checkout expired: ${metadata.reference || checkout.id}`);
+                console.log(`Checkout expired:`, event.data?.id);
                 break;
             }
 
@@ -295,6 +350,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ received: true });
     } catch (error: any) {
         console.error('Webhook processing error:', error);
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: 'Webhook processing failed' });
     }
 }

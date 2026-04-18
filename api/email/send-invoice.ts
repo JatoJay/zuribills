@@ -1,13 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import {
+    applyCors,
+    requireAuth,
+    getOrgMembership,
+    getInvoiceById,
+    getOrganizationById,
+    escapeHtml,
+    stripCRLF,
+    checkRateLimit,
+    EMAIL_REGEX,
+    SLUG_REGEX,
+    ID_REGEX,
+} from '../_lib/security';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ZuriBills <noreply@zuribills.com>';
 const APP_BASE_URL = process.env.VITE_APP_BASE_URL || 'https://zuribills.com';
 
+const escapeHtmlPreserveNewlines = (value: unknown): string =>
+    escapeHtml(value).replace(/\n/g, '<br>');
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    applyCors(req, res);
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -17,20 +31,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    if (!checkRateLimit(req, res, 'email-invoice', 20, 60_000)) return;
+
     if (!RESEND_API_KEY) {
         console.error('RESEND_API_KEY not configured');
         return res.status(500).json({ error: 'Email service not configured' });
     }
 
-    const { to, subject, body, invoiceNumber, clientName, invoiceId, orgSlug } = req.body;
+    const user = await requireAuth(req, res);
+    if (!user) return;
 
-    if (!to || !subject) {
-        return res.status(400).json({ error: 'Missing required fields: to, subject' });
+    const { to, subject, body, clientName, invoiceId, orgSlug } = req.body || {};
+
+    if (!invoiceId || typeof invoiceId !== 'string' || !ID_REGEX.test(invoiceId)) {
+        return res.status(400).json({ error: 'Invalid invoiceId' });
+    }
+    if (orgSlug && (typeof orgSlug !== 'string' || !SLUG_REGEX.test(orgSlug))) {
+        return res.status(400).json({ error: 'Invalid orgSlug' });
+    }
+    if (!to || typeof to !== 'string' || !EMAIL_REGEX.test(to) || to.length > 254) {
+        return res.status(400).json({ error: 'Invalid recipient email' });
+    }
+    if (!subject || typeof subject !== 'string' || subject.length > 200) {
+        return res.status(400).json({ error: 'Invalid subject' });
     }
 
-    const invoiceLink = invoiceId && orgSlug
-        ? `${APP_BASE_URL}/catalog/${orgSlug}/invoice/${invoiceId}`
+    const invoice = await getInvoiceById(invoiceId);
+    if (!invoice) {
+        return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    const membership = await getOrgMembership(user.id, invoice.organization_id);
+    if (!membership) {
+        return res.status(403).json({ error: 'Not authorized for this invoice' });
+    }
+
+    const recipient = (invoice.client_email && EMAIL_REGEX.test(invoice.client_email))
+        ? invoice.client_email
+        : to;
+
+    const org = await getOrganizationById(invoice.organization_id);
+    const safeOrgSlug = (orgSlug && SLUG_REGEX.test(orgSlug)) ? orgSlug : (org?.slug || '');
+
+    const invoiceLink = safeOrgSlug
+        ? `${APP_BASE_URL}/catalog/${encodeURIComponent(safeOrgSlug)}/invoice/${encodeURIComponent(invoiceId)}`
         : null;
+
+    const safeSubject = stripCRLF(subject).slice(0, 200);
+    const safeClientName = clientName ? escapeHtml(String(clientName).slice(0, 128)) : '';
+    const safeBody = body ? escapeHtmlPreserveNewlines(String(body).slice(0, 5000)) : '';
+    const safeInvoiceNumber = invoice.invoice_number
+        ? escapeHtml(String(invoice.invoice_number).slice(0, 64))
+        : '';
 
     const htmlBody = `
 <!DOCTYPE html>
@@ -54,11 +106,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     <tr>
                         <td style="padding: 40px;">
                             <h2 style="margin: 0 0 20px; color: #1a1a1a; font-size: 20px; font-weight: 600;">
-                                ${invoiceNumber ? `Invoice ${invoiceNumber}` : 'Invoice'}
+                                ${safeInvoiceNumber ? `Invoice ${safeInvoiceNumber}` : 'Invoice'}
                             </h2>
-                            ${(!body && clientName) ? `<p style="margin: 0 0 20px; color: #666666; font-size: 16px;">Dear ${clientName},</p>` : ''}
+                            ${(!safeBody && safeClientName) ? `<p style="margin: 0 0 20px; color: #666666; font-size: 16px;">Dear ${safeClientName},</p>` : ''}
                             <div style="margin: 0 0 30px; color: #333333; font-size: 16px; line-height: 1.6;">
-                                ${body ? body.replace(/\n/g, '<br>') : 'Please find your invoice attached. Thank you for your business!'}
+                                ${safeBody || 'Please find your invoice attached. Thank you for your business!'}
                             </div>
                             ${invoiceLink ? `
                             <table role="presentation" style="margin: 30px 0;">
@@ -99,27 +151,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             },
             body: JSON.stringify({
                 from: FROM_EMAIL,
-                to: [to],
-                subject,
+                to: [recipient],
+                subject: safeSubject,
                 html: htmlBody,
             }),
+            signal: AbortSignal.timeout(10_000),
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('Resend API error:', data);
-            return res.status(response.status).json({
-                error: data.message || 'Failed to send email'
-            });
+            console.error('Resend API error');
+            return res.status(502).json({ error: 'Failed to send email' });
         }
 
         return res.status(200).json({
             success: true,
-            messageId: data.id
+            messageId: data.id,
         });
     } catch (error: any) {
-        console.error('Email send error:', error);
+        console.error('Email send error:', error?.message || 'unknown');
         return res.status(500).json({ error: 'Failed to send email' });
     }
 }

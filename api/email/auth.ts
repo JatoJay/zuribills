@@ -1,12 +1,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import {
+    applyCors,
+    requireAuth,
+    checkRateLimit,
+    EMAIL_REGEX,
+} from '../_lib/security';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'ZuriBills <noreply@zuribills.com>';
 const APP_BASE_URL = process.env.VITE_APP_BASE_URL || 'https://zuribills.com';
 
-type EmailType = 'welcome' | 'login_alert' | 'password_reset';
+type EmailType = 'welcome' | 'login_alert';
 
-const getEmailContent = (type: EmailType, _data: Record<string, string> = {}) => {
+const getEmailContent = (type: EmailType) => {
     switch (type) {
         case 'welcome':
             return {
@@ -60,7 +66,7 @@ const getEmailContent = (type: EmailType, _data: Record<string, string> = {}) =>
     </table>
 </body>
 </html>
-`
+`,
             };
 
         case 'login_alert':
@@ -92,7 +98,7 @@ const getEmailContent = (type: EmailType, _data: Record<string, string> = {}) =>
                                 We noticed a new sign-in to your ZuriBills account. If this was you, no action is needed.
                             </p>
                             <p style="margin: 0 0 20px; color: #666666; font-size: 14px;">
-                                Time: ${new Date().toLocaleString()}
+                                Time: ${new Date().toUTCString()}
                             </p>
                             <p style="margin: 20px 0 0; color: #999999; font-size: 14px;">
                                 If this wasn't you, please secure your account immediately by changing your password.
@@ -112,21 +118,16 @@ const getEmailContent = (type: EmailType, _data: Record<string, string> = {}) =>
     </table>
 </body>
 </html>
-`
+`,
             };
 
         default:
-            return {
-                subject: 'ZuriBills Notification',
-                html: `<p>You have a notification from ZuriBills.</p>`
-            };
+            return null;
     }
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    applyCors(req, res);
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -136,18 +137,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    if (!checkRateLimit(req, res, 'email-auth', 5, 60_000)) return;
+
     if (!RESEND_API_KEY) {
         console.error('RESEND_API_KEY not configured');
         return res.status(200).json({ success: true, skipped: true });
     }
 
-    const { to, type } = req.body;
+    const user = await requireAuth(req, res);
+    if (!user) return;
 
-    if (!to || !type) {
-        return res.status(400).json({ error: 'Missing required fields: to, type' });
+    if (!user.email || !EMAIL_REGEX.test(user.email)) {
+        return res.status(400).json({ error: 'Authenticated user has no valid email' });
+    }
+
+    const { type } = req.body || {};
+
+    if (type !== 'welcome' && type !== 'login_alert') {
+        return res.status(400).json({ error: 'Invalid type' });
     }
 
     const emailContent = getEmailContent(type as EmailType);
+    if (!emailContent) {
+        return res.status(400).json({ error: 'Unknown email type' });
+    }
 
     try {
         const response = await fetch('https://api.resend.com/emails', {
@@ -158,25 +171,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             },
             body: JSON.stringify({
                 from: FROM_EMAIL,
-                to: [to],
+                to: [user.email],
                 subject: emailContent.subject,
                 html: emailContent.html,
             }),
+            signal: AbortSignal.timeout(10_000),
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('Resend API error:', data);
-            return res.status(200).json({ success: false, error: data.message });
+            console.error('Resend API error');
+            return res.status(200).json({ success: false });
         }
 
         return res.status(200).json({
             success: true,
-            messageId: data.id
+            messageId: data.id,
         });
     } catch (error: any) {
-        console.error('Email send error:', error);
-        return res.status(200).json({ success: false, error: error.message });
+        console.error('Email send error:', error?.message || 'unknown');
+        return res.status(200).json({ success: false });
     }
 }

@@ -814,7 +814,8 @@ export const updateService = async (updatedService: Service): Promise<Service> =
   const { error } = await supabase
     .from('services')
     .update(mapServiceToDb(updatedService))
-    .eq('id', updatedService.id);
+    .eq('id', updatedService.id)
+    .eq('organization_id', updatedService.organizationId);
   if (error) throw error;
   return updatedService;
 };
@@ -875,7 +876,8 @@ export const updateClient = async (updatedClient: Client): Promise<Client> => {
   const { error } = await supabase
     .from('clients')
     .update(mapClientToDb(updatedClient))
-    .eq('id', updatedClient.id);
+    .eq('id', updatedClient.id)
+    .eq('organization_id', updatedClient.organizationId);
   if (error) throw error;
   return updatedClient;
 };
@@ -907,6 +909,17 @@ export const getInvoices = async (orgId: string): Promise<Invoice[]> => {
     if (cached) return cached;
     throw error;
   }
+};
+
+export const getInvoiceById = async (invoiceId: string): Promise<Invoice | null> => {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapInvoiceFromDb(data) : null;
 };
 
 const generateInvoiceNumber = async (
@@ -990,7 +1003,8 @@ export const updateInvoice = async (invoice: Invoice): Promise<Invoice> => {
   const { error } = await supabase
     .from('invoices')
     .update(mapInvoiceToDb(invoice))
-    .eq('id', invoice.id);
+    .eq('id', invoice.id)
+    .eq('organization_id', invoice.organizationId);
   if (error) throw error;
   return invoice;
 };
@@ -1220,7 +1234,8 @@ export const updateExpense = async (updatedExpense: Expense): Promise<Expense> =
   const { error } = await supabase
     .from('expenses')
     .update(mapExpenseToDb(updatedExpense))
-    .eq('id', updatedExpense.id);
+    .eq('id', updatedExpense.id)
+    .eq('organization_id', updatedExpense.organizationId);
   if (error) throw error;
   return updatedExpense;
 };

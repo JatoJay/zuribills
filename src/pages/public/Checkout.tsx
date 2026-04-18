@@ -265,7 +265,7 @@ const Checkout: React.FC = () => {
                                     <div className="flex gap-4 flex-1 items-center">
                                         {item.imageUrl && (
                                             <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-border">
-                                                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                                <img src={item.imageUrl} alt={item.name} loading="lazy" className="w-full h-full object-cover" />
                                             </div>
                                         )}
                                         <div>

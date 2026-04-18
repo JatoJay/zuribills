@@ -380,7 +380,7 @@ const Team: React.FC = () => {
 
                                 <div className="flex items-center gap-3 mb-4">
                                     {user.avatarUrl ? (
-                                        <img src={user.avatarUrl} alt={user.name} className="w-10 h-10 rounded-full" />
+                                        <img src={user.avatarUrl} alt={user.name} loading="lazy" className="w-10 h-10 rounded-full" />
                                     ) : (
                                         <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-semibold">
                                             {(user.name || 'U').charAt(0)}

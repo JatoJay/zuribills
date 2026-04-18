@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, createContext, useContext } from 'react';
+import React, { useEffect, useMemo, useState, createContext, useContext, useCallback } from 'react';
 import { Outlet, useParams, Link, useNavigate } from '@tanstack/react-router';
 import { LayoutDashboard, FileText, Settings as SettingsIcon, Users, ShoppingBag, LogOut, ShieldCheck, ExternalLink, Wallet, BarChart3, Building2, Sparkles, CheckCircle, Lock, Landmark, Menu, X as CloseIcon, Globe, HelpCircle } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -46,6 +46,118 @@ export const AdminContext = createContext<AdminContextType>(EMPTY_ADMIN_CONTEXT)
 export const useAdminContext = () => useContext(AdminContext);
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+interface BillingOption {
+  value: 'monthly' | 'yearly';
+  label: string;
+  price: string;
+  usdAmount: number;
+  localPrice: string | null;
+  detail: string;
+  badge?: string;
+}
+
+interface UpgradePanelProps {
+  title: string;
+  subtitle: string;
+  icon: React.ElementType;
+  showClose?: boolean;
+  onClose?: () => void;
+  billingCycle: 'monthly' | 'yearly';
+  onSelectCycle: (cycle: 'monthly' | 'yearly') => void;
+  billingOptions: BillingOption[];
+  features: string[];
+  upgradeError: string | null;
+  isUpgrading: boolean;
+  onUpgrade: () => void;
+  t: (key: string) => string;
+}
+
+const UpgradePanel: React.FC<UpgradePanelProps> = ({
+  title,
+  subtitle,
+  icon: Icon,
+  showClose,
+  onClose,
+  billingCycle,
+  onSelectCycle,
+  billingOptions,
+  features,
+  upgradeError,
+  isUpgrading,
+  onUpgrade,
+  t,
+}) => (
+  <Card className="p-8 border border-border bg-surface">
+    <div className="flex items-start gap-4">
+      <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+        <Icon className="w-5 h-5" />
+      </div>
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+        <p className="text-sm text-muted mt-1">{subtitle}</p>
+      </div>
+    </div>
+
+    <div className="mt-6 grid gap-6 md:grid-cols-2">
+      <div className="space-y-3">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted">{t('Choose your plan')}</div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {billingOptions.map((option) => {
+            const isSelected = billingCycle === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onSelectCycle(option.value)}
+                className={`rounded-2xl border p-4 text-left transition-all ${isSelected ? 'border-primary/60 bg-primary/10' : 'border-border hover:border-foreground/30'}`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground">{option.label}</span>
+                  {option.badge && (
+                    <span className="text-[10px] uppercase font-semibold tracking-wider bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                      {option.badge}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2 text-2xl font-semibold text-foreground">{option.localPrice || option.price}</div>
+                {option.localPrice && <div className="text-xs text-muted">({option.price} USD)</div>}
+                <div className="text-xs text-muted mt-1">{option.detail}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted">{t('Included features')}</div>
+        <ul className="space-y-2">
+          {features.map((feature) => (
+            <li key={feature} className="flex items-center gap-2 text-sm text-foreground">
+              <CheckCircle className="w-4 h-4 text-primary" />
+              {feature}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+
+    {upgradeError && (
+      <div className="mt-4 text-sm text-red-600">{upgradeError}</div>
+    )}
+
+    <div className="mt-6 flex flex-col sm:flex-row sm:justify-end gap-3">
+      {showClose && (
+        <Button variant="outline" onClick={onClose}>
+          {t('Close')}
+        </Button>
+      )}
+      <Button onClick={onUpgrade} isLoading={isUpgrading}>
+        {t('Activate subscription')}
+      </Button>
+    </div>
+  </Card>
+);
 
 const AdminLayout: React.FC = () => {
   const params = useParams({ strict: false });
@@ -104,9 +216,9 @@ const AdminLayout: React.FC = () => {
   ]), []);
   const { t, setLanguage, language } = useTranslation(translationStrings);
 
-  const refreshOrg = () => {
+  const refreshOrg = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
-  };
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -263,18 +375,32 @@ const AdminLayout: React.FC = () => {
     ];
   }, [exchangeRate, org?.currency]);
 
-  const formatMoney = (amount: number, currencyCode?: string) => {
-    if (!org) return '';
+  const orgCurrency = org?.currency;
+  const formatMoney = useCallback((amount: number, currencyCode?: string) => {
+    if (!orgCurrency) return '';
+    const code = currencyCode || orgCurrency || 'USD';
     try {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: currencyCode || org.currency || 'USD'
+        currency: code,
       }).format(amount).replace(/[\u00A0\u202F]/g, ' ');
     } catch (error) {
-      // Fallback if currency code is invalid
-      return `${currencyCode || org.currency} ${amount.toFixed(2)} `;
+      return `${code} ${amount.toFixed(2)} `;
     }
-  };
+  }, [orgCurrency]);
+
+  const isOwner = useMemo(() => {
+    if (!org) return false;
+    return account?.ownerUserId ? account.ownerUserId === (getCurrentUserId() || org.ownerId) : true;
+  }, [account, org]);
+
+  const adminContextValue = useMemo<AdminContextType>(() => ({
+    org: org ?? EMPTY_ORG,
+    account,
+    isOwner,
+    refreshOrg,
+    formatMoney,
+  }), [org, account, isOwner, refreshOrg, formatMoney]);
 
   const openUpgradeModal = () => {
     setUpgradeError(null);
@@ -362,7 +488,6 @@ const AdminLayout: React.FC = () => {
   const daysRemaining = trialActive ? Math.ceil((trialEndTime - now) / MS_PER_DAY) : 0;
   const showTrialBanner = hasTrial && trialActive && !subscriptionActive;
   const showTrialGate = hasTrial && trialExpired && !subscriptionActive;
-  const isOwner = account?.ownerUserId ? account.ownerUserId === (getCurrentUserId() || org.ownerId) : true;
 
   const baseNavItemClass = "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md transition-colors";
   const inactiveClass = "text-muted hover:bg-surface/50 hover:text-foreground";
@@ -394,90 +519,6 @@ const AdminLayout: React.FC = () => {
     detail: t(opt.detail),
     badge: opt.badge ? t(opt.badge) : undefined,
   }));
-
-  const UpgradePanel = ({
-    title,
-    subtitle,
-    icon: Icon,
-    showClose,
-    onClose,
-  }: {
-    title: string;
-    subtitle: string;
-    icon: React.ElementType;
-    showClose?: boolean;
-    onClose?: () => void;
-  }) => (
-    <Card className="p-8 border border-border bg-surface">
-      <div className="flex items-start gap-4">
-        <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-          <Icon className="w-5 h-5" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">{title}</h2>
-          <p className="text-sm text-muted mt-1">{subtitle}</p>
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <div className="space-y-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted">{t('Choose your plan')}</div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {translatedBillingOptions.map((option) => {
-              const isSelected = billingCycle === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setBillingCycle(option.value)}
-                  className={`rounded-2xl border p-4 text-left transition-all ${isSelected ? 'border-primary/60 bg-primary/10' : 'border-border hover:border-foreground/30'}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-foreground">{option.label}</span>
-                    {option.badge && (
-                      <span className="text-[10px] uppercase font-semibold tracking-wider bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                        {option.badge}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-2 text-2xl font-semibold text-foreground">{option.localPrice || option.price}</div>
-                  {option.localPrice && <div className="text-xs text-muted">({option.price} USD)</div>}
-                  <div className="text-xs text-muted mt-1">{option.detail}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted">{t('Included features')}</div>
-          <ul className="space-y-2">
-            {upgradeFeatures.map((feature) => (
-              <li key={feature} className="flex items-center gap-2 text-sm text-foreground">
-                <CheckCircle className="w-4 h-4 text-primary" />
-                {feature}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {upgradeError && (
-        <div className="mt-4 text-sm text-red-600">{upgradeError}</div>
-      )}
-
-      <div className="mt-6 flex flex-col sm:flex-row sm:justify-end gap-3">
-        {showClose && (
-          <Button variant="outline" onClick={onClose}>
-            {t('Close')}
-          </Button>
-        )}
-        <Button onClick={handleUpgrade} isLoading={isUpgrading}>
-          {t('Activate subscription')}
-        </Button>
-      </div>
-    </Card>
-  );
 
   return (
     <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300 overflow-hidden">
@@ -599,7 +640,7 @@ const AdminLayout: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 pt-20 md:pt-8 relative z-10 overflow-auto h-screen custom-scrollbar">
-        <AdminContext.Provider value={{ org, account, isOwner, refreshOrg, formatMoney }}>
+        <AdminContext.Provider value={adminContextValue}>
           <div className="space-y-6">
             {showTrialBanner && (
               <Card className="p-4 border border-primary/30 bg-primary/5">
@@ -631,6 +672,14 @@ const AdminLayout: React.FC = () => {
                     title={t('Trial ended')}
                     subtitle={t('Upgrade to keep using invoices, payments, and reports.')}
                     icon={Lock}
+                    billingCycle={billingCycle}
+                    onSelectCycle={setBillingCycle}
+                    billingOptions={translatedBillingOptions}
+                    features={upgradeFeatures}
+                    upgradeError={upgradeError}
+                    isUpgrading={isUpgrading}
+                    onUpgrade={handleUpgrade}
+                    t={t}
                   />
                 </div>
               </div>
@@ -652,6 +701,14 @@ const AdminLayout: React.FC = () => {
               icon={Sparkles}
               showClose
               onClose={closeUpgradeModal}
+              billingCycle={billingCycle}
+              onSelectCycle={setBillingCycle}
+              billingOptions={translatedBillingOptions}
+              features={upgradeFeatures}
+              upgradeError={upgradeError}
+              isUpgrading={isUpgrading}
+              onUpgrade={handleUpgrade}
+              t={t}
             />
           </div>
         </div>

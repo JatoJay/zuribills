@@ -659,6 +659,20 @@ const FeatureSlider: React.FC<{ t: any }> = ({ t }) => {
   );
 };
 
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;',
+};
+const sanitizeAiHtml = (html: string): string => {
+  let s = String(html ?? '');
+  s = s.replace(/<\/?(?:script|style|iframe|object|embed|link|meta|form|input|svg|math)[^>]*>/gi, '');
+  s = s.replace(/[&<>"'/]/g, (c) => HTML_ESCAPE_MAP[c] || c);
+  s = s.replace(/&lt;(\/?)(strong|em|b|i|br)&gt;/g, '<$1$2>');
+  s = s.replace(/&lt;br\s*&#x2F;&gt;/g, '<br/>');
+  s = s.replace(/&lt;span class=(?:&quot;|&#39;)([a-zA-Z0-9 _\-\/]{1,64})(?:&quot;|&#39;)&gt;/g, '<span class="$1">');
+  s = s.replace(/&lt;\/span&gt;/g, '</span>');
+  return s;
+};
+
 const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([
     { role: 'user', text: 'How much revenue did we make this week?' },
@@ -785,13 +799,16 @@ const InteractiveAIChat: React.FC<{ t: (text: string) => string }> = ({ t }) => 
       <div className="space-y-4 text-sm font-medium h-64 overflow-y-auto no-scrollbar">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
-            <div
-              className={`px-4 py-2 rounded-2xl max-w-[85%] ${msg.role === 'user'
-                ? 'bg-foreground text-background rounded-tr-none'
-                : 'bg-white/80 border border-white/40 text-foreground rounded-tl-none'
-                }`}
-              dangerouslySetInnerHTML={{ __html: msg.text }}
-            />
+            {msg.role === 'user' ? (
+              <div className="px-4 py-2 rounded-2xl max-w-[85%] bg-foreground text-background rounded-tr-none">
+                {msg.text}
+              </div>
+            ) : (
+              <div
+                className="px-4 py-2 rounded-2xl max-w-[85%] bg-white/80 border border-white/40 text-foreground rounded-tl-none"
+                dangerouslySetInnerHTML={{ __html: sanitizeAiHtml(msg.text) }}
+              />
+            )}
           </div>
         ))}
         {isTyping && (
@@ -1554,7 +1571,7 @@ const Footer: React.FC<{ t: (text: string) => string }> = ({ t }) => {
             {/* Top Integrated Header Row */}
             <div className="py-12 flex flex-col md:flex-row justify-between items-center gap-6 text-left">
               <div className="flex items-center gap-3">
-                <img src="/logo.svg" alt="ZuriBills" className="w-8 h-8" />
+                <img src="/logo.svg" alt="ZuriBills" loading="lazy" className="w-8 h-8" />
                 <span className="font-display text-lg font-semibold tracking-tight">
                   <span className="text-white">Zuri</span><span className="text-primary">Bills</span>
                 </span>

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams } from '@tanstack/react-router';
 import { Invoice, Organization, InvoiceStatus, DEFAULT_EINVOICING_CONFIG } from '@/types';
-import { getOrganizationBySlug, getInvoices } from '@/services/storage';
+import { getOrganizationBySlug, getInvoiceById } from '@/services/storage';
 import { apiFetch } from '@/services/apiClient';
 import { Button, formatCurrency, Badge, Card, Input } from '@/components/ui';
 import { Printer, CreditCard, X, DollarSign, Shield, CheckCircle2, AlertCircle, RefreshCw, ArrowRight, ArrowRightLeft, Calendar } from 'lucide-react';
@@ -90,11 +90,12 @@ const InvoiceView: React.FC = () => {
     useEffect(() => {
         const load = async () => {
             if (!slug || !invoiceId) return;
-            const org = await getOrganizationBySlug(slug);
-            if (org) {
-                const invoices = await getInvoices(org.id);
-                const invoice = invoices.find(i => i.id === invoiceId);
-                if (invoice) setData({ invoice, org });
+            const [org, invoice] = await Promise.all([
+                getOrganizationBySlug(slug),
+                getInvoiceById(invoiceId),
+            ]);
+            if (org && invoice && invoice.organizationId === org.id) {
+                setData({ invoice, org });
             }
         };
         load();
@@ -124,8 +125,7 @@ const InvoiceView: React.FC = () => {
             if (cancelled) return;
             attempts += 1;
             try {
-                const invoices = await getInvoices(data.org.id);
-                const updatedInvoice = invoices.find(i => i.id === data.invoice.id);
+                const updatedInvoice = await getInvoiceById(data.invoice.id);
                 if (updatedInvoice) {
                     setData(prev => prev ? { ...prev, invoice: updatedInvoice } : prev);
                 }
@@ -178,8 +178,7 @@ const InvoiceView: React.FC = () => {
                     setPaymentNotice(t('Payment received. Updating invoice status...'));
                     clearPendingPayment();
                     try {
-                        const invoices = await getInvoices(data.org.id);
-                        const updatedInvoice = invoices.find(i => i.id === data.invoice.id);
+                        const updatedInvoice = await getInvoiceById(data.invoice.id);
                         if (updatedInvoice) {
                             setData(prev => prev ? { ...prev, invoice: updatedInvoice } : prev);
                         }

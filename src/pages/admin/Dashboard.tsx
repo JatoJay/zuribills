@@ -1,15 +1,24 @@
 
 // ... imports
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Expense, ExpenseStatus, Invoice, InvoiceStatus } from '@/types';
 import { getExpenses, getInvoices } from '@/services/storage';
 import { Card, Badge } from '@/components/ui';
-import {
-    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-    PieChart, Pie, Cell
-} from 'recharts';
 import { DollarSign, AlertCircle, TrendingUp, Activity, PieChart as PieChartIcon, ArrowUpRight, Bot, Wallet } from 'lucide-react';
+
+const RevenueBarChart = lazy(() =>
+    import('./DashboardCharts').then(m => ({ default: m.RevenueBarChart }))
+);
+const StatusPieChart = lazy(() =>
+    import('./DashboardCharts').then(m => ({ default: m.StatusPieChart }))
+);
+
+const ChartFallback: React.FC = () => (
+    <div className="h-full w-full flex items-center justify-center text-xs text-muted">
+        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+);
 import { runInvoiceAgent, getAgentLogs } from '@/services/aiAgent';
 import { AgentLog } from '@/types';
 import { useAdminContext } from './AdminLayout';
@@ -57,89 +66,113 @@ const Dashboard: React.FC = () => {
     const [agentLogs, setAgentLogs] = useState<AgentLog[]>([]);
 
     useEffect(() => {
-        if (org) {
-            getInvoices(org.id).then(setInvoices);
-            getExpenses(org.id).then(setExpenses);
-            // Run Agent
-            runInvoiceAgent(org.id).then(async (newLogs) => {
-                const allLogs = await getAgentLogs(org.id);
-                setAgentLogs(allLogs);
-                if (newLogs.length > 0) {
-                    // Refresh invoices if agent made changes
-                    getInvoices(org.id).then(setInvoices);
-                }
-            });
-        }
-    }, [org]);
+        if (!org) return;
+        let cancelled = false;
+        const orgId = org.id;
 
-    // --- Metrics Calculations ---
-    const totalRevenue = invoices
-        .filter(i => i.status === InvoiceStatus.PAID)
-        .reduce((sum, i) => sum + i.total, 0);
-
-    const pendingAmount = invoices
-        .filter(i => i.status === InvoiceStatus.SENT || i.status === InvoiceStatus.OVERDUE)
-        .reduce((sum, i) => sum + i.total, 0);
-
-    const totalInvoices = invoices.length;
-    const paidCount = invoices.filter(i => i.status === InvoiceStatus.PAID).length;
-    const paymentRate = totalInvoices > 0 ? Math.round((paidCount / totalInvoices) * 100) : 0;
-
-    const averageValue = totalInvoices > 0
-        ? invoices.reduce((sum, i) => sum + i.total, 0) / totalInvoices
-        : 0;
-
-    const totalExpenses = expenses
-        .filter(e => e.status === ExpenseStatus.PAID)
-        .reduce((sum, e) => sum + e.total, 0);
-
-    const outstandingExpenses = expenses
-        .filter(e => e.status === ExpenseStatus.SUBMITTED || e.status === ExpenseStatus.OVERDUE)
-        .reduce((sum, e) => sum + e.total, 0);
-
-    // --- Chart Data Processing ---
-
-    // 1. Revenue History (Last 6 Months)
-    const getLast6Months = () => {
-        const months = [];
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date();
-            d.setMonth(d.getMonth() - i);
-            months.push({
-                dateObj: d,
-                name: d.toLocaleString('default', { month: 'short' }),
-                key: `${d.getFullYear()}-${d.getMonth()}`
-            });
-        }
-        return months;
-    };
-
-    const chartData = getLast6Months().map(month => {
-        const monthInvoices = invoices.filter(inv => {
-            const d = new Date(inv.date);
-            return `${d.getFullYear()}-${d.getMonth()}` === month.key;
+        Promise.all([
+            getInvoices(orgId),
+            getExpenses(orgId),
+            getAgentLogs(orgId),
+        ]).then(([inv, exp, logs]) => {
+            if (cancelled) return;
+            setInvoices(inv);
+            setExpenses(exp);
+            setAgentLogs(logs);
+        }).catch((err) => {
+            console.error('Dashboard initial load failed', err);
         });
 
-        return {
-            name: month.name,
-            revenue: monthInvoices.filter(i => i.status === InvoiceStatus.PAID).reduce((s, i) => s + i.total, 0),
-            invoiced: monthInvoices.reduce((s, i) => s + i.total, 0),
-            count: monthInvoices.length
-        };
-    });
+        runInvoiceAgent(orgId).then(async (newLogs) => {
+            if (cancelled || newLogs.length === 0) return;
+            const [refreshedInvoices, refreshedLogs] = await Promise.all([
+                getInvoices(orgId),
+                getAgentLogs(orgId),
+            ]);
+            if (cancelled) return;
+            setInvoices(refreshedInvoices);
+            setAgentLogs(refreshedLogs);
+        }).catch((err) => {
+            console.error('AI agent run failed', err);
+        });
 
-    // 2. Status Distribution
-    const statusCounts = invoices.reduce((acc, inv) => {
-        acc[inv.status] = (acc[inv.status] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
+        return () => { cancelled = true; };
+    }, [org]);
 
-    const pieData = [
-        { name: t('Paid'), value: statusCounts[InvoiceStatus.PAID] || 0, color: COLORS[0] },
-        { name: t('Sent'), value: statusCounts[InvoiceStatus.SENT] || 0, color: COLORS[1] },
-        { name: t('Draft'), value: statusCounts[InvoiceStatus.DRAFT] || 0, color: COLORS[2] },
-        { name: t('Overdue'), value: statusCounts[InvoiceStatus.OVERDUE] || 0, color: COLORS[3] },
-    ].filter(d => d.value > 0);
+    const metrics = useMemo(() => {
+        let totalRevenue = 0;
+        let pendingAmount = 0;
+        let invoicedTotal = 0;
+        let paidCount = 0;
+        const statusCounts: Record<string, number> = {};
+
+        for (const inv of invoices) {
+            invoicedTotal += inv.total;
+            statusCounts[inv.status] = (statusCounts[inv.status] || 0) + 1;
+            if (inv.status === InvoiceStatus.PAID) {
+                totalRevenue += inv.total;
+                paidCount += 1;
+            } else if (inv.status === InvoiceStatus.SENT || inv.status === InvoiceStatus.OVERDUE) {
+                pendingAmount += inv.total;
+            }
+        }
+
+        const totalInvoices = invoices.length;
+        const paymentRate = totalInvoices > 0 ? Math.round((paidCount / totalInvoices) * 100) : 0;
+        const averageValue = totalInvoices > 0 ? invoicedTotal / totalInvoices : 0;
+
+        return { totalRevenue, pendingAmount, totalInvoices, paymentRate, averageValue, statusCounts };
+    }, [invoices]);
+
+    const expenseTotals = useMemo(() => {
+        let totalExpenses = 0;
+        let outstandingExpenses = 0;
+        for (const e of expenses) {
+            if (e.status === ExpenseStatus.PAID) totalExpenses += e.total;
+            else if (e.status === ExpenseStatus.SUBMITTED || e.status === ExpenseStatus.OVERDUE) outstandingExpenses += e.total;
+        }
+        return { totalExpenses, outstandingExpenses };
+    }, [expenses]);
+
+    const chartData = useMemo(() => {
+        const months: { name: string; key: string }[] = [];
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({
+                name: d.toLocaleString('default', { month: 'short' }),
+                key: `${d.getFullYear()}-${d.getMonth()}`,
+            });
+        }
+
+        const buckets = new Map<string, { revenue: number; invoiced: number; count: number }>();
+        for (const m of months) buckets.set(m.key, { revenue: 0, invoiced: 0, count: 0 });
+
+        for (const inv of invoices) {
+            const d = new Date(inv.date);
+            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            const bucket = buckets.get(key);
+            if (!bucket) continue;
+            bucket.invoiced += inv.total;
+            bucket.count += 1;
+            if (inv.status === InvoiceStatus.PAID) bucket.revenue += inv.total;
+        }
+
+        return months.map(m => ({ name: m.name, ...buckets.get(m.key)! }));
+    }, [invoices]);
+
+    const pieData = useMemo(() => {
+        const { statusCounts } = metrics;
+        return [
+            { name: t('Paid'), value: statusCounts[InvoiceStatus.PAID] || 0, color: COLORS[0] },
+            { name: t('Sent'), value: statusCounts[InvoiceStatus.SENT] || 0, color: COLORS[1] },
+            { name: t('Draft'), value: statusCounts[InvoiceStatus.DRAFT] || 0, color: COLORS[2] },
+            { name: t('Overdue'), value: statusCounts[InvoiceStatus.OVERDUE] || 0, color: COLORS[3] },
+        ].filter(d => d.value > 0);
+    }, [metrics, t]);
+
+    const { totalRevenue, pendingAmount, totalInvoices, paymentRate, averageValue } = metrics;
+    const { totalExpenses, outstandingExpenses } = expenseTotals;
 
     if (!org.id) return <div className="p-8">Loading...</div>;
     return (
@@ -285,19 +318,9 @@ const Dashboard: React.FC = () => {
                         </div>
                     </div>
                     <div className="h-72 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.1} />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} tickFormatter={(val) => `${val / 1000}k`} />
-                                <Tooltip
-                                    cursor={{ fill: 'var(--surface)' }}
-                                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text)' }}
-                                />
-                                <Bar dataKey="invoiced" name="Total Invoiced" fill="var(--text-muted)" radius={[4, 4, 0, 0]} barSize={20} opacity={0.3} />
-                                <Bar dataKey="revenue" name="Revenue Collected" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        <Suspense fallback={<ChartFallback />}>
+                            <RevenueBarChart data={chartData} />
+                        </Suspense>
                     </div>
                 </Card>
 
@@ -308,25 +331,9 @@ const Dashboard: React.FC = () => {
 
                     <div className="h-48 w-full relative">
                         {pieData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={pieData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                        stroke="none"
-                                    >
-                                        {pieData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }} />
-                                </PieChart>
-                            </ResponsiveContainer>
+                            <Suspense fallback={<ChartFallback />}>
+                                <StatusPieChart data={pieData} />
+                            </Suspense>
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-muted">
                                 <PieChartIcon className="w-8 h-8 mb-2 opacity-20" />

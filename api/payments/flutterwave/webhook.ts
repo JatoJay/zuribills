@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { timingSafeStringEqual, ID_REGEX, NUMERIC_REGEX } from '../../_lib/security';
 
 const FLW_SECRET_KEY = process.env.FLUTTERWAVE_SECRET_KEY;
 const FLW_WEBHOOK_SECRET = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
@@ -19,6 +20,7 @@ const supabaseFetch = async (path: string, options: RequestInit = {}) => {
             'Prefer': 'return=minimal',
             ...options.headers,
         },
+        signal: AbortSignal.timeout(10_000),
     });
     return response;
 };
@@ -41,7 +43,8 @@ const logPayout = async (orgId: string, action: string, details: Record<string, 
 };
 
 const getInvoice = async (invoiceId: string) => {
-    const response = await supabaseFetch(`/invoices?id=eq.${invoiceId}&select=*`);
+    if (!ID_REGEX.test(invoiceId)) return null;
+    const response = await supabaseFetch(`/invoices?id=eq.${encodeURIComponent(invoiceId)}&select=id,organization_id,total,currency,status,invoice_number&limit=1`);
     if (!response.ok) return null;
     const data = await response.json();
     return data?.[0] || null;
@@ -53,7 +56,7 @@ const updateInvoiceStatus = async (
     paymentDetails: Record<string, any>,
     payoutStatus?: 'pending' | 'processing' | 'completed' | 'failed'
 ) => {
-    console.log('Updating invoice status:', { invoiceId, status, reference: paymentDetails.reference, payoutStatus });
+    console.log('Updating invoice status:', { invoiceId, status, payoutStatus });
 
     const updatePayload: Record<string, any> = {
         status,
@@ -66,7 +69,7 @@ const updateInvoiceStatus = async (
         updatePayload.payout_status = payoutStatus;
     }
 
-    const response = await supabaseFetch(`/invoices?id=eq.${invoiceId}`, {
+    const response = await supabaseFetch(`/invoices?id=eq.${encodeURIComponent(invoiceId)}`, {
         method: 'PATCH',
         body: JSON.stringify(updatePayload),
     });
@@ -74,7 +77,7 @@ const updateInvoiceStatus = async (
     if (!response.ok) {
         const errorText = await response.text();
         console.error('Failed to update invoice status:', { invoiceId, status: response.status, error: errorText });
-        throw new Error(`Failed to update invoice: ${errorText}`);
+        throw new Error('Failed to update invoice');
     }
 
     console.log('Invoice status updated successfully:', invoiceId);
@@ -86,23 +89,29 @@ const updatePayoutStatus = async (invoiceId: string, payoutStatus: string, payou
         updatePayload.payout_reference = payoutDetails.transferRef;
     }
 
-    await supabaseFetch(`/invoices?id=eq.${invoiceId}`, {
+    await supabaseFetch(`/invoices?id=eq.${encodeURIComponent(invoiceId)}`, {
         method: 'PATCH',
         body: JSON.stringify(updatePayload),
     });
 };
 
-const verifyTransaction = async (transactionId: string) => {
-    const response = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
+const verifyTransaction = async (transactionId: string | number) => {
+    const id = String(transactionId);
+    if (!NUMERIC_REGEX.test(id)) {
+        return { status: 'error', message: 'invalid transaction id' };
+    }
+    const response = await fetch(`https://api.flutterwave.com/v3/transactions/${id}/verify`, {
         headers: {
             'Authorization': `Bearer ${FLW_SECRET_KEY}`,
         },
+        signal: AbortSignal.timeout(15_000),
     });
     return response.json();
 };
 
 const getOrganization = async (orgId: string) => {
-    const response = await supabaseFetch(`/organizations?id=eq.${orgId}&select=*`);
+    if (!ID_REGEX.test(orgId)) return null;
+    const response = await supabaseFetch(`/organizations?id=eq.${encodeURIComponent(orgId)}&select=*`);
     if (!response.ok) return null;
     const data = await response.json();
     return data?.[0] || null;
@@ -129,7 +138,7 @@ const transferToMerchant = async (
     const accountName = paymentConfig.accountName || paymentConfig.account_name;
 
     if (!bankCode || !accountNumber) {
-        console.log('Incomplete payout details for org:', orgId, { bankCode, accountNumber });
+        console.log('Incomplete payout details for org:', orgId);
         return { success: false, error: 'Incomplete payout account' };
     }
 
@@ -140,8 +149,7 @@ const transferToMerchant = async (
 
     console.log('Initiating transfer:', {
         orgId,
-        bankCode,
-        accountNumber: accountNumber.slice(-4),
+        accountLast4: String(accountNumber).slice(-4),
         amount: merchantAmount,
         currency,
     });
@@ -181,13 +189,12 @@ const transferToMerchant = async (
                 merchantAmount,
                 currency,
                 invoiceId,
-                bankCode,
                 accountName,
                 timestamp: new Date().toISOString(),
             });
             return { success: true, transferRef, merchantAmount };
         } else {
-            console.error('Transfer failed:', result);
+            console.error('Transfer failed');
             await logPayout(orgId, 'PAYOUT_FAILED', {
                 provider: 'flutterwave',
                 error: result.message || 'Transfer failed',
@@ -201,12 +208,41 @@ const transferToMerchant = async (
         console.error('Transfer error:', error);
         await logPayout(orgId, 'PAYOUT_FAILED', {
             provider: 'flutterwave',
-            error: error.message,
+            error: 'Network error',
             invoiceId,
             amount: merchantAmount,
             timestamp: new Date().toISOString(),
         });
-        return { success: false, error: error.message };
+        return { success: false, error: 'Transfer failed' };
+    }
+};
+
+const amountWithinTolerance = (paid: number, expected: number) => {
+    return Math.abs(paid - expected) <= 0.01;
+};
+
+const processMerchantPayout = async (
+    orgId: string,
+    amount: number,
+    currency: string,
+    invoiceId: string,
+    txRef: string
+) => {
+    try {
+        await updatePayoutStatus(invoiceId, 'processing');
+        const result = await transferToMerchant(orgId, amount, currency, invoiceId, txRef);
+        if (result.success) {
+            await updatePayoutStatus(invoiceId, 'completed', { transferRef: result.transferRef });
+            console.log(`Auto-transfer initiated for invoice ${invoiceId}`);
+        } else {
+            await updatePayoutStatus(invoiceId, 'failed');
+            console.error(`Auto-transfer failed for invoice ${invoiceId}`);
+        }
+    } catch (err) {
+        console.error('Background payout error:', err);
+        try {
+            await updatePayoutStatus(invoiceId, 'failed');
+        } catch {}
     }
 };
 
@@ -219,23 +255,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const signature = req.headers['verif-hash'] as string || '';
+    if (!FLW_WEBHOOK_SECRET) {
+        console.error('FLUTTERWAVE_WEBHOOK_SECRET not configured');
+        return res.status(500).json({ error: 'Webhook not configured' });
+    }
 
-    if (FLW_WEBHOOK_SECRET && signature !== FLW_WEBHOOK_SECRET) {
-        console.error('Invalid webhook signature');
+    if (!FLW_SECRET_KEY) {
+        console.error('FLUTTERWAVE_SECRET_KEY not configured');
+        return res.status(500).json({ error: 'Webhook not configured' });
+    }
+
+    const signature = (req.headers['verif-hash'] as string) || '';
+
+    if (!signature || !timingSafeStringEqual(signature, FLW_WEBHOOK_SECRET)) {
+        console.error('Invalid or missing webhook signature');
         return res.status(401).json({ error: 'Invalid signature' });
     }
 
     const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
 
-    console.log('Flutterwave webhook received:', event.event, JSON.stringify(event.data || {}).slice(0, 1000));
+    console.log('Flutterwave webhook received:', event.event);
 
     try {
         if (event.event === 'charge.completed' && event.data?.status === 'successful') {
             const transactionId = event.data.id;
-            const txRef = event.data.tx_ref || '';
+            if (!NUMERIC_REGEX.test(String(transactionId))) {
+                console.error('Invalid transaction id format');
+                return res.status(200).json({ received: true, error: 'Invalid transaction id' });
+            }
 
-            let meta = event.data.meta || {};
+            const txRef = String(event.data.tx_ref || '');
+
+            let meta: Record<string, any> = event.data.meta || {};
             if (Array.isArray(meta)) {
                 meta = meta.reduce((acc: Record<string, any>, item: any) => {
                     if (item && typeof item === 'object') {
@@ -253,18 +304,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
             }
 
-            console.log('Parsed meta:', { invoiceId, txRef, meta });
-
-            if (!invoiceId) {
-                console.log('No invoice_id found, skipping');
+            if (!invoiceId || typeof invoiceId !== 'string' || !ID_REGEX.test(invoiceId)) {
+                console.log('No valid invoice_id, skipping');
                 return res.status(200).json({ received: true, skipped: true });
             }
 
-            const invoice = await getInvoice(invoiceId);
+            const [invoice, verification] = await Promise.all([
+                getInvoice(invoiceId),
+                verifyTransaction(transactionId),
+            ]);
 
             if (!invoice) {
                 console.error('Invoice not found:', invoiceId);
-                return res.status(200).json({ received: true, error: 'Invoice not found', invoiceId });
+                return res.status(200).json({ received: true, error: 'Invoice not found' });
             }
 
             if (invoice.status === 'PAID') {
@@ -272,50 +324,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({ received: true, skipped: true, reason: 'already_paid' });
             }
 
-            const verification = await verifyTransaction(transactionId);
             if (verification.status !== 'success' || verification.data?.status !== 'successful') {
-                console.error('Transaction verification failed:', verification);
+                console.error('Transaction verification failed');
                 return res.status(200).json({ received: true, error: 'Verification failed' });
             }
 
-            const orgId = invoice.organization_id || meta.organization_id;
+            const verifiedAmount = Number(verification.data.amount);
+            const verifiedCurrency = String(verification.data.currency || '').toUpperCase();
+            const expectedTotal = Number(invoice.total);
+
+            if (!Number.isFinite(verifiedAmount) || verifiedAmount <= 0) {
+                console.error('Invalid verified amount');
+                return res.status(200).json({ received: true, error: 'Invalid amount' });
+            }
+
+            if (!amountWithinTolerance(verifiedAmount, expectedTotal)) {
+                console.error('Amount mismatch:', { verifiedAmount, expectedTotal, invoiceId });
+                void logPayout(invoice.organization_id, 'PAYMENT_AMOUNT_MISMATCH', {
+                    provider: 'flutterwave',
+                    invoiceId,
+                    paidAmount: verifiedAmount,
+                    expectedTotal,
+                    timestamp: new Date().toISOString(),
+                });
+                return res.status(200).json({ received: true, error: 'Amount mismatch' });
+            }
+
+            const orgId = invoice.organization_id;
 
             await updateInvoiceStatus(invoiceId, 'PAID', {
                 reference: txRef,
                 transactionId,
-                amount: event.data.amount,
-                currency: event.data.currency,
+                amount: verifiedAmount,
+                currency: verifiedCurrency,
             }, 'pending');
 
             if (orgId) {
-                await logPayout(orgId, 'PAYMENT_RECEIVED', {
+                void logPayout(orgId, 'PAYMENT_RECEIVED', {
                     provider: 'flutterwave',
                     reference: txRef,
                     transactionId,
                     invoiceId,
                     invoiceNumber: invoice?.invoice_number,
-                    amount: event.data.amount,
-                    currency: event.data.currency,
+                    amount: verifiedAmount,
+                    currency: verifiedCurrency,
                     timestamp: new Date().toISOString(),
                 });
 
-                await updatePayoutStatus(invoiceId, 'processing');
-
-                const transferResult = await transferToMerchant(
-                    orgId,
-                    event.data.amount,
-                    event.data.currency,
-                    invoiceId,
-                    txRef
-                );
-
-                if (transferResult.success) {
-                    await updatePayoutStatus(invoiceId, 'completed', { transferRef: transferResult.transferRef });
-                    console.log(`Auto-transfer initiated for invoice ${invoiceId}: ${transferResult.merchantAmount} ${event.data.currency}`);
-                } else {
-                    await updatePayoutStatus(invoiceId, 'failed');
-                    console.error(`Auto-transfer failed for invoice ${invoiceId}:`, transferResult.error);
-                }
+                void processMerchantPayout(orgId, verifiedAmount, verifiedCurrency, invoiceId, txRef);
             }
 
             console.log(`Payment completed for invoice ${invoiceId}`);
@@ -324,6 +380,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ received: true });
     } catch (error: any) {
         console.error('Webhook processing error:', error);
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: 'Webhook processing failed' });
     }
 }

@@ -88,10 +88,9 @@ const Reports: React.FC = () => {
     'Category',
   ]), []);
   const { t } = useTranslation(translationStrings);
-  const now = new Date();
   const [period, setPeriod] = useState<ReportPeriod>('monthly');
-  const [year, setYear] = useState(String(now.getFullYear()));
-  const [month, setMonth] = useState(String(now.getMonth() + 1));
+  const [year, setYear] = useState(() => String(new Date().getFullYear()));
+  const [month, setMonth] = useState(() => String(new Date().getMonth() + 1));
   const [report, setReport] = useState<CashFlowReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -100,12 +99,12 @@ const Reports: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
 
   const yearOptions = useMemo(() => {
-    const currentYear = now.getFullYear();
+    const currentYear = new Date().getFullYear();
     return Array.from({ length: 5 }, (_, idx) => {
       const value = String(currentYear - idx);
       return { label: value, value };
     });
-  }, [now]);
+  }, []);
 
   const vendorOptions = useMemo(() => {
     const vendors = Array.from(new Set(expenses.map(expense => expense.vendorName.trim()).filter(Boolean)));
@@ -206,55 +205,79 @@ const Reports: React.FC = () => {
 
   const openPdfReport = () => {
     if (!report) return;
-    const reportTitle = t('Cash Flow Report');
-    const periodLabel = report.period === 'monthly'
+
+    const escapeHtml = (value: unknown): string =>
+      String(value ?? '').replace(/[&<>"'/]/g, (c) => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;' }[c] || c
+      ));
+    const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+    const safeColor = (value: unknown): string =>
+      typeof value === 'string' && HEX_COLOR.test(value.trim()) ? value.trim() : '#0EA5A4';
+    const safeImageUrl = (value: unknown): string | null => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      try {
+        const u = new URL(trimmed);
+        if (u.protocol === 'https:' || u.protocol === 'data:') return trimmed;
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    const reportTitle = escapeHtml(t('Cash Flow Report'));
+    const periodLabel = escapeHtml(report.period === 'monthly'
       ? `${new Date(report.year, (report.month || 1) - 1, 1).toLocaleString('default', { month: 'long' })} ${report.year}`
-      : `${report.year}`;
-    const brandColor = org.primaryColor || '#0EA5A4';
-    const taxId = org.taxId?.trim() || 'N/A';
-    const signatoryName = org.signatoryName?.trim() || org.name;
-    const signatoryTitle = org.signatoryTitle?.trim() || t('Authorized Signatory');
-    const initials = org.name
+      : `${report.year}`);
+    const brandColor = safeColor(org.primaryColor);
+    const taxId = escapeHtml(org.taxId?.trim() || 'N/A');
+    const signatoryName = escapeHtml(org.signatoryName?.trim() || org.name);
+    const signatoryTitle = escapeHtml(org.signatoryTitle?.trim() || t('Authorized Signatory'));
+    const orgName = escapeHtml(org.name);
+    const initialsRaw = org.name
       .split(' ')
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0].toUpperCase())
       .join('') || 'IF';
-    const logoMarkup = org.logoUrl
-      ? `<img src="${org.logoUrl}" alt="${org.name} logo" />`
+    const initials = escapeHtml(initialsRaw);
+    const logoUrl = safeImageUrl(org.logoUrl);
+    const logoMarkup = logoUrl
+      ? `<img src="${escapeHtml(logoUrl)}" alt="${orgName} logo" />`
       : `<div class="logo-fallback">${initials}</div>`;
     const addressParts = org.address
       ? [
         org.address.street,
         [org.address.city, org.address.state, org.address.zip].filter(Boolean).join(', '),
         org.address.country,
-      ].filter(Boolean)
+      ].filter(Boolean).map((p) => escapeHtml(p))
       : [];
     const addressHtml = addressParts.length ? `<div class="brand-meta">${addressParts.join('<br />')}</div>` : '';
-    const contactLine = [org.contactEmail, org.contactPhone].filter(Boolean).join(' · ');
+    const contactLine = escapeHtml([org.contactEmail, org.contactPhone].filter(Boolean).join(' · '));
     const rowsHtml = report.breakdown.map((row) => (
       `<tr>
-        <td>${row.label}</td>
-        <td>${formatMoney(row.inflow, report.currency)}</td>
-        <td>${formatMoney(row.outflow, report.currency)}</td>
-        <td>${formatMoney(row.net, report.currency)}</td>
+        <td>${escapeHtml(row.label)}</td>
+        <td>${escapeHtml(formatMoney(row.inflow, report.currency))}</td>
+        <td>${escapeHtml(formatMoney(row.outflow, report.currency))}</td>
+        <td>${escapeHtml(formatMoney(row.net, report.currency))}</td>
       </tr>`
     )).join('');
     const categoryRowsHtml = report.expenseCategories?.map((category) => (
       `<tr>
-        <td>${category.category}</td>
-        <td>${formatMoney(category.total, report.currency)}</td>
-        <td>${category.count}</td>
+        <td>${escapeHtml(category.category)}</td>
+        <td>${escapeHtml(formatMoney(category.total, report.currency))}</td>
+        <td>${escapeHtml(String(category.count))}</td>
       </tr>`
     )).join('');
     const categoryTableHtml = report.expenseCategories?.length ? `
-      <div class="section-title">${t('Expense Categories')}</div>
+      <div class="section-title">${escapeHtml(t('Expense Categories'))}</div>
       <table>
         <thead>
           <tr>
-            <th>${t('Category')}</th>
-            <th>${t('Total Outflow')}</th>
-            <th>${t('Count')}</th>
+            <th>${escapeHtml(t('Category'))}</th>
+            <th>${escapeHtml(t('Total Outflow'))}</th>
+            <th>${escapeHtml(t('Count'))}</th>
           </tr>
         </thead>
         <tbody>
@@ -262,9 +285,13 @@ const Reports: React.FC = () => {
         </tbody>
       </table>
     ` : `
-      <div class="section-title">${t('Expense Categories')}</div>
-      <div class="empty-state">${t('No expenses match the selected filters.')}</div>
+      <div class="section-title">${escapeHtml(t('Expense Categories'))}</div>
+      <div class="empty-state">${escapeHtml(t('No expenses match the selected filters.'))}</div>
     `;
+    const safeCurrency = escapeHtml(report.currency);
+    const safeReportPeriod = escapeHtml(report.period.toUpperCase());
+    const safeVendorFilter = escapeHtml(vendorFilter || t('All'));
+    const safeCategoryFilter = escapeHtml(categoryFilter || t('All'));
 
     const html = `
       <!doctype html>
@@ -310,47 +337,47 @@ const Reports: React.FC = () => {
             <div class="brand">
               <div class="logo">${logoMarkup}</div>
               <div>
-              <div class="brand-name">${org.name}</div>
-              <div class="brand-meta">${t('Tax ID:')} ${taxId}</div>
+              <div class="brand-name">${orgName}</div>
+              <div class="brand-meta">${escapeHtml(t('Tax ID:'))} ${taxId}</div>
               ${addressHtml}
               ${contactLine ? `<div class="brand-meta">${contactLine}</div>` : ''}
             </div>
           </div>
           <div class="report-block">
             <h1 class="report-title">${reportTitle}</h1>
-            <div class="report-sub">${periodLabel} · ${t('Generated')} ${new Date().toLocaleDateString()}</div>
-            <div class="pill">${report.period.toUpperCase()} ${t('CASH FLOW')}</div>
+            <div class="report-sub">${periodLabel} · ${escapeHtml(t('Generated'))} ${escapeHtml(new Date().toLocaleDateString())}</div>
+            <div class="pill">${safeReportPeriod} ${escapeHtml(t('CASH FLOW'))}</div>
           </div>
         </div>
 
         <div class="meta">
-          <div><strong>${t('Filters:')}</strong> ${t('Vendor')} ${vendorFilter || t('All')} · ${t('Category')} ${categoryFilter || t('All')}</div>
-          <div><strong>${t('Currency')}:</strong> ${report.currency}</div>
+          <div><strong>${escapeHtml(t('Filters:'))}</strong> ${escapeHtml(t('Vendor'))} ${safeVendorFilter} · ${escapeHtml(t('Category'))} ${safeCategoryFilter}</div>
+          <div><strong>${escapeHtml(t('Currency'))}:</strong> ${safeCurrency}</div>
         </div>
 
         <div class="summary">
           <div class="card">
-            <div class="label">${t('Total Inflow')}</div>
-            <div class="value">${formatMoney(report.totals.inflow, report.currency)}</div>
+            <div class="label">${escapeHtml(t('Total Inflow'))}</div>
+            <div class="value">${escapeHtml(formatMoney(report.totals.inflow, report.currency))}</div>
           </div>
           <div class="card">
-            <div class="label">${t('Total Outflow')}</div>
-            <div class="value">${formatMoney(report.totals.outflow, report.currency)}</div>
+            <div class="label">${escapeHtml(t('Total Outflow'))}</div>
+            <div class="value">${escapeHtml(formatMoney(report.totals.outflow, report.currency))}</div>
           </div>
           <div class="card">
-            <div class="label">${t('Net Cash Flow')}</div>
-            <div class="value">${formatMoney(report.totals.net, report.currency)}</div>
+            <div class="label">${escapeHtml(t('Net Cash Flow'))}</div>
+            <div class="value">${escapeHtml(formatMoney(report.totals.net, report.currency))}</div>
           </div>
         </div>
 
-        <div class="section-title">${t('Cash Flow Breakdown')}</div>
+        <div class="section-title">${escapeHtml(t('Cash Flow Breakdown'))}</div>
         <table>
           <thead>
             <tr>
-              <th>${t('Period')}</th>
-              <th>${t('Inflow')}</th>
-              <th>${t('Outflow')}</th>
-              <th>${t('Net')}</th>
+              <th>${escapeHtml(t('Period'))}</th>
+              <th>${escapeHtml(t('Inflow'))}</th>
+              <th>${escapeHtml(t('Outflow'))}</th>
+              <th>${escapeHtml(t('Net'))}</th>
             </tr>
           </thead>
             <tbody>
@@ -369,7 +396,7 @@ const Reports: React.FC = () => {
         </div>
 
         <div class="footer">
-          ${t('Prepared for tax filing. Totals reflect PAID invoices and PAID expenses within the selected period and filters.')}
+          ${escapeHtml(t('Prepared for tax filing. Totals reflect PAID invoices and PAID expenses within the selected period and filters.'))}
         </div>
       </body>
     </html>
